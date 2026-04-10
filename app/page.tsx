@@ -3,13 +3,6 @@ import { Hero, Navbar } from "@/components/Hero";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
-function IconShield({ size = 20 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2L3 6v6c0 5.5 3.9 10.65 9 12 5.1-1.35 9-6.5 9-12V6l-9-4z" />
-    </svg>
-  );
-}
 
 function IconAlert() {
   return (
@@ -97,9 +90,9 @@ export default function Home() {
         <Divider />
 
         {/* ── WHY IT MATTERS ── */}
-        <section className="py-20 lg:py-28">
+        <section className="py-14 md:py-24">
           <Container>
-            <div className="mb-10 lg:mb-14">
+            <div className="mb-8 lg:mb-14">
               <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">Why it matters</p>
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight">
                 What you&apos;re actually buying
@@ -142,9 +135,9 @@ export default function Home() {
           md:      2 col (wraps gracefully)
           lg:      5 col row
         */}
-        <section className="py-20 lg:py-28" id="how-it-works">
+        <section className="py-14 md:py-24" id="how-it-works">
           <Container>
-            <div className="mb-10 lg:mb-14">
+            <div className="mb-8 lg:mb-14">
               <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">Process</p>
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight">
                 A structured path from interest to purchase
@@ -153,11 +146,11 @@ export default function Home() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
               {[
-                { step: "01", label: "Understand", description: "Define your budget, use case, and risk tolerance before engaging with a seller." },
-                { step: "02", label: "Find", description: "Evaluate listings with AI assistance. Identify red flags, missing information, and unrealistic pricing." },
-                { step: "03", label: "Evaluate", description: "Assess condition signals, pricing context, and negotiation exposure before committing." },
-                { step: "04", label: "Verify", description: "Run checks across REPUVE, ownership records, fines, and lien databases. Validate documents and identity consistency." },
-                { step: "05", label: "Complete", description: "Generate a structured purchase agreement and finalize with a documented, verifiable transaction record." },
+                { step: "01", label: "Understand", description: "Define your budget and risk." },
+                { step: "02", label: "Find", description: "Scan listings and spot red flags." },
+                { step: "03", label: "Evaluate", description: "Assess condition and pricing." },
+                { step: "04", label: "Verify", description: "Check records and validate documents." },
+                { step: "05", label: "Complete", description: "Generate and sign a secure agreement." },
               ].map(({ step, label, description }) => (
                 <div key={step} className="bg-white/[0.04] rounded-xl px-5 py-5 lg:px-5 lg:py-6">
                   <p className="text-xs font-mono text-[var(--foreground-muted)] mb-3">{step}</p>
@@ -176,9 +169,9 @@ export default function Home() {
           Mobile:  stacked (narrative → list)
           Desktop: two-column, narrative anchors left, list fills right
         */}
-        <section className="py-20 lg:py-28">
+        <section className="py-14 md:py-24">
           <Container>
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-12 lg:gap-20 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8 lg:gap-20 items-start">
 
               <div>
                 <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">Common failure points</p>
@@ -219,9 +212,9 @@ export default function Home() {
           Mobile:  1 col stats → closing card
           Desktop: left = header + closing statement, right = stat grid (2-col)
         */}
-        <section className="py-20 lg:py-28">
+        <section className="py-12 md:py-20">
           <Container>
-            <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] xl:grid-cols-[360px_1fr] gap-12 lg:gap-20 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] xl:grid-cols-[360px_1fr] gap-8 lg:gap-20 items-start">
 
               {/* Left: header + closing statement */}
               <div className="lg:sticky lg:top-28">
@@ -229,7 +222,7 @@ export default function Home() {
                   <IconBar />
                   <p className="text-xs uppercase tracking-widest">What the data shows</p>
                 </div>
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-8 lg:mb-10">
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-6 lg:mb-10">
                   This is not a rare edge case
                 </h2>
                 <div className="bg-white/[0.06] rounded-xl px-5 py-5 lg:px-6 lg:py-6">
@@ -263,11 +256,11 @@ export default function Home() {
         <Divider />
 
         {/* ── PRICING ── */}
-        <section className="py-20 lg:py-28" id="pricing">
+        <section className="py-12 md:py-20" id="pricing">
           <Container>
             <div className="max-w-[980px] mx-auto">
 
-            <div className="mb-10 lg:mb-14 text-center">
+            <div className="mb-8 lg:mb-14 text-center">
               <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">Pricing</p>
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-2">
                 Choose your level of certainty
@@ -388,7 +381,7 @@ export default function Home() {
         <Divider />
 
         {/* ── FINAL CTA ── */}
-        <section className="pt-16 pb-20 lg:pt-20 lg:pb-28 border-t border-white/[0.08]">
+        <section className="pt-12 pb-16 lg:pt-20 lg:pb-28 border-t border-white/[0.08]">
           <Container>
             <div className="max-w-[520px] mx-auto text-center">
 
@@ -432,72 +425,69 @@ export default function Home() {
       {/* ── FOOTER ── */}
       <footer>
         <Divider />
-        <Container className="py-14 lg:py-16">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-10 lg:gap-16 mb-12 lg:mb-14">
+        <Container className="py-12 lg:py-16">
 
-            <div className="col-span-2 md:col-span-1">
-              <div className="flex items-center gap-2.5 text-white mb-4">
-                <IconShield size={16} />
-                <span className="text-sm font-semibold uppercase tracking-widest">MexGuardian</span>
-              </div>
+          {/* Top: brand + nav columns */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-12 mb-10 md:mb-14">
+
+            {/* Brand */}
+            <div>
+              <p className="text-sm font-semibold text-white mb-3">MexGuardian</p>
               <p className="text-sm text-[var(--foreground-muted)] leading-relaxed">
-                Structured verification for used car purchases in Mexico. Know what you&apos;re buying before you commit.
+                Structured verification for used car purchases in Mexico.<br />
+                Know what you&apos;re buying before you commit.
               </p>
             </div>
 
+            {/* Product */}
             <div>
               <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-4">Product</p>
               <ul className="flex flex-col gap-3">
-                {["How it works", "Pricing"].map((label) => (
-                  <li key={label}>
-                    <Link href="#" className="text-sm text-[var(--foreground-muted)] hover:text-white transition-colors">
-                      {label}
-                    </Link>
-                  </li>
-                ))}
+                <li>
+                  <Link href="#how-it-works" className="text-sm text-[var(--foreground-muted)] hover:text-white transition-colors">
+                    How it works
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#pricing" className="text-sm text-[var(--foreground-muted)] hover:text-white transition-colors">
+                    Pricing
+                  </Link>
+                </li>
               </ul>
             </div>
 
+            {/* Legal + Contact */}
             <div>
-              <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-4">Resources</p>
-              <ul className="flex flex-col gap-3">
-                {["Verification explained", "Fraud risks"].map((label) => (
-                  <li key={label}>
-                    <Link href="#" className="text-sm text-[var(--foreground-muted)] hover:text-white transition-colors">
-                      {label}
-                    </Link>
-                  </li>
-                ))}
+              <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-4">Legal</p>
+              <ul className="flex flex-col gap-3 mb-6">
+                <li>
+                  <Link href="/privacy" className="text-sm text-[var(--foreground-muted)] hover:text-white transition-colors">
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/terms" className="text-sm text-[var(--foreground-muted)] hover:text-white transition-colors">
+                    Terms of Service
+                  </Link>
+                </li>
               </ul>
-            </div>
-
-            <div>
-              <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-4">Company</p>
-              <ul className="flex flex-col gap-3">
-                {["About", "Contact"].map((label) => (
-                  <li key={label}>
-                    <Link href="#" className="text-sm text-[var(--foreground-muted)] hover:text-white transition-colors">
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              <p className="text-xs text-[var(--foreground-muted)] leading-relaxed">
+                For support related to verification or transactions:<br />
+                <a href="mailto:support@mexguardian.com" className="hover:text-white transition-colors">
+                  support@mexguardian.com
+                </a>
+              </p>
             </div>
 
           </div>
 
           <Divider />
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-8">
-            <p className="text-sm text-[var(--foreground-muted)]">© 2026 MexGuardian. All rights reserved.</p>
-            <div className="flex gap-6">
-              {["Privacy", "Terms"].map((label) => (
-                <Link key={label} href="#" className="text-sm text-[var(--foreground-muted)] hover:text-white transition-colors">
-                  {label}
-                </Link>
-              ))}
-            </div>
-          </div>
+          {/* Bottom strip */}
+          <p className="text-sm text-[var(--foreground-muted)] pt-8">
+            © 2026 MexGuardian. All rights reserved.
+          </p>
+
         </Container>
       </footer>
     </>
