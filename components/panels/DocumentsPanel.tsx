@@ -1,0 +1,118 @@
+"use client";
+
+import { useRef } from "react";
+import { useTransaction } from "@/context/TransactionContext";
+import { DocumentType, DOCUMENT_LABELS } from "@/lib/types";
+
+
+const DOCUMENT_TYPES: DocumentType[] = ["ine", "registration", "invoice"];
+
+export default function DocumentsPanel() {
+  const { transaction, uploadDocument } = useTransaction();
+  const { documents } = transaction;
+
+  const allUploaded =
+    documents.ine.status === "uploaded" &&
+    documents.registration.status === "uploaded" &&
+    documents.invoice.status === "uploaded";
+  const inputRefs = useRef<Record<DocumentType, HTMLInputElement | null>>({
+    ine: null,
+    registration: null,
+    invoice: null,
+  });
+
+  function handleFileChange(docType: DocumentType, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const mockUrl = `https://storage.mexguardian.com/mock/${transaction.id}/${docType}/${file.name}`;
+    uploadDocument(docType, file.name, mockUrl);
+    // Reset input so the same file can be re-selected if needed
+    e.target.value = "";
+  }
+
+  return (
+    <section className="border-t border-[var(--border)] py-6">
+      <h3 className="text-xs uppercase tracking-widest text-[var(--foreground-muted)] mb-4">
+        Documents
+      </h3>
+
+      <ul className="flex flex-col gap-4">
+        {DOCUMENT_TYPES.map((docType) => {
+          const doc = documents[docType];
+          const isUploaded = doc.status === "uploaded";
+
+          return (
+            <li key={docType} className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-white">{DOCUMENT_LABELS[docType]}</p>
+                {isUploaded && (
+                  <div className="mt-0.5">
+                    <p className="text-xs text-[var(--foreground-muted)] font-mono truncate max-w-[240px]">
+                      {doc.file_name}
+                    </p>
+                    <p className="text-[10px] text-[var(--foreground-muted)] mt-0.5">
+                      Uploaded
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="shrink-0">
+                <input
+                  ref={(el) => { inputRefs.current[docType] = el; }}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="hidden"
+                  onChange={(e) => handleFileChange(docType, e)}
+                />
+                {isUploaded ? (
+                  <button
+                    onClick={() => inputRefs.current[docType]?.click()}
+                    className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors"
+                  >
+                    Replace
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => inputRefs.current[docType]?.click()}
+                    className="text-xs text-[var(--accent)] hover:text-blue-400 transition-colors"
+                  >
+                    Upload
+                  </button>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      {allUploaded && (
+        <p className="text-xs text-[var(--foreground-muted)] mt-4">
+          All required documents uploaded.
+        </p>
+      )}
+
+      {transaction.current_step === "complete" && (
+        <div className="mt-6">
+          <p className="text-xs text-[var(--foreground-muted)] mb-2">
+            AGREEMENT
+          </p>
+          {transaction.contract.status === "generated" ? (
+            <div className="space-y-1">
+              <p className="text-sm text-white">
+                {transaction.contract.file_name}
+              </p>
+              <p className="text-xs text-[var(--foreground-muted)]">
+                Generated
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-[var(--foreground-muted)]">
+              No agreement generated yet.
+            </p>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
