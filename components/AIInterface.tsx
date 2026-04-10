@@ -244,6 +244,7 @@ function CompleteInterface() {
     setShowShared(true);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   function handleRevokeShare() {
     revokeShare();
     setShowShared(false);
