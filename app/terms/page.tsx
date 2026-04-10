@@ -21,6 +21,10 @@ export default function TermsPage() {
 
       <main className="max-w-3xl mx-auto px-6 pt-32 pb-24">
 
+        <Link href="/" className="inline-block text-sm text-gray-400 hover:text-white transition-colors mb-8">
+          ← Back to home
+        </Link>
+
         <h1 className="text-3xl md:text-4xl font-semibold text-white mb-3">
           Terms of Service
         </h1>

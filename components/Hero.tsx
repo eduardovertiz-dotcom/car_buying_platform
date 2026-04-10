@@ -26,9 +26,10 @@ export function Navbar() {
             </Link>
             <Link
               href="/transactions"
-              className="bg-[var(--accent)] text-white text-[14px] font-medium rounded-lg px-4 py-2 hover:opacity-90 transition-opacity"
+              className="bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 hover:opacity-90 transition-opacity whitespace-nowrap"
             >
-              Start verification
+              <span className="sm:hidden">Start</span>
+              <span className="hidden sm:inline">Start verification</span>
             </Link>
           </div>
         </nav>
