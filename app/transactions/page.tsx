@@ -110,6 +110,12 @@ export default function TransactionsPage() {
         (t) => t.id && UUID_RE.test(t.id)
       ) as TxnRow[];
 
+      // Auto-redirect to /start when user has no transactions (and not on ?new confirmation)
+      if (valid.length === 0 && !new URLSearchParams(window.location.search).get("new")) {
+        router.replace("/start");
+        return;
+      }
+
       setTransactions(valid);
       setLoaded(true);
     });
@@ -188,7 +194,7 @@ export default function TransactionsPage() {
                   Sign out
                 </button>
                 <Link
-                  href="/#pricing"
+                  href="/start"
                   className="shrink-0 bg-[var(--accent)] text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:opacity-90 transition-opacity"
                 >
                   + Start new
@@ -206,7 +212,7 @@ export default function TransactionsPage() {
                     Start your first vehicle verification
                   </p>
                   <Link
-                    href="/#pricing"
+                    href="/start"
                     className="inline-flex items-center gap-2 bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-5 py-3 hover:opacity-90 transition-opacity"
                   >
                     Start new transaction →
