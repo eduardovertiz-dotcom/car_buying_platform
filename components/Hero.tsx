@@ -63,8 +63,10 @@ export default function Hero() {
             </h1>
 
             <p className="max-w-lg text-white/75 leading-relaxed mt-4">
-              We verify ownership, documents, and hidden risks before you pay,
-              <br className="hidden sm:block" />
+              We verify ownership, documents, and hidden risks before you pay,{" "}
+              <span className="hidden sm:inline">
+                <br />
+              </span>
               so you know exactly what you&apos;re buying.
             </p>
 
