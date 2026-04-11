@@ -58,8 +58,34 @@ export default async function TransactionSuccessPage({
   }
 
   const amount = session.amount_total ?? 0;
+  const existingTransactionId = session.metadata?.transaction_id ?? null;
 
-  // ── True upsert — safe under concurrent/duplicate requests ───────────────
+  // ── UPGRADE: update plan on existing transaction ──────────────────────────
+  if (existingTransactionId) {
+    const update = await fetch(
+      `${SUPABASE_URL}/rest/v1/transactions?id=eq.${encodeURIComponent(existingTransactionId)}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({ plan, stripe_session_id: sessionId }),
+      }
+    );
+
+    if (!update.ok) {
+      console.error("Supabase upgrade PATCH failed:", await update.text());
+      return <ErrorPage title="Something went wrong" body="Your payment was received but we could not upgrade your transaction. Please contact support." />;
+    }
+
+    // Return to the existing transaction step flow
+    redirect(`/transaction/${existingTransactionId}`);
+  }
+
+  // ── NEW TRANSACTION: upsert — safe under concurrent/duplicate requests ────
   const upsert = await fetch(
     `${SUPABASE_URL}/rest/v1/transactions?on_conflict=stripe_session_id`,
     {

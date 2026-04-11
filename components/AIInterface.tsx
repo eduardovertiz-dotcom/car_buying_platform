@@ -66,18 +66,25 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     documents.registration.status === "uploaded" &&
     documents.invoice.status === "uploaded";
 
-  // Auto-trigger verification on mount based on plan — only if not already started
+  // Auto-trigger verification on mount based on plan.
+  // Handles both first arrival and post-upgrade ($49 → $79).
   useEffect(() => {
-    if (verification_status !== "not_started") return;
     if (!plan) return;
 
     if (plan === "79") {
-      requestProfessionalVerification();
-      setTimeout(() => {
-        completeProfessionalVerification(mockProfessionalResults);
-      }, 4000);
+      // Trigger professional for: fresh start OR upgrading from basic_complete
+      if (
+        verification_status === "not_started" ||
+        verification_status === "basic_complete"
+      ) {
+        requestProfessionalVerification();
+        setTimeout(() => {
+          completeProfessionalVerification(mockProfessionalResults);
+        }, 4000);
+      }
     } else {
-      // plan === "49"
+      // plan === "49" — only trigger basic on first arrival
+      if (verification_status !== "not_started") return;
       requestBasicVerification();
       setTimeout(() => {
         completeBasicVerification(mockBasicResults);
@@ -97,7 +104,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId: "price_1TKnpHBgMSWbEFIIbmJUc4C7" }),
+        body: JSON.stringify({ priceId: "price_1TKtx4BgMSWbEFIIdUeEhJn0", transactionId: transaction.id }),
       });
       const { url, error } = await res.json();
       if (error || !url) throw new Error(error ?? "No checkout URL");

@@ -8,11 +8,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 const PRICE_TO_PLAN: Record<string, "49" | "79"> = {
   "price_1TKnooBgMSWbEFIIv0Pg5V1P": "49",
   "price_1TKnpHBgMSWbEFIIbmJUc4C7": "79",
+  "price_1TKtx4BgMSWbEFIIdUeEhJn0": "79",
 }
 
 export async function POST(req: Request) {
   try {
-    const { priceId } = await req.json()
+    const { priceId, transactionId } = await req.json()
 
     const plan = PRICE_TO_PLAN[priceId] ?? null
     if (!plan) {
@@ -20,11 +21,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid price ID" }, { status: 400 })
     }
 
-    // Derive base URL from request origin — works correctly on Vercel, local, and preview deployments
-    // Falls back to NEXT_PUBLIC_BASE_URL if origin header is absent
     const origin = req.headers.get("origin")
     const baseUrl = origin ?? process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"
-    console.log("[checkout] baseUrl:", baseUrl)
+
+    // Build metadata — include transaction_id when upgrading an existing transaction
+    const metadata: Record<string, string> = { plan }
+    if (transactionId) metadata.transaction_id = transactionId
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -34,7 +36,7 @@ export async function POST(req: Request) {
           quantity: 1,
         },
       ],
-      metadata: { plan },
+      metadata,
       success_url: `${baseUrl}/transaction/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}`,
     })
