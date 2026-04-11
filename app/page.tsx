@@ -168,7 +168,7 @@ export default function Home() {
                 { step: "04", label: "Verify", description: "Check records and validate documents." },
                 { step: "05", label: "Complete", description: "Finalize with confidence. Generate and sign a secure agreement with the seller." },
               ].map(({ step, label, description }) => (
-                <div key={step} className="bg-white/[0.04] rounded-xl px-5 py-5 lg:px-5 lg:py-6">
+                <div key={step} className="bg-white/[0.04] border border-white/[0.15] rounded-xl px-5 py-5 lg:px-6 lg:py-6">
                   <p className="text-xs font-mono text-[var(--foreground-muted)] mb-3">{step}</p>
                   <p className="text-sm lg:text-base font-medium text-white mb-2">{label}</p>
                   <p className="text-sm text-[var(--foreground-muted)] leading-relaxed">{description}</p>
@@ -247,8 +247,8 @@ export default function Home() {
                   { stat: "Thousands", detail: "of buyers inherit hidden liabilities every year" },
                 ].map(({ stat, detail }) => (
                   <div key={stat} className="bg-white/[0.04] rounded-xl px-5 py-5 lg:px-6 lg:py-6">
-                    <p className="text-lg lg:text-xl font-semibold text-white mb-1.5">{stat}</p>
-                    <p className="text-sm lg:text-base text-[var(--foreground-muted)] leading-relaxed">{detail}</p>
+                    <p className="text-2xl lg:text-3xl font-semibold text-white mb-1.5">{stat}</p>
+                    <p className="text-sm lg:text-base text-white/60 leading-relaxed">{detail}</p>
                   </div>
                 ))}
               </div>
@@ -260,7 +260,7 @@ export default function Home() {
         <Divider />
 
         {/* ── GET A CLEAR ANSWER ── */}
-        <section className="py-12 md:py-20">
+        <section className="py-20 md:py-20">
           <Container>
             <div className="text-center mb-8 lg:mb-12">
               <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">What you receive</p>
@@ -269,8 +269,9 @@ export default function Home() {
               </h2>
             </div>
 
-            <div className="max-w-md mx-auto">
-              <div className="bg-white/[0.04] rounded-xl px-6 py-6 lg:px-8 lg:py-8">
+            <div className="max-w-lg mx-auto">
+              <p className="text-xs uppercase tracking-wide text-white/60 text-center mb-4">Sample verification result</p>
+              <div className="bg-white/[0.04] border border-white/20 rounded-xl px-8 py-8 lg:px-10 lg:py-10">
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-xs font-medium uppercase tracking-widest text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
                     CAUTION
@@ -306,6 +307,7 @@ export default function Home() {
 
               <div className="mb-8 lg:mb-14 text-center">
                 <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">Pricing</p>
+                <p className="text-sm text-white/60 text-center mb-2">One check can save you thousands</p>
                 <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-2">
                   Avoid costly mistakes before you buy
                 </h2>
@@ -431,7 +433,7 @@ export default function Home() {
               </p>
 
               <h2 className="text-3xl sm:text-[2.25rem] font-semibold text-white tracking-tight leading-[1.1] mb-4">
-                Know before you pay
+                Don&apos;t risk it. Know before you pay
               </h2>
 
               <p className="text-[15px] text-[var(--foreground-muted)] leading-relaxed max-w-[360px] mx-auto">
