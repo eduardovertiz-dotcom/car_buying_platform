@@ -97,7 +97,7 @@ export default function FacturaForm({ transactionId, prefillEmail }: FacturaForm
       <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-1">Factura</p>
       <p className="text-sm font-medium text-white mb-2">Request a factura for this transaction</p>
       <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-5">
-        We'll use this information to generate your factura. You can edit it anytime.
+        We&apos;ll use this information to generate your factura. You can edit it anytime.
       </p>
 
       {/* Read-only email display */}

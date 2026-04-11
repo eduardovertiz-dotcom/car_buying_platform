@@ -100,7 +100,7 @@ export default function TransactionsPage() {
                   Payment received successfully.
                 </p>
                 <p className="text-sm text-[var(--foreground-muted)] leading-relaxed opacity-70">
-                  Your transaction has been created. Begin the verification process when you're ready.
+                  Your transaction has been created. Begin the verification process when you&apos;re ready.
                 </p>
               </div>
 
