@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     }
 
     const origin = req.headers.get("origin")
-    const baseUrl = origin ?? process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"
+    const baseUrl = origin ?? process.env.NEXT_PUBLIC_BASE_URL ?? "https://www.mexguardian.com"
 
     // Build metadata — include transaction_id when upgrading an existing transaction
     const metadata: Record<string, string> = { plan }
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
       ],
       metadata,
       success_url: `${baseUrl}/transaction/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}`,
+      cancel_url: `${baseUrl}/start`,
     })
 
     console.log("[checkout] session.url:", session.url)

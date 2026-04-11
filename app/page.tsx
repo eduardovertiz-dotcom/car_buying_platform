@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Hero from "@/components/Hero";
+import { createClient } from "@/lib/supabase/client";
 
 // 🔥 STRIPE HANDLER
 const handleCheckout = async (priceId: string) => {
@@ -101,6 +104,16 @@ function Divider() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
+  const router = useRouter();
+
+  // Redirect authenticated users into the product — no marketing page after login
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) router.replace("/transactions");
+    });
+  }, [router]);
+
   return (
     <>
       <main>

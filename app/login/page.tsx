@@ -40,10 +40,13 @@ export default function LoginPage() {
 
         <button
           onClick={handleGoogle}
-          className="w-full bg-white text-gray-900 text-sm font-medium px-5 py-3 rounded-lg mb-6 hover:opacity-90 transition-opacity"
+          className="w-full bg-white text-gray-900 text-sm font-medium px-5 py-3 rounded-lg hover:opacity-90 transition-opacity"
         >
           Continue with Google
         </button>
+        <p className="text-xs text-[var(--foreground-muted)] text-center mt-2 mb-6">
+          Secure login powered by Google
+        </p>
 
         <div className="flex items-center gap-3 mb-6">
           <div className="flex-1 h-px bg-[var(--border)]" />
