@@ -278,19 +278,24 @@ export default function Home() {
                 <p className="text-sm text-white/60 text-center mt-4 mb-10">Most buyers choose full protection for high-value purchases.</p>
               </div>
 
-              <div className="flex flex-col md:flex-row justify-center gap-8 lg:gap-12">
+              {/* Mobile: $79 first (flex-col-reverse), Desktop: $49 left (flex-row) */}
+              <div className="flex flex-col-reverse md:flex-row justify-center gap-8 lg:gap-12">
 
-                {/* $49 */}
+                {/* $49 — secondary */}
                 <div className="flex flex-col bg-white/[0.04] rounded-xl px-6 py-8 lg:px-8 lg:py-10 w-full max-w-[460px]">
-                  <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-1">Guided Purchase</p>
+                  <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-1">Basic Coverage</p>
                   <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
                     Essential vehicle history and risk overview.
                   </p>
 
-                  <div className="flex items-end gap-1.5 mb-6">
+                  <div className="flex items-end gap-1.5 mb-3">
                     <span className="text-[3.5rem] lg:text-[4rem] font-semibold text-white leading-none tracking-tight">$49</span>
                     <span className="text-sm text-[var(--foreground-muted)] mb-2">one-time</span>
                   </div>
+
+                  <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mb-6">
+                    Does not include identity or fraud risk verification.
+                  </p>
 
                   <div className="h-px bg-white/[0.08] mb-6" />
 
@@ -309,10 +314,6 @@ export default function Home() {
                     ))}
                   </ul>
 
-                  <p className="text-xs text-[var(--foreground-muted)] opacity-60 leading-relaxed mb-6">
-                    Does not include identity or fraud risk verification.
-                  </p>
-
                   {/* 🔥 $49 BUTTON */}
                   <button
                     onClick={() => handleCheckout("price_1TKnooBgMSWbEFIIv0Pg5V1P")}
@@ -322,21 +323,21 @@ export default function Home() {
                   </button>
                 </div>
 
-                {/* $79 — recommended */}
-                <div className="flex flex-col bg-white/[0.06] border border-[var(--accent)] rounded-xl px-6 py-8 lg:px-8 lg:py-10 w-full max-w-[460px] scale-105 shadow-lg">
+                {/* $79 — primary */}
+                <div className="flex flex-col bg-white/[0.06] border border-[var(--accent)] shadow-[0_0_24px_0_rgba(99,102,241,0.15)] rounded-xl px-6 py-8 lg:px-8 lg:py-10 w-full max-w-[460px] scale-105">
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest">Professional Verification</p>
-                    <span className="text-[10px] font-medium uppercase tracking-widest text-[var(--accent)] bg-[var(--accent)]/10 px-2 py-0.5 rounded-full">Best Protection</span>
+                    <span className="text-[10px] font-medium uppercase tracking-widest text-[var(--accent)] bg-[var(--accent)]/10 px-2 py-0.5 rounded-full">Full Fraud Protection</span>
                   </div>
                   <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
-                    Full verification including identity and fraud risk analysis.
+                    Verify ownership, identity, and fraud risk before you pay.
                   </p>
 
                   <div className="flex items-end gap-1.5 mb-2">
                     <span className="text-[3.5rem] lg:text-[4rem] font-semibold text-white leading-none tracking-tight">$79</span>
                     <span className="text-sm text-[var(--foreground-muted)] mb-2">one-time</span>
                   </div>
-                  <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mb-6">Catches identity and fraud risks before you commit.</p>
+                  <p className="text-sm text-white/80 leading-relaxed mb-6">Prevents identity fraud and ownership scams.</p>
 
                   <div className="h-px bg-white/[0.08] mb-6" />
 
