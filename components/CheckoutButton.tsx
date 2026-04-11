@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 
+const PLAN_TO_PRICE: Record<"49" | "79", string> = {
+  "49": "price_1TKnooBgMSWbEFIIv0Pg5V1P",
+  "79": "price_1TKnpHBgMSWbEFIIbmJUc4C7",
+};
+
 interface CheckoutButtonProps {
   plan: "49" | "79";
   className?: string;
@@ -13,16 +18,14 @@ export function CheckoutButton({ plan, className, children }: CheckoutButtonProp
 
   async function handleClick() {
     setLoading(true);
-    console.log(`[checkout] initiating plan=${plan}`);
     try {
-      const res = await fetch("/api/create-checkout-session", {
+      const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ priceId: PLAN_TO_PRICE[plan] }),
       });
       const { url, error } = await res.json();
       if (error || !url) throw new Error(error ?? "No checkout URL returned");
-      console.log(`[checkout] redirecting to Stripe`);
       window.location.href = url;
     } catch (err) {
       console.error("[checkout] failed:", err);

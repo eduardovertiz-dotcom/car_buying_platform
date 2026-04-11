@@ -1,16 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { DEFAULT_DOCUMENTS, Transaction, STEPS } from "@/lib/types";
+import { Transaction, STEPS } from "@/lib/types";
 import FacturaForm from "@/components/FacturaForm";
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+
 export default function TransactionsPage() {
-  const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [newId, setNewId] = useState<string | null>(null);
+  const [newEmail, setNewEmail] = useState<string | null>(null);
   const [isFacturaOpen, setIsFacturaOpen] = useState(false);
   const facturaRef = useRef<HTMLDivElement>(null);
 
@@ -22,10 +24,24 @@ export default function TransactionsPage() {
   }
 
   useEffect(() => {
-    setNewId(new URLSearchParams(window.location.search).get("new"));
-    const LEGACY_IDS = new Set(["txn_001", "txn_002"]);
+    const id = new URLSearchParams(window.location.search).get("new");
+    setNewId(id);
 
-    // Purge legacy mock transactions from previous sessions
+    // Fetch email for factura prefill when ?new is present
+    if (id && SUPABASE_URL && SUPABASE_KEY) {
+      fetch(
+        `${SUPABASE_URL}/rest/v1/transactions?id=eq.${encodeURIComponent(id)}&select=email&limit=1`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+      )
+        .then((r) => r.json())
+        .then((rows: { email: string | null }[]) => {
+          setNewEmail(rows[0]?.email ?? null);
+        })
+        .catch(() => {});
+    }
+
+    // Purge legacy mock transactions
+    const LEGACY_IDS = new Set(["txn_001", "txn_002"]);
     Object.keys(localStorage).forEach((key) => {
       if (!key.startsWith("transaction_")) return;
       try {
@@ -38,7 +54,7 @@ export default function TransactionsPage() {
       }
     });
 
-    // Load only valid real transactions
+    // Load valid paid transactions from localStorage (keyed by Supabase UUID)
     const txns: Transaction[] = Object.keys(localStorage)
       .filter((key) => key.startsWith("transaction_"))
       .map((key) => {
@@ -51,34 +67,6 @@ export default function TransactionsPage() {
     setTransactions(txns);
     setLoaded(true);
   }, []);
-
-  function handleNewTransaction() {
-    const txnId = "txn_" + crypto.randomUUID();
-    const newTransaction: Transaction & { source: string } = {
-      id: txnId,
-      source: "real",
-      vehicle: { make: "", model: "", year: new Date().getFullYear() },
-      current_step: "understand",
-      checklist_progress: 0,
-      verification_status: "not_started",
-      documents: { ...DEFAULT_DOCUMENTS },
-      verification_results: null,
-      activity_log: [
-        {
-          id: `act_${Date.now()}`,
-          type: "transaction_created",
-          step: "understand",
-          timestamp: new Date().toISOString(),
-        },
-      ],
-      contract: { status: "not_started" },
-      maintenance: { records: [] },
-      share: { enabled: false },
-      created_at: new Date().toISOString(),
-    };
-    localStorage.setItem(`transaction_${txnId}`, JSON.stringify(newTransaction));
-    router.push(`/transaction/${txnId}`);
-  }
 
   return (
     <main className="min-h-screen px-6 py-12">
@@ -125,7 +113,7 @@ export default function TransactionsPage() {
 
                 {isFacturaOpen && (
                   <div ref={facturaRef}>
-                    <FacturaForm transactionId={newId} prefillEmail={null} />
+                    <FacturaForm transactionId={newId} prefillEmail={newEmail} />
                   </div>
                 )}
               </div>
@@ -133,22 +121,31 @@ export default function TransactionsPage() {
           </div>
         )}
 
-        <div className="mb-10">
-          <h1 className="text-xl font-semibold text-white tracking-tight">
-            MexGuardian
-          </h1>
-          <p className="text-sm text-[var(--foreground-muted)] mt-1">
-            Your active transactions
-          </p>
-        </div>
-
+        {/* ── Transaction list — only when ?new is absent ───────────────────── */}
         {!newId && (
           <>
+            <div className="mb-10">
+              <h1 className="text-xl font-semibold text-white tracking-tight">
+                MexGuardian
+              </h1>
+              <p className="text-sm text-[var(--foreground-muted)] mt-1">
+                Your active transactions
+              </p>
+            </div>
+
             <div className="flex flex-col gap-3">
               {loaded && transactions.length === 0 && (
-                <p className="text-sm text-[var(--foreground-muted)] py-4">
-                  Start your first verification
-                </p>
+                <div className="py-4">
+                  <p className="text-sm text-[var(--foreground-muted)] mb-4">
+                    You don&apos;t have any active transactions.
+                  </p>
+                  <Link
+                    href="/#pricing"
+                    className="inline-flex items-center gap-2 bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-5 py-3 hover:opacity-90 transition-opacity"
+                  >
+                    Start verification →
+                  </Link>
+                </div>
               )}
 
               {transactions.map((txn) => {
@@ -197,17 +194,9 @@ export default function TransactionsPage() {
                 );
               })}
             </div>
-
-            <div className="mt-8">
-              <button
-                onClick={handleNewTransaction}
-                className="w-full border border-[var(--border)] rounded-lg px-5 py-4 text-sm text-[var(--foreground-muted)] hover:border-[var(--accent)] hover:text-white transition-colors text-left"
-              >
-                + Start new transaction
-              </button>
-            </div>
           </>
         )}
+
       </div>
     </main>
   );

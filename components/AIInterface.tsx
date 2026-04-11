@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTransaction } from "@/context/TransactionContext";
 import { STEPS, Step, MaintenanceRecordType } from "@/lib/types";
+import { mockBasicResults, mockProfessionalResults } from "@/lib/mock";
 
 type StepContent = {
   heading: string;
@@ -44,84 +45,90 @@ const stepContent: Record<Step, StepContent> = {
   },
 };
 
-function VerifyInterface() {
+// ─── Verify ──────────────────────────────────────────────────────────────────
+
+function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
   const {
     transaction,
     advanceStep,
+    requestBasicVerification,
+    completeBasicVerification,
+    requestProfessionalVerification,
+    completeProfessionalVerification,
   } = useTransaction();
 
   const { verification_status, documents } = transaction;
   const [showDocWarning, setShowDocWarning] = useState(false);
-  const [loadingBasic, setLoadingBasic] = useState(false);
-  const [loadingPro, setLoadingPro] = useState(false);
+  const [upsellLoading, setUpsellLoading] = useState(false);
 
   const allDocumentsUploaded =
     documents.ine.status === "uploaded" &&
     documents.registration.status === "uploaded" &&
     documents.invoice.status === "uploaded";
 
-  async function handleRunBasic() {
-    setLoadingBasic(true);
-    try {
-      const res = await fetch("/api/create-checkout-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "49" }),
-      });
-      const { url, error } = await res.json();
-      if (error || !url) throw new Error(error ?? "No checkout URL returned");
-      window.location.href = url;
-    } catch (err) {
-      console.error("[checkout] basic failed:", err);
-      setLoadingBasic(false);
-    }
-  }
+  // Auto-trigger verification on mount based on plan — only if not already started
+  useEffect(() => {
+    if (verification_status !== "not_started") return;
+    if (!plan) return;
 
-  async function handleRunProfessional() {
+    if (plan === "79") {
+      requestProfessionalVerification();
+      setTimeout(() => {
+        completeProfessionalVerification(mockProfessionalResults);
+      }, 4000);
+    } else {
+      // plan === "49"
+      requestBasicVerification();
+      setTimeout(() => {
+        completeBasicVerification(mockBasicResults);
+      }, 3000);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleUpsell() {
     if (!allDocumentsUploaded) {
       setShowDocWarning(true);
       return;
     }
     setShowDocWarning(false);
-    setLoadingPro(true);
+    setUpsellLoading(true);
     try {
-      const res = await fetch("/api/create-checkout-session", {
+      const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "79" }),
+        body: JSON.stringify({ priceId: "price_1TKnpHBgMSWbEFIIbmJUc4C7" }),
       });
       const { url, error } = await res.json();
-      if (error || !url) throw new Error(error ?? "No checkout URL returned");
+      if (error || !url) throw new Error(error ?? "No checkout URL");
       window.location.href = url;
     } catch (err) {
-      console.error("[checkout] professional failed:", err);
-      setLoadingPro(false);
+      console.error("[upsell] failed:", err);
+      setUpsellLoading(false);
     }
   }
 
-  if (verification_status === "not_started") {
+  // ── No plan — should not happen in normal flow ───────────────────────────
+  if (!plan) {
     return (
       <>
         <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
-          This is where important issues are often overlooked.
+          Verification required
         </h2>
         <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-8">
-          Basic verification checks REPUVE, outstanding liens, VIN registry, and
-          factura structure against public databases. Results come back
-          immediately. What it cannot check: document manipulation, identity
-          mismatches, or risks that don&apos;t appear in official records.
+          A verification plan is required to run checks on this vehicle.
         </p>
-        <button
-          onClick={handleRunBasic}
-          disabled={loadingBasic}
-          className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left disabled:opacity-60"
+        <a
+          href="/#pricing"
+          className="inline-block w-full bg-[var(--accent)] text-white text-sm font-medium px-5 py-3 rounded-lg text-center hover:opacity-90 transition-opacity"
         >
-          {loadingBasic ? "Redirecting…" : "Run basic verification — $49"}
-        </button>
+          View plans →
+        </a>
       </>
     );
   }
 
+  // ── Processing states ────────────────────────────────────────────────────
   if (verification_status === "basic_processing") {
     return (
       <>
@@ -141,6 +148,25 @@ function VerifyInterface() {
     );
   }
 
+  if (verification_status === "professional_processing") {
+    return (
+      <>
+        <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
+          Running full verification
+        </h2>
+        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
+          Verifying identity, documents, and running advanced fraud checks.
+        </p>
+        <div className="border border-[var(--border)] rounded-lg px-5 py-4">
+          <p className="text-sm text-[var(--foreground-muted)]">
+            Full review in progress — do not close this page.
+          </p>
+        </div>
+      </>
+    );
+  }
+
+  // ── Basic complete — show results + upsell ($49 users only) ─────────────
   if (verification_status === "basic_complete") {
     return (
       <>
@@ -159,26 +185,28 @@ function VerifyInterface() {
         <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-8">
           Basic verification queries official databases — it cannot detect
           document alterations, confirm the seller&apos;s true identity, or flag
-          risks that exist outside the public record. These are the issues that
-          typically surface after the transaction is completed.
+          risks that exist outside the public record.
         </p>
+
         <button
-          onClick={handleRunProfessional}
-          disabled={loadingPro}
+          onClick={handleUpsell}
+          disabled={upsellLoading}
           className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left mb-4 disabled:opacity-60"
         >
-          {loadingPro ? "Redirecting…" : "Get professional verification — $79"}
+          {upsellLoading ? "Redirecting…" : "Upgrade to full verification — $30"}
         </button>
+
         {showDocWarning && (
           <p className="text-xs text-amber-400 leading-relaxed mb-3">
-            Upload the required documents to continue with professional verification.
+            Upload the required documents to continue with full verification.
           </p>
         )}
         {allDocumentsUploaded && !showDocWarning && (
           <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mb-3">
-            Documents ready. You can proceed with professional verification.
+            Documents ready. You can proceed with full verification.
           </p>
         )}
+
         <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mb-2">
           A human reviewer checks the physical documents, confirms seller
           identity, and flags patterns that don&apos;t appear in automated checks.
@@ -187,39 +215,21 @@ function VerifyInterface() {
           onClick={advanceStep}
           className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors underline underline-offset-2"
         >
-          Continue without professional verification
+          Continue with basic results
         </button>
       </>
     );
   }
 
-  if (verification_status === "professional_processing") {
-    return (
-      <>
-        <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
-          Professional verification in progress
-        </h2>
-        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
-          The Nexcar team is reviewing documents, validating identity, and
-          running advanced fraud checks. This may take a few minutes.
-        </p>
-        <div className="border border-[var(--border)] rounded-lg px-5 py-4">
-          <p className="text-sm text-[var(--foreground-muted)]">
-            Human review in progress — you will be notified when complete.
-          </p>
-        </div>
-      </>
-    );
-  }
-
+  // ── Professional complete ────────────────────────────────────────────────
   if (verification_status === "professional_complete") {
     return (
       <>
         <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
-          Professional verification complete
+          Full verification complete
         </h2>
         <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-8">
-          Full results are shown below. Review the findings before proceeding
+          All results are shown below. Review the findings before proceeding
           to complete the transaction.
         </p>
         <button
@@ -234,6 +244,8 @@ function VerifyInterface() {
 
   return null;
 }
+
+// ─── Complete ────────────────────────────────────────────────────────────────
 
 function CompleteInterface() {
   const { transaction, generateContract, addMaintenanceRecord, enableShare, revokeShare } = useTransaction();
@@ -260,6 +272,7 @@ function CompleteInterface() {
     revokeShare();
     setShowShared(false);
   }
+
   const [recordType, setRecordType] = useState<MaintenanceRecordType>("service");
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
@@ -391,7 +404,9 @@ function CompleteInterface() {
   );
 }
 
-export default function AIInterface() {
+// ─── Main export ─────────────────────────────────────────────────────────────
+
+export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
   const { transaction, advanceStep } = useTransaction();
   const { current_step } = transaction;
   const currentIndex = STEPS.findIndex((s) => s.key === current_step);
@@ -404,7 +419,7 @@ export default function AIInterface() {
             Verify
           </span>
         </div>
-        <VerifyInterface />
+        <VerifyInterface plan={plan} />
       </section>
     );
   }
