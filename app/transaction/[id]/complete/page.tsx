@@ -1,14 +1,11 @@
 import { redirect } from "next/navigation";
-import AIInterface from "@/components/AIInterface";
 import Header from "@/components/Header";
-import DocumentsPanel from "@/components/panels/DocumentsPanel";
-import VerificationPanel from "@/components/panels/VerificationPanel";
-import ActivityPanel from "@/components/panels/ActivityPanel";
+import TransactionComplete from "@/components/TransactionComplete";
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
-export default async function TransactionPage({
+export default async function TransactionCompletePage({
   params,
 }: {
   params: { id: string };
@@ -41,16 +38,15 @@ export default async function TransactionPage({
     redirect("/");
   }
 
+  const email = rows[0].email ?? null;
+
   // ── Access granted ────────────────────────────────────────────────────────
   return (
     <>
       <Header />
       <main className="px-6 pb-16">
         <div className="max-w-[680px] mx-auto">
-          <AIInterface />
-          <DocumentsPanel />
-          <VerificationPanel />
-          <ActivityPanel />
+          <TransactionComplete transactionId={id} email={email} />
         </div>
       </main>
     </>

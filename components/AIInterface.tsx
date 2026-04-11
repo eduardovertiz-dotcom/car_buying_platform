@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useTransaction } from "@/context/TransactionContext";
 import { STEPS, Step, MaintenanceRecordType } from "@/lib/types";
-import { mockBasicResults, mockProfessionalResults } from "@/lib/mock";
 
 type StepContent = {
   heading: string;
@@ -14,9 +13,9 @@ type StepContent = {
 
 const stepContent: Record<Step, StepContent> = {
   understand: {
-    heading: "Before you move forward",
-    body: "Buying a car from a private seller in Mexico carries real risks — hidden debt, ownership mismatches, falsified factura, cloned or stolen vehicles, and payment fraud. Most buyers don't check all of this. This system will guide you through each step so you don't miss anything important.",
-    action: "I understand — begin the process",
+    heading: "Let's begin your verification",
+    body: "We'll guide you through each step to verify the vehicle, documents, and ownership. This ensures you don't miss anything critical before completing your purchase.",
+    action: "Begin verification",
     completedAction: "Step completed",
   },
   find: {
@@ -49,45 +48,55 @@ function VerifyInterface() {
   const {
     transaction,
     advanceStep,
-    requestBasicVerification,
-    completeBasicVerification,
-    requestProfessionalVerification,
-    completeProfessionalVerification,
   } = useTransaction();
 
   const { verification_status, documents } = transaction;
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showDocWarning, setShowDocWarning] = useState(false);
+  const [loadingBasic, setLoadingBasic] = useState(false);
+  const [loadingPro, setLoadingPro] = useState(false);
 
   const allDocumentsUploaded =
     documents.ine.status === "uploaded" &&
     documents.registration.status === "uploaded" &&
     documents.invoice.status === "uploaded";
 
-  // Clean up timer on unmount
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
-  function handleRunBasic() {
-    requestBasicVerification();
-    timerRef.current = setTimeout(() => {
-      completeBasicVerification(mockBasicResults);
-    }, 3000);
+  async function handleRunBasic() {
+    setLoadingBasic(true);
+    try {
+      const res = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: "49" }),
+      });
+      const { url, error } = await res.json();
+      if (error || !url) throw new Error(error ?? "No checkout URL returned");
+      window.location.href = url;
+    } catch (err) {
+      console.error("[checkout] basic failed:", err);
+      setLoadingBasic(false);
+    }
   }
 
-  function handleRunProfessional() {
+  async function handleRunProfessional() {
     if (!allDocumentsUploaded) {
       setShowDocWarning(true);
       return;
     }
     setShowDocWarning(false);
-    requestProfessionalVerification();
-    timerRef.current = setTimeout(() => {
-      completeProfessionalVerification(mockProfessionalResults);
-    }, 4000);
+    setLoadingPro(true);
+    try {
+      const res = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: "79" }),
+      });
+      const { url, error } = await res.json();
+      if (error || !url) throw new Error(error ?? "No checkout URL returned");
+      window.location.href = url;
+    } catch (err) {
+      console.error("[checkout] professional failed:", err);
+      setLoadingPro(false);
+    }
   }
 
   if (verification_status === "not_started") {
@@ -104,9 +113,10 @@ function VerifyInterface() {
         </p>
         <button
           onClick={handleRunBasic}
-          className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
+          disabled={loadingBasic}
+          className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left disabled:opacity-60"
         >
-          Run basic verification — $49
+          {loadingBasic ? "Redirecting…" : "Run basic verification — $49"}
         </button>
       </>
     );
@@ -154,9 +164,10 @@ function VerifyInterface() {
         </p>
         <button
           onClick={handleRunProfessional}
-          className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left mb-4"
+          disabled={loadingPro}
+          className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left mb-4 disabled:opacity-60"
         >
-          Get professional verification — $79
+          {loadingPro ? "Redirecting…" : "Get professional verification — $79"}
         </button>
         {showDocWarning && (
           <p className="text-xs text-amber-400 leading-relaxed mb-3">

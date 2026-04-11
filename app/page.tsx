@@ -1,8 +1,32 @@
+"use client";
+
 import Link from "next/link";
-import { Hero, Navbar } from "@/components/Hero";
+import Hero from "@/components/Hero";
+
+// 🔥 STRIPE HANDLER
+const handleCheckout = async (priceId: string) => {
+  try {
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ priceId }),
+    });
+
+    const data = await res.json();
+    console.log("[checkout] response:", data);
+
+    if (!res.ok || !data.url) {
+      console.error("[checkout] missing url:", data);
+      return;
+    }
+
+    window.location.href = data.url;
+  } catch (err) {
+    console.error("[checkout] fetch failed:", err);
+  }
+};
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
-
 
 function IconAlert() {
   return (
@@ -80,8 +104,6 @@ function Divider() {
 export default function Home() {
   return (
     <>
-      <Navbar />
-
       <main>
 
         {/* ── HERO ── */}
@@ -130,11 +152,6 @@ export default function Home() {
         <Divider />
 
         {/* ── PROCESS ── */}
-        {/*
-          Mobile:  1 col
-          md:      2 col (wraps gracefully)
-          lg:      5 col row
-        */}
         <section className="py-14 md:py-24" id="how-it-works">
           <Container>
             <div className="mb-8 lg:mb-14">
@@ -165,10 +182,6 @@ export default function Home() {
         <Divider />
 
         {/* ── WHERE BUYERS GO WRONG ── */}
-        {/*
-          Mobile:  stacked (narrative → list)
-          Desktop: two-column, narrative anchors left, list fills right
-        */}
         <section className="py-14 md:py-24">
           <Container>
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8 lg:gap-20 items-start">
@@ -208,15 +221,10 @@ export default function Home() {
         <Divider />
 
         {/* ── WHAT THE DATA SHOWS ── */}
-        {/*
-          Mobile:  1 col stats → closing card
-          Desktop: left = header + closing statement, right = stat grid (2-col)
-        */}
         <section className="py-12 md:py-20">
           <Container>
             <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] xl:grid-cols-[360px_1fr] gap-8 lg:gap-20 items-start">
 
-              {/* Left: header + closing statement */}
               <div className="lg:sticky lg:top-28">
                 <div className="flex items-center gap-2.5 text-[var(--foreground-muted)] mb-3">
                   <IconBar />
@@ -233,7 +241,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Right: stat grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
                 {[
                   { stat: "Up to 40%", detail: "of transactions contain irregularities" },
@@ -260,119 +267,114 @@ export default function Home() {
           <Container>
             <div className="max-w-[980px] mx-auto">
 
-            <div className="mb-8 lg:mb-14 text-center">
-              <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">Pricing</p>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-2">
-                Choose your level of certainty
-              </h2>
-              <p className="text-sm lg:text-base text-[var(--foreground-muted)]">
-                Start with guided verification or validate at a professional level before you commit.
+              <div className="mb-8 lg:mb-14 text-center">
+                <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">Pricing</p>
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-2">
+                  Avoid costly mistakes before you buy
+                </h2>
+                <p className="text-sm lg:text-base text-[var(--foreground-muted)]">
+                  Verify the vehicle, the seller, and the risk before committing.
+                </p>
+                <p className="text-sm text-white/60 text-center mt-4 mb-10">Most buyers choose full protection for high-value purchases.</p>
+              </div>
+
+              <div className="flex flex-col md:flex-row justify-center gap-8 lg:gap-12">
+
+                {/* $49 */}
+                <div className="flex flex-col bg-white/[0.04] rounded-xl px-6 py-8 lg:px-8 lg:py-10 w-full max-w-[460px]">
+                  <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-1">Guided Purchase</p>
+                  <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
+                    Essential vehicle history and risk overview.
+                  </p>
+
+                  <div className="flex items-end gap-1.5 mb-6">
+                    <span className="text-[3.5rem] lg:text-[4rem] font-semibold text-white leading-none tracking-tight">$49</span>
+                    <span className="text-sm text-[var(--foreground-muted)] mb-2">one-time</span>
+                  </div>
+
+                  <div className="h-px bg-white/[0.08] mb-6" />
+
+                  <ul className="flex flex-col gap-3 mb-6 lg:mb-8 flex-1">
+                    {[
+                      "Full AI-guided process (Find → Evaluate → Verify → Complete)",
+                      "AI-assisted deal evaluation (red flags, missing information)",
+                      "Basic verification (registry, ownership, fines)",
+                      "Risk interpretation layer",
+                      "Guided contract generation and transaction record",
+                    ].map((f) => (
+                      <li key={f} className="flex items-start gap-3">
+                        <span className="shrink-0 mt-0.5 text-[var(--foreground-muted)] opacity-70"><IconCheck /></span>
+                        <span className="text-sm text-[var(--foreground-muted)] leading-relaxed">{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <p className="text-xs text-[var(--foreground-muted)] opacity-60 leading-relaxed mb-6">
+                    Does not include identity or fraud risk verification.
+                  </p>
+
+                  {/* 🔥 $49 BUTTON */}
+                  <button
+                    onClick={() => handleCheckout("price_1TKnooBgMSWbEFIIv0Pg5V1P")}
+                    className="block w-full bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-4 py-3 text-center hover:opacity-90 transition-opacity"
+                  >
+                    Get Basic Report
+                  </button>
+                </div>
+
+                {/* $79 — recommended */}
+                <div className="flex flex-col bg-white/[0.06] border border-[var(--accent)] rounded-xl px-6 py-8 lg:px-8 lg:py-10 w-full max-w-[460px] scale-105 shadow-lg">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest">Professional Verification</p>
+                    <span className="text-[10px] font-medium uppercase tracking-widest text-[var(--accent)] bg-[var(--accent)]/10 px-2 py-0.5 rounded-full">Best Protection</span>
+                  </div>
+                  <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
+                    Full verification including identity and fraud risk analysis.
+                  </p>
+
+                  <div className="flex items-end gap-1.5 mb-2">
+                    <span className="text-[3.5rem] lg:text-[4rem] font-semibold text-white leading-none tracking-tight">$79</span>
+                    <span className="text-sm text-[var(--foreground-muted)] mb-2">one-time</span>
+                  </div>
+                  <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mb-6">Catches identity and fraud risks before you commit.</p>
+
+                  <div className="h-px bg-white/[0.08] mb-6" />
+
+                  <ul className="flex flex-col gap-3 mb-6 lg:mb-8 flex-1">
+                    {[
+                      "Everything in Guided Purchase",
+                      "Institutional-level verification (multi-source checks)",
+                      "Document inspection (factura, ID, consistency validation)",
+                      "Human expert review",
+                      "Fraud pattern detection",
+                      "Structured risk assessment with confidence level",
+                    ].map((f) => (
+                      <li key={f} className="flex items-start gap-3">
+                        <span className="shrink-0 mt-0.5 text-[var(--foreground-muted)] opacity-70"><IconCheck /></span>
+                        <span className="text-sm text-[var(--foreground-muted)] leading-relaxed">{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <p className="text-xs text-[var(--foreground-muted)] opacity-60 leading-relaxed mb-6">
+                    Not a guarantee. Highest level of verification available to a buyer.
+                  </p>
+
+                  {/* 🔥 $79 BUTTON */}
+                  <button
+                    onClick={() => handleCheckout("price_1TKnpHBgMSWbEFIIbmJUc4C7")}
+                    className="block w-full bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-4 py-3 text-center hover:opacity-90 transition-opacity"
+                  >
+                    Get Full Protection
+                  </button>
+                </div>
+
+              </div>
+
+              <p className="text-xs lg:text-sm text-[var(--foreground-muted)] leading-relaxed mt-10 text-center">
+                <span className="text-white">Progressive certainty:</span>{" "}
+                Start with system-based validation or escalate to professional verification for higher confidence.
               </p>
-            </div>
-
-            <div className="flex flex-col md:flex-row justify-center gap-8 lg:gap-12">
-
-              {/* $49 */}
-              <div className="flex flex-col bg-white/[0.04] rounded-xl px-6 py-8 lg:px-8 lg:py-10 w-full max-w-[460px]">
-                {/* Title block */}
-                <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-1">Guided Purchase</p>
-                <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
-                  Understand the deal and check what&apos;s visible.
-                </p>
-
-                {/* Price — primary focal point */}
-                <div className="flex items-end gap-1.5 mb-6">
-                  <span className="text-[3.5rem] lg:text-[4rem] font-semibold text-white leading-none tracking-tight">$49</span>
-                  <span className="text-sm text-[var(--foreground-muted)] mb-2">one-time</span>
-                </div>
-
-                {/* Divider */}
-                <div className="h-px bg-white/[0.08] mb-6" />
-
-                {/* Features */}
-                <ul className="flex flex-col gap-3 mb-6 lg:mb-8 flex-1">
-                  {[
-                    "Full AI-guided process (Find → Evaluate → Verify → Complete)",
-                    "AI-assisted deal evaluation (red flags, missing information)",
-                    "Basic verification (registry, ownership, fines)",
-                    "Risk interpretation layer",
-                    "Guided contract generation and transaction record",
-                  ].map((f) => (
-                    <li key={f} className="flex items-start gap-3">
-                      <span className="shrink-0 mt-0.5 text-[var(--foreground-muted)] opacity-70"><IconCheck /></span>
-                      <span className="text-sm text-[var(--foreground-muted)] leading-relaxed">{f}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* Caveat */}
-                <p className="text-xs text-[var(--foreground-muted)] opacity-60 leading-relaxed mb-6">
-                  Does not include human review or document inspection. Limited to available database information.
-                </p>
-
-                {/* CTA */}
-                <Link
-                  href="/transactions"
-                  className="block w-full bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-4 py-3 text-center hover:opacity-90 transition-opacity"
-                >
-                  Start verification
-                </Link>
-              </div>
-
-              {/* $79 */}
-              <div className="flex flex-col bg-white/[0.04] rounded-xl px-6 py-8 lg:px-8 lg:py-10 w-full max-w-[460px]">
-                {/* Title block */}
-                <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-1">Professional Verification</p>
-                <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
-                  Verify at a professional level before you commit.
-                </p>
-
-                {/* Price — primary focal point */}
-                <div className="flex items-end gap-1.5 mb-6">
-                  <span className="text-[3.5rem] lg:text-[4rem] font-semibold text-white leading-none tracking-tight">$79</span>
-                  <span className="text-sm text-[var(--foreground-muted)] mb-2">one-time</span>
-                </div>
-
-                {/* Divider */}
-                <div className="h-px bg-white/[0.08] mb-6" />
-
-                {/* Features */}
-                <ul className="flex flex-col gap-3 mb-6 lg:mb-8 flex-1">
-                  {[
-                    "Everything in Guided Purchase",
-                    "Institutional-level verification (multi-source checks)",
-                    "Document inspection (factura, ID, consistency validation)",
-                    "Human expert review",
-                    "Fraud pattern detection",
-                    "Structured risk assessment with confidence level",
-                  ].map((f) => (
-                    <li key={f} className="flex items-start gap-3">
-                      <span className="shrink-0 mt-0.5 text-[var(--foreground-muted)] opacity-70"><IconCheck /></span>
-                      <span className="text-sm text-[var(--foreground-muted)] leading-relaxed">{f}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* Caveat */}
-                <p className="text-xs text-[var(--foreground-muted)] opacity-60 leading-relaxed mb-6">
-                  Not a guarantee. Highest level of verification available to a buyer.
-                </p>
-
-                {/* CTA */}
-                <Link
-                  href="/transactions"
-                  className="block w-full bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-4 py-3 text-center hover:opacity-90 transition-opacity"
-                >
-                  Start verification
-                </Link>
-              </div>
-
-            </div>
-
-            <p className="text-xs lg:text-sm text-[var(--foreground-muted)] leading-relaxed mt-6 text-center">
-              <span className="text-white">Progressive certainty:</span>{" "}
-              Start with system-based validation or escalate to professional verification for higher confidence.
-            </p>
 
             </div>
           </Container>
@@ -385,25 +387,21 @@ export default function Home() {
           <Container>
             <div className="max-w-[520px] mx-auto text-center">
 
-              {/* Label */}
               <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-5">
                 Get started
               </p>
 
-              {/* Headline — locked two lines */}
               <h2 className="text-3xl sm:text-[2.25rem] font-semibold text-white tracking-tight leading-[1.1] mb-4">
                 Know what you&apos;re buying<br />before you pay.
               </h2>
 
-              {/* Subtext — two clean lines */}
               <p className="text-[15px] text-[var(--foreground-muted)] leading-relaxed max-w-[360px] mx-auto">
                 Open a transaction and walk through each step<br className="hidden sm:block" /> with structured guidance. Verify before you commit.
               </p>
 
-              {/* CTA */}
               <div className="mt-8">
                 <Link
-                  href="/transactions"
+                  href="#pricing"
                   className="inline-flex items-center gap-2 bg-[var(--accent)] text-white text-[15px] font-semibold rounded-lg px-7 py-3.5 hover:opacity-90 transition-opacity"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -427,21 +425,20 @@ export default function Home() {
         <Divider />
         <Container className="py-12 lg:py-16">
 
-          {/* Top: brand + nav columns */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-12 mb-10 md:mb-14">
 
             {/* Brand */}
             <div>
               <p className="text-sm font-semibold text-white mb-3">MexGuardian</p>
               <p className="text-sm text-[var(--foreground-muted)] leading-relaxed">
-                Structured verification for used car purchases in Mexico.<br />
-                Know what you&apos;re buying before you commit.
+                Vehicle verification for used car purchases in Mexico.<br />
+                <span className="text-[var(--foreground-muted)] opacity-70">Helping buyers identify risk before committing.</span>
               </p>
             </div>
 
             {/* Product */}
             <div>
-              <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-4">Product</p>
+              <p className="text-xs text-white/50 font-medium uppercase tracking-wider mb-3">Product</p>
               <ul className="flex flex-col gap-3">
                 <li>
                   <Link href="#how-it-works" className="text-sm text-[var(--foreground-muted)] hover:text-white transition-colors">
@@ -458,7 +455,7 @@ export default function Home() {
 
             {/* Legal + Contact */}
             <div>
-              <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-4">Legal</p>
+              <p className="text-xs text-white/50 font-medium uppercase tracking-wider mb-3">Legal</p>
               <ul className="flex flex-col gap-3 mb-6">
                 <li>
                   <Link href="/privacy" className="text-sm text-[var(--foreground-muted)] hover:text-white transition-colors">
@@ -483,7 +480,6 @@ export default function Home() {
 
           <Divider />
 
-          {/* Bottom strip */}
           <p className="text-sm text-[var(--foreground-muted)] pt-8">
             © 2026 MexGuardian. All rights reserved.
           </p>

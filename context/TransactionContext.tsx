@@ -256,10 +256,32 @@ type Props = {
   children: ReactNode;
 };
 
+function createFreshTransaction(id: string): Transaction {
+  return {
+    id,
+    vehicle: { make: "", model: "", year: new Date().getFullYear() },
+    current_step: "understand",
+    checklist_progress: 0,
+    verification_status: "not_started",
+    documents: { ...DEFAULT_DOCUMENTS },
+    verification_results: null,
+    activity_log: [
+      {
+        id: `act_${Date.now()}`,
+        type: "transaction_created",
+        step: "understand",
+        timestamp: new Date().toISOString(),
+      },
+    ],
+    contract: { status: "not_started" },
+    maintenance: { records: [] },
+    share: { enabled: false },
+    created_at: new Date().toISOString(),
+  };
+}
+
 function getInitialState(transactionId: string): Transaction {
-  const mock = mockTransactions.find((t) => t.id === transactionId);
-  if (!mock) throw new Error(`Transaction ${transactionId} not found`);
-  return mock;
+  return mockTransactions.find((t) => t.id === transactionId) ?? createFreshTransaction(transactionId);
 }
 
 export function TransactionProvider({ transactionId, children }: Props) {
