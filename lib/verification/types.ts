@@ -9,7 +9,7 @@ export type ProviderError =
 // Adapters never throw; they always return a ProviderResult.
 export type ProviderResult<T> =
   | { ok: true; data: T }
-  | { ok: false; error: ProviderError };
+  | { ok: false; error: ProviderError; source: string };
 
 // ── Verifik / REPUVE ─────────────────────────────────────────────────────────
 export type RepuveResult = {

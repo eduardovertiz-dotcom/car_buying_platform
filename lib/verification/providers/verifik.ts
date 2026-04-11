@@ -10,7 +10,7 @@ export async function checkRepuve(
 
   if (!apiKey) {
     console.error("VERIFIK: VERIFIK_API_KEY is not set");
-    return { ok: false, error: "provider_error" };
+    return { ok: false, error: "provider_error", source: "verifik" };
   }
 
   const controller = new AbortController();
@@ -31,7 +31,7 @@ export async function checkRepuve(
 
     if (!res.ok) {
       console.error("VERIFIK: HTTP error", { status: res.status });
-      return { ok: false, error: "provider_error" };
+      return { ok: false, error: "provider_error", source: "verifik" };
     }
 
     let json: unknown;
@@ -39,14 +39,14 @@ export async function checkRepuve(
       json = await res.json();
     } catch {
       console.error("VERIFIK: failed to parse response");
-      return { ok: false, error: "invalid_response" };
+      return { ok: false, error: "invalid_response", source: "verifik" };
     }
 
     const data = (json as Record<string, unknown>)?.data as Record<string, unknown> | undefined;
 
     if (!data || typeof data !== "object") {
       console.error("VERIFIK: unexpected response shape");
-      return { ok: false, error: "invalid_response" };
+      return { ok: false, error: "invalid_response", source: "verifik" };
     }
 
     const theft: boolean =
@@ -67,10 +67,10 @@ export async function checkRepuve(
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") {
       console.error("VERIFIK: timeout");
-      return { ok: false, error: "timeout" };
+      return { ok: false, error: "timeout", source: "verifik" };
     }
     console.error("VERIFIK: network error");
-    return { ok: false, error: "network_error" };
+    return { ok: false, error: "network_error", source: "verifik" };
   } finally {
     clearTimeout(timer);
   }
