@@ -6,7 +6,7 @@ import type { ProviderResult, FacturaResult, VerifyInput } from "@/lib/verificat
 
 const FACTURA_NOT_PROVIDED: ProviderResult<FacturaResult> = {
   ok: false,
-  error: "invalid_response",
+  error: "not_provided",
   source: "validacfdi",
 };
 

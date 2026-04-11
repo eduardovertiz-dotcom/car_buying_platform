@@ -3,7 +3,8 @@ export type ProviderError =
   | "timeout"          // AbortController fired
   | "network_error"    // fetch threw (DNS, TCP, etc.)
   | "invalid_response" // response parsed but shape is unexpected
-  | "provider_error";  // non-200 HTTP status from the provider
+  | "provider_error"   // non-200 HTTP status from the provider
+  | "not_provided";    // required input was not submitted by caller
 
 // Discriminated union — every adapter resolves to one of these two shapes.
 // Adapters never throw; they always return a ProviderResult.

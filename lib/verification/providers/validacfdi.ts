@@ -8,6 +8,19 @@ type FacturaInput = NonNullable<VerifyInput["factura"]>;
 export async function validateFactura(
   factura: FacturaInput
 ): Promise<ProviderResult<FacturaResult>> {
+  // Validate required fields before calling API
+  if (
+    !factura.uuid?.trim() ||
+    !factura.rfc_emisor?.trim() ||
+    !factura.rfc_receptor?.trim() ||
+    typeof factura.total !== "number" ||
+    !isFinite(factura.total) ||
+    factura.total <= 0
+  ) {
+    console.error("VALIDACFDI: invalid input fields");
+    return { ok: false, error: "invalid_response", source: "validacfdi" };
+  }
+
   const apiKey = process.env.VALIDACFDI_API_KEY;
 
   if (!apiKey) {
@@ -51,11 +64,7 @@ export async function validateFactura(
 
     const valid: boolean = raw.valid;
     const status: string =
-      typeof raw.status === "string"
-        ? raw.status
-        : valid
-        ? "vigente"
-        : "cancelado";
+      typeof raw.status === "string" ? raw.status : "unknown";
 
     return { ok: true, data: { valid, status } };
   } catch (err) {
