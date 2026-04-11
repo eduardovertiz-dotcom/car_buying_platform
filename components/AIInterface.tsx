@@ -266,6 +266,9 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
   if (verification_status === "basic_complete") {
     const repuveResult = verifyChecks ? mapRepuve(verifyChecks.repuve) : null;
     const facturaResult = verifyChecks ? mapFactura(verifyChecks.factura) : null;
+    const allUnavailable =
+      (!repuveResult || repuveResult.status === "unavailable") &&
+      (!facturaResult || facturaResult.status === "unavailable");
 
     return (
       <>
@@ -281,28 +284,38 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
               Verification Results
             </p>
 
-            {repuveResult && (
+            {allUnavailable ? (
               <div className="mb-2">
-                <p className={`text-sm font-medium leading-relaxed ${
-                  repuveResult.status === "success" ? "text-green-400"
-                  : repuveResult.status === "warning" ? "text-amber-400"
-                  : "text-[var(--foreground-muted)]"
-                }`}>
-                  REPUVE — {repuveResult.text}
+                <p className="text-sm font-medium leading-relaxed text-[var(--foreground-muted)]">
+                  Verification could not be completed at this time.
                 </p>
               </div>
-            )}
+            ) : (
+              <>
+                {repuveResult && (
+                  <div className="mb-2">
+                    <p className={`text-sm font-medium leading-relaxed ${
+                      repuveResult.status === "success" ? "text-green-400"
+                      : repuveResult.status === "warning" ? "text-amber-400"
+                      : "text-[var(--foreground-muted)]"
+                    }`}>
+                      REPUVE — {repuveResult.text}
+                    </p>
+                  </div>
+                )}
 
-            {facturaResult && (
-              <div className="mb-2">
-                <p className={`text-sm font-medium leading-relaxed ${
-                  facturaResult.status === "success" ? "text-green-400"
-                  : facturaResult.status === "warning" ? "text-amber-400"
-                  : "text-[var(--foreground-muted)]"
-                }`}>
-                  Factura — {facturaResult.text}
-                </p>
-              </div>
+                {facturaResult && (
+                  <div className="mb-2">
+                    <p className={`text-sm font-medium leading-relaxed ${
+                      facturaResult.status === "success" ? "text-green-400"
+                      : facturaResult.status === "warning" ? "text-amber-400"
+                      : "text-[var(--foreground-muted)]"
+                    }`}>
+                      Factura — {facturaResult.text}
+                    </p>
+                  </div>
+                )}
+              </>
             )}
 
             <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-3">
@@ -357,6 +370,9 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
   if (verification_status === "professional_complete") {
     const repuveResult = verifyChecks ? mapRepuve(verifyChecks.repuve) : null;
     const facturaResult = verifyChecks ? mapFactura(verifyChecks.factura) : null;
+    const allUnavailable =
+      (!repuveResult || repuveResult.status === "unavailable") &&
+      (!facturaResult || facturaResult.status === "unavailable");
 
     return (
       <>
@@ -376,28 +392,38 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
               Verification Results
             </p>
 
-            {repuveResult && (
+            {allUnavailable ? (
               <div className="mb-2">
-                <p className={`text-sm font-medium leading-relaxed ${
-                  repuveResult.status === "success" ? "text-green-400"
-                  : repuveResult.status === "warning" ? "text-amber-400"
-                  : "text-[var(--foreground-muted)]"
-                }`}>
-                  REPUVE — {repuveResult.text}
+                <p className="text-sm font-medium leading-relaxed text-[var(--foreground-muted)]">
+                  Verification could not be completed at this time.
                 </p>
               </div>
-            )}
+            ) : (
+              <>
+                {repuveResult && (
+                  <div className="mb-2">
+                    <p className={`text-sm font-medium leading-relaxed ${
+                      repuveResult.status === "success" ? "text-green-400"
+                      : repuveResult.status === "warning" ? "text-amber-400"
+                      : "text-[var(--foreground-muted)]"
+                    }`}>
+                      REPUVE — {repuveResult.text}
+                    </p>
+                  </div>
+                )}
 
-            {facturaResult && (
-              <div className="mb-2">
-                <p className={`text-sm font-medium leading-relaxed ${
-                  facturaResult.status === "success" ? "text-green-400"
-                  : facturaResult.status === "warning" ? "text-amber-400"
-                  : "text-[var(--foreground-muted)]"
-                }`}>
-                  Factura — {facturaResult.text}
-                </p>
-              </div>
+                {facturaResult && (
+                  <div className="mb-2">
+                    <p className={`text-sm font-medium leading-relaxed ${
+                      facturaResult.status === "success" ? "text-green-400"
+                      : facturaResult.status === "warning" ? "text-amber-400"
+                      : "text-[var(--foreground-muted)]"
+                    }`}>
+                      Factura — {facturaResult.text}
+                    </p>
+                  </div>
+                )}
+              </>
             )}
 
             <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-3">
