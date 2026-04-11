@@ -34,6 +34,12 @@ export default function TransactionsPage() {
   const [isFacturaOpen, setIsFacturaOpen] = useState(false);
   const facturaRef = useRef<HTMLDivElement>(null);
 
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  }
+
   function handleOpenFactura() {
     setIsFacturaOpen(true);
     setTimeout(() => {
@@ -174,12 +180,20 @@ export default function TransactionsPage() {
                   Your active transactions
                 </p>
               </div>
-              <Link
-                href="/#pricing"
-                className="shrink-0 bg-[var(--accent)] text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:opacity-90 transition-opacity"
-              >
-                + Start new
-              </Link>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleLogout}
+                  className="text-sm text-[var(--foreground-muted)] hover:text-white transition-colors"
+                >
+                  Sign out
+                </button>
+                <Link
+                  href="/#pricing"
+                  className="shrink-0 bg-[var(--accent)] text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:opacity-90 transition-opacity"
+                >
+                  + Start new
+                </Link>
+              </div>
             </div>
 
             <div className="flex flex-col gap-3">
