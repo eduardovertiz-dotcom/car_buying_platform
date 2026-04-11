@@ -124,6 +124,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
   const [upsellLoading, setUpsellLoading] = useState(false);
   const [verifyChecks, setVerifyChecks] = useState<VerifyChecks | null>(null);
   const [verifyError, setVerifyError] = useState(false);
+  const [verifyMode, setVerifyMode] = useState<"manual" | "automated" | null>(null);
 
   const allDocumentsUploaded =
     documents.ine.status === "uploaded" &&
@@ -160,7 +161,24 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
-      .then((data: { success: boolean; checks: VerifyChecks }) => {
+      .then((data: { success: boolean; mode?: string; checks: VerifyChecks }) => {
+        const mode = data.mode === "manual" ? "manual" : "automated";
+        setVerifyMode(mode);
+
+        if (mode === "manual") {
+          // Manual mode: advance the step with a neutral result.
+          // The UI will show the "in progress" message instead of check results.
+          const manualResult: VerificationResult = {
+            status: "safe",
+            summary: "Manual verification in progress.",
+            findings: [],
+            confidence: 0,
+          };
+          if (shouldRunProfessional) completeProfessionalVerification(manualResult);
+          else completeBasicVerification(manualResult);
+          return;
+        }
+
         const checks = data.checks;
         setVerifyChecks(checks);
         const result = checksToVerificationResult(checks);
@@ -272,56 +290,73 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
 
     return (
       <>
-        {verifyError && (
-          <p className="text-sm text-amber-400 leading-relaxed mb-4">
-            Some checks could not be completed. You can still proceed.
-          </p>
-        )}
-
-        {(repuveResult || facturaResult) && (
+        {/* Results section — manual message or real check results */}
+        {verifyMode === "manual" ? (
           <div className="mb-6">
             <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
               Verification Results
             </p>
-
-            {allUnavailable ? (
-              <div className="mb-2">
-                <p className="text-sm font-medium leading-relaxed text-[var(--foreground-muted)]">
-                  Verification could not be completed at this time.
-                </p>
-              </div>
-            ) : (
-              <>
-                {repuveResult && (
-                  <div className="mb-2">
-                    <p className={`text-sm font-medium leading-relaxed ${
-                      repuveResult.status === "success" ? "text-green-400"
-                      : repuveResult.status === "warning" ? "text-amber-400"
-                      : "text-[var(--foreground-muted)]"
-                    }`}>
-                      REPUVE — {repuveResult.text}
-                    </p>
-                  </div>
-                )}
-
-                {facturaResult && (
-                  <div className="mb-2">
-                    <p className={`text-sm font-medium leading-relaxed ${
-                      facturaResult.status === "success" ? "text-green-400"
-                      : facturaResult.status === "warning" ? "text-amber-400"
-                      : "text-[var(--foreground-muted)]"
-                    }`}>
-                      Factura — {facturaResult.text}
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-
-            <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-3">
-              If any issues appear, we recommend verifying directly with the seller before proceeding.
+            <p className="text-sm font-medium leading-relaxed text-[var(--foreground-muted)]">
+              Your verification is in progress.
+            </p>
+            <p className="text-sm leading-relaxed text-[var(--foreground-muted)] mt-1">
+              Our team will review your vehicle and documents. You&apos;ll receive results within 24 hours.
             </p>
           </div>
+        ) : (
+          <>
+            {verifyError && (
+              <p className="text-sm text-amber-400 leading-relaxed mb-4">
+                Some checks could not be completed. You can still proceed.
+              </p>
+            )}
+
+            {(repuveResult || facturaResult) && (
+              <div className="mb-6">
+                <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
+                  Verification Results
+                </p>
+
+                {allUnavailable ? (
+                  <div className="mb-2">
+                    <p className="text-sm font-medium leading-relaxed text-[var(--foreground-muted)]">
+                      Verification could not be completed at this time.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {repuveResult && (
+                      <div className="mb-2">
+                        <p className={`text-sm font-medium leading-relaxed ${
+                          repuveResult.status === "success" ? "text-green-400"
+                          : repuveResult.status === "warning" ? "text-amber-400"
+                          : "text-[var(--foreground-muted)]"
+                        }`}>
+                          REPUVE — {repuveResult.text}
+                        </p>
+                      </div>
+                    )}
+
+                    {facturaResult && (
+                      <div className="mb-2">
+                        <p className={`text-sm font-medium leading-relaxed ${
+                          facturaResult.status === "success" ? "text-green-400"
+                          : facturaResult.status === "warning" ? "text-amber-400"
+                          : "text-[var(--foreground-muted)]"
+                        }`}>
+                          Factura — {facturaResult.text}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-3">
+                  If any issues appear, we recommend verifying directly with the seller before proceeding.
+                </p>
+              </div>
+            )}
+          </>
         )}
 
         <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
@@ -380,56 +415,73 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
           Full verification complete
         </h2>
 
-        {verifyError && (
-          <p className="text-sm text-amber-400 leading-relaxed mb-4">
-            Some checks could not be completed. You can still proceed.
-          </p>
-        )}
-
-        {(repuveResult || facturaResult) && (
+        {/* Results section — manual message or real check results */}
+        {verifyMode === "manual" ? (
           <div className="mb-6">
             <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
               Verification Results
             </p>
-
-            {allUnavailable ? (
-              <div className="mb-2">
-                <p className="text-sm font-medium leading-relaxed text-[var(--foreground-muted)]">
-                  Verification could not be completed at this time.
-                </p>
-              </div>
-            ) : (
-              <>
-                {repuveResult && (
-                  <div className="mb-2">
-                    <p className={`text-sm font-medium leading-relaxed ${
-                      repuveResult.status === "success" ? "text-green-400"
-                      : repuveResult.status === "warning" ? "text-amber-400"
-                      : "text-[var(--foreground-muted)]"
-                    }`}>
-                      REPUVE — {repuveResult.text}
-                    </p>
-                  </div>
-                )}
-
-                {facturaResult && (
-                  <div className="mb-2">
-                    <p className={`text-sm font-medium leading-relaxed ${
-                      facturaResult.status === "success" ? "text-green-400"
-                      : facturaResult.status === "warning" ? "text-amber-400"
-                      : "text-[var(--foreground-muted)]"
-                    }`}>
-                      Factura — {facturaResult.text}
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-
-            <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-3">
-              If any issues appear, we recommend verifying directly with the seller before proceeding.
+            <p className="text-sm font-medium leading-relaxed text-[var(--foreground-muted)]">
+              Your verification is in progress.
+            </p>
+            <p className="text-sm leading-relaxed text-[var(--foreground-muted)] mt-1">
+              Our team will review your vehicle and documents. You&apos;ll receive results within 24 hours.
             </p>
           </div>
+        ) : (
+          <>
+            {verifyError && (
+              <p className="text-sm text-amber-400 leading-relaxed mb-4">
+                Some checks could not be completed. You can still proceed.
+              </p>
+            )}
+
+            {(repuveResult || facturaResult) && (
+              <div className="mb-6">
+                <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
+                  Verification Results
+                </p>
+
+                {allUnavailable ? (
+                  <div className="mb-2">
+                    <p className="text-sm font-medium leading-relaxed text-[var(--foreground-muted)]">
+                      Verification could not be completed at this time.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {repuveResult && (
+                      <div className="mb-2">
+                        <p className={`text-sm font-medium leading-relaxed ${
+                          repuveResult.status === "success" ? "text-green-400"
+                          : repuveResult.status === "warning" ? "text-amber-400"
+                          : "text-[var(--foreground-muted)]"
+                        }`}>
+                          REPUVE — {repuveResult.text}
+                        </p>
+                      </div>
+                    )}
+
+                    {facturaResult && (
+                      <div className="mb-2">
+                        <p className={`text-sm font-medium leading-relaxed ${
+                          facturaResult.status === "success" ? "text-green-400"
+                          : facturaResult.status === "warning" ? "text-amber-400"
+                          : "text-[var(--foreground-muted)]"
+                        }`}>
+                          Factura — {facturaResult.text}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-3">
+                  If any issues appear, we recommend verifying directly with the seller before proceeding.
+                </p>
+              </div>
+            )}
+          </>
         )}
 
         <button

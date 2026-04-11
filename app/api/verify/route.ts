@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isManualMode } from "@/lib/verification/mode";
 import { checkRepuve } from "@/lib/verification/providers/verifik";
 import { validateFactura } from "@/lib/verification/providers/validacfdi";
 import type {
@@ -9,7 +10,26 @@ import type {
   VerifyInput,
 } from "@/lib/verification/types";
 
-// Fallback constants — used when an adapter unexpectedly throws
+// ── Mode — read once at module load ──────────────────────────────────────────
+// Switch between "manual" and "automated" via VERIFICATION_MODE env var.
+// Default: "manual". No other code needs to change when switching.
+const MANUAL = isManualMode();
+
+// ── Manual-mode response shape ────────────────────────────────────────────────
+// Returned immediately — no external API calls are made.
+// `checks` preserves the expected shape so the frontend always destructures safely.
+const MANUAL_RESPONSE = {
+  success: true,
+  mode: "manual" as const,
+  message: "Verification in progress",
+  checks: {
+    repuve: { ok: false, error: "pending", source: "manual" },
+    factura: { ok: false, error: "pending", source: "manual" },
+  },
+};
+
+// ── Automated-mode fallback constants ─────────────────────────────────────────
+// Used only in automated mode when an adapter unexpectedly throws.
 const REPUVE_FALLBACK: ProviderResult<RepuveResult> = {
   ok: false,
   error: "network_error",
@@ -49,10 +69,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "plate is required" }, { status: 400 });
   }
 
-  // Normalize once, centrally, before any provider call
+  // ── Manual mode: return immediately, no external calls ───────────────────
+  if (MANUAL) {
+    return NextResponse.json(MANUAL_RESPONSE);
+  }
+
+  // ── Automated mode: run providers in parallel ────────────────────────────
+  // Normalize once, centrally, before any provider call.
   const plate = body.plate.trim().toUpperCase();
 
-  // Run both providers in parallel.
   // Each call is guarded with .catch() so an unexpected throw
   // never crashes the route — checks object is always complete.
   const [repuve, factura] = await Promise.all([
@@ -70,6 +95,7 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     success: true,
+    mode: "automated" as const,
     checks: {
       repuve,
       factura,
