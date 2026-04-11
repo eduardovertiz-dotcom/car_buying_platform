@@ -69,11 +69,29 @@ export default function TransactionsPage() {
         return;
       }
 
-      const { data, error } = await supabase
+      // Execute any pending bind immediately after login
+      const pendingBind = localStorage.getItem("bind_pending");
+      if (pendingBind) {
+        const res = await fetch("/api/bind-transaction", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transactionId: pendingBind }),
+        });
+        if (res.ok) {
+          localStorage.removeItem("bind_pending");
+        }
+      }
+
+      const query = supabase
         .from("transactions")
         .select("id, created_at, status, plan")
-        .eq("status", "paid")
-        .or(`user_id.eq.${user.id},and(user_id.is.null,email.eq.${user.email})`)
+        .eq("status", "paid");
+
+      const filteredQuery = user.email
+        ? query.or(`user_id.eq.${user.id},and(user_id.is.null,email.eq.${user.email})`)
+        : query.eq("user_id", user.id);
+
+      const { data, error } = await filteredQuery
         .order("created_at", { ascending: false });
 
       if (error) {

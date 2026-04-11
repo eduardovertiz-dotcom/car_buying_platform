@@ -1,9 +1,21 @@
-import { redirect } from "next/navigation";
 import Header from "@/components/Header";
 import TransactionComplete from "@/components/TransactionComplete";
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function renderError(message: string) {
+  return (
+    <main className="min-h-screen flex items-center justify-center px-6">
+      <div className="max-w-md text-center space-y-3">
+        <p className="text-white font-semibold">Unable to load transaction</p>
+        <p className="text-sm text-[var(--foreground-muted)]">{message}</p>
+      </div>
+    </main>
+  );
+}
 
 export default async function TransactionCompletePage({
   params,
@@ -12,35 +24,39 @@ export default async function TransactionCompletePage({
 }) {
   const { id } = params;
 
-  // ── Validate UUID format before hitting DB ────────────────────────────────
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!UUID_RE.test(id)) {
-    redirect("/");
+    return renderError("This transaction link is invalid.");
   }
 
-  // ── Fetch transaction from Supabase ───────────────────────────────────────
+  const headers = {
+    apikey: SUPABASE_KEY,
+    Authorization: `Bearer ${SUPABASE_KEY}`,
+  };
+
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/transactions?id=eq.${encodeURIComponent(id)}&select=id,status,email&limit=1`,
-    {
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
-      cache: "no-store",
-    }
+    { headers, cache: "no-store" }
   );
 
   if (!res.ok) {
-    redirect("/");
+    console.error("TRANSACTION FETCH FAILED", { id, status: res.status });
+    return renderError("We could not load this transaction. Please try again or contact support.");
   }
 
   const rows: { id: string; status: string; email: string | null }[] = await res.json();
 
-  // ── Not found or not paid → block access ─────────────────────────────────
-  if (rows.length === 0 || rows[0].status !== "paid") {
-    redirect("/");
+  if (rows.length === 0) {
+    console.error("TRANSACTION NOT FOUND", { id });
+    return renderError("This transaction does not exist.");
+  }
+
+  if (rows[0].status !== "paid") {
+    console.error("TRANSACTION NOT PAID", { id, status: rows[0].status });
+    return renderError("This transaction has not been completed.");
   }
 
   const email = rows[0].email ?? null;
 
-  // ── Access granted ────────────────────────────────────────────────────────
   return (
     <>
       <Header />
