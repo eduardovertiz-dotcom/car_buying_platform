@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import Stripe from "stripe";
+import { sendAdminAlert } from "@/lib/notifications/sendAdminAlert";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -81,6 +82,15 @@ export default async function TransactionSuccessPage({
       return <ErrorPage title="Something went wrong" body="Your payment was received but we could not upgrade your transaction. Please contact support." />;
     }
 
+    // Notify admin of plan upgrade — documents status unknown at this point
+    await sendAdminAlert({
+      transactionId: existingTransactionId,
+      userEmail: email ?? "unknown",
+      hasINE: false,
+      hasFactura: false,
+      hasCirculation: false,
+    });
+
     // Return to the existing transaction step flow
     redirect(`/transaction/${existingTransactionId}`);
   }
@@ -117,6 +127,15 @@ export default async function TransactionSuccessPage({
   if (!transactionId) {
     return <ErrorPage title="Something went wrong" body="Could not retrieve your transaction ID. Please contact support." />;
   }
+
+  // Notify admin of new paid transaction — documents not yet uploaded at this stage
+  await sendAdminAlert({
+    transactionId,
+    userEmail: email ?? "unknown",
+    hasINE: false,
+    hasFactura: false,
+    hasCirculation: false,
+  });
 
   // ── Redirect to transactions hub with new= param ─────────────────────────
   redirect(`/transactions?new=${transactionId}`);

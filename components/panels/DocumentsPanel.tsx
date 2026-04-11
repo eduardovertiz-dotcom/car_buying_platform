@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { useTransaction } from "@/context/TransactionContext";
 import { DocumentType, DOCUMENT_LABELS } from "@/lib/types";
 
@@ -15,6 +15,33 @@ export default function DocumentsPanel() {
     documents.ine.status === "uploaded" &&
     documents.registration.status === "uploaded" &&
     documents.invoice.status === "uploaded";
+
+  // Notify admin when all documents transition to complete for the first time.
+  // Guard: localStorage key prevents duplicate alerts across page reloads.
+  useEffect(() => {
+    if (!allUploaded) return;
+    const key = `docs_notified_${transaction.id}`;
+    if (localStorage.getItem(key)) return;
+
+    fetch("/api/notify/docs-complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        transactionId: transaction.id,
+        hasINE: documents.ine.status === "uploaded",
+        hasFactura: documents.invoice.status === "uploaded",
+        hasCirculation: documents.registration.status === "uploaded",
+        plate: transaction.vehicle.plate ?? transaction.vehicle.vin ?? undefined,
+      }),
+    })
+      .then(() => {
+        localStorage.setItem(key, "1");
+      })
+      .catch(() => {
+        // Notification failure is non-critical — silently ignore
+      });
+  }, [allUploaded, transaction.id, documents, transaction.vehicle]);
+
   const inputRefs = useRef<Record<DocumentType, HTMLInputElement | null>>({
     ine: null,
     registration: null,
