@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   const repuve = await checkRepuve(plate);
 
   return NextResponse.json({
-    success: repuve.ok,
+    success: true,
     checks: {
       repuve,
     },

@@ -29,8 +29,7 @@ export async function checkRepuve(
     });
 
     if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      console.error("VERIFIK: HTTP error", { status: res.status, body });
+      console.error("VERIFIK: HTTP error", { status: res.status });
       return { ok: false, error: `HTTP ${res.status}` };
     }
 
@@ -48,13 +47,11 @@ export async function checkRepuve(
       json?.data?.estado ??
       (theft ? "reported_stolen" : "clean");
 
-    console.error("VERIFIK: success", { plate, theft, status });
-
     return { ok: true, data: { theft, status } };
   } catch (err) {
     const isTimeout = err instanceof Error && err.name === "AbortError";
     const message = isTimeout ? "timeout" : (err instanceof Error ? err.message : "unknown error");
-    console.error("VERIFIK: fetch failed", { plate, error: message });
+    console.error("VERIFIK: fetch failed", { error: message });
     return { ok: false, error: message };
   } finally {
     clearTimeout(timer);
