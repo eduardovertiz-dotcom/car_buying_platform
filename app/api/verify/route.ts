@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkRepuve } from "@/lib/verification/providers/verifik";
-import type { VerifyInput } from "@/lib/verification/types";
+import { validateFactura } from "@/lib/verification/providers/validacfdi";
+import type { ProviderResult, FacturaResult, VerifyInput } from "@/lib/verification/types";
+
+const FACTURA_NOT_PROVIDED: ProviderResult<FacturaResult> = {
+  ok: false,
+  error: "invalid_response",
+  source: "validacfdi",
+};
 
 export async function POST(req: Request) {
   // Require authenticated session
@@ -24,13 +31,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "plate is required" }, { status: 400 });
   }
 
-  // Call Verifik
-  const repuve = await checkRepuve(plate);
+  // Run Verifik + ValidaCFDI in parallel
+  const [repuve, factura] = await Promise.all([
+    checkRepuve(plate),
+    body.factura ? validateFactura(body.factura) : Promise.resolve(FACTURA_NOT_PROVIDED),
+  ]);
 
   return NextResponse.json({
     success: true,
     checks: {
       repuve,
+      factura,
     },
   });
 }
