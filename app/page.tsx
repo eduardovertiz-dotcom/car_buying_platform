@@ -125,17 +125,17 @@ export default function Home() {
                 {
                   icon: <IconAlert />,
                   title: "Debts transfer with the vehicle",
-                  body: "Outstanding fines, loans, and tax obligations follow the car. They become your responsibility after purchase.",
+                  body: "Fines, taxes, and obligations stay with the car — not the seller.",
                 },
                 {
                   icon: <IconFile />,
                   title: "Documents can be falsified",
-                  body: "Facturas are altered. VINs are cloned. Official seals and QR validations are replicated with fake portals.",
+                  body: "Ownership records and invoices can be altered or inconsistent.",
                 },
                 {
                   icon: <IconEye />,
                   title: "What you see is incomplete",
-                  body: "Most buyers rely on seller-provided documents. Fraud happens in what isn't cross-checked.",
+                  body: "Listings rarely show the full picture.",
                 },
               ].map(({ icon, title, body }) => (
                 <div key={title} className="bg-white/[0.04] rounded-xl px-6 py-6 lg:px-7 lg:py-8">
@@ -156,17 +156,17 @@ export default function Home() {
             <div className="mb-8 lg:mb-14">
               <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">Process</p>
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight">
-                A structured path from interest to purchase
+                A clear path to buying safely
               </h2>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
               {[
-                { step: "01", label: "Understand", description: "Define your budget and risk." },
-                { step: "02", label: "Find", description: "Scan listings and spot red flags." },
+                { step: "01", label: "Understand", description: "Define your budget and risk tolerance." },
+                { step: "02", label: "Find", description: "Scan listings and identify red flags." },
                 { step: "03", label: "Evaluate", description: "Assess condition and pricing." },
                 { step: "04", label: "Verify", description: "Check records and validate documents." },
-                { step: "05", label: "Complete", description: "Generate and sign a secure agreement." },
+                { step: "05", label: "Complete", description: "Finalize with confidence. Generate and sign a secure agreement with the seller." },
               ].map(({ step, label, description }) => (
                 <div key={step} className="bg-white/[0.04] rounded-xl px-5 py-5 lg:px-5 lg:py-6">
                   <p className="text-xs font-mono text-[var(--foreground-muted)] mb-3">{step}</p>
@@ -188,7 +188,7 @@ export default function Home() {
               <div>
                 <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">Common failure points</p>
                 <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-5">
-                  Where most buyers get it wrong
+                  Where most buyers make costly mistakes
                 </h2>
                 <p className="text-sm lg:text-base text-[var(--foreground-muted)] leading-relaxed max-w-[420px]">
                   The majority of fraud in the Mexican secondary market isn&apos;t hidden — it&apos;s unverified. These are the five most consistent failure patterns.
@@ -244,9 +244,7 @@ export default function Home() {
                 {[
                   { stat: "Up to 40%", detail: "of transactions contain irregularities" },
                   { stat: "60%", detail: "of fraud cases involve financial manipulation" },
-                  { stat: "30–50% below market", detail: "how fake listings are priced to lure buyers" },
-                  { stat: "~100 per day", detail: "fake foreign titles detected by authorities" },
-                  { stat: "15–30 day lag", detail: "between real theft events and REPUVE updates" },
+                  { stat: "Thousands", detail: "of buyers inherit hidden liabilities every year" },
                 ].map(({ stat, detail }) => (
                   <div key={stat} className="bg-white/[0.04] rounded-xl px-5 py-5 lg:px-6 lg:py-6">
                     <p className="text-lg lg:text-xl font-semibold text-white mb-1.5">{stat}</p>
@@ -255,6 +253,46 @@ export default function Home() {
                 ))}
               </div>
 
+            </div>
+          </Container>
+        </section>
+
+        <Divider />
+
+        {/* ── GET A CLEAR ANSWER ── */}
+        <section className="py-12 md:py-20">
+          <Container>
+            <div className="text-center mb-8 lg:mb-12">
+              <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">What you receive</p>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight">
+                Get a clear answer before you commit
+              </h2>
+            </div>
+
+            <div className="max-w-md mx-auto">
+              <div className="bg-white/[0.04] rounded-xl px-6 py-6 lg:px-8 lg:py-8">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-xs font-medium uppercase tracking-widest text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
+                    CAUTION
+                  </span>
+                </div>
+                <p className="text-sm font-medium text-white mb-3">Issues detected</p>
+                <ul className="flex flex-col gap-2 mb-5">
+                  <li className="flex items-start gap-2 text-sm text-[var(--foreground-muted)]">
+                    <span className="shrink-0 mt-0.5 text-amber-400"><IconX /></span>
+                    Ownership inconsistency
+                  </li>
+                  <li className="flex items-start gap-2 text-sm text-[var(--foreground-muted)]">
+                    <span className="shrink-0 mt-0.5 text-amber-400"><IconX /></span>
+                    Pending fines
+                  </li>
+                </ul>
+                <div className="h-px bg-white/[0.08] mb-5" />
+                <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-1">Recommendation</p>
+                <p className="text-sm text-[var(--foreground-muted)] leading-relaxed">
+                  Proceed only after resolving these issues.
+                </p>
+              </div>
             </div>
           </Container>
         </section>
@@ -274,7 +312,8 @@ export default function Home() {
                 <p className="text-sm lg:text-base text-[var(--foreground-muted)]">
                   Verify the vehicle, the seller, and the risk before committing.
                 </p>
-                <p className="text-sm text-white/60 text-center mt-4 mb-10">Most buyers choose full protection for high-value purchases.</p>
+                <p className="text-sm text-white/60 text-center mt-4 mb-2">Choose your level of protection</p>
+                <p className="text-sm text-white/60 text-center mt-2 mb-10">Most buyers choose full protection for high-value purchases.</p>
               </div>
 
               {/* Mobile: $79 first (flex-col-reverse), Desktop: $49 left (flex-row) */}
@@ -392,11 +431,11 @@ export default function Home() {
               </p>
 
               <h2 className="text-3xl sm:text-[2.25rem] font-semibold text-white tracking-tight leading-[1.1] mb-4">
-                Know what you&apos;re buying<br />before you pay.
+                Know before you pay
               </h2>
 
               <p className="text-[15px] text-[var(--foreground-muted)] leading-relaxed max-w-[360px] mx-auto">
-                Open a transaction and walk through each step<br className="hidden sm:block" /> with structured guidance. Verify before you commit.
+                A few minutes now can save you thousands later.
               </p>
 
               <div className="mt-8">
@@ -407,7 +446,7 @@ export default function Home() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 2L3 6v6c0 5.5 3.9 10.65 9 12 5.1-1.35 9-6.5 9-12V6l-9-4z" />
                   </svg>
-                  Start my verification
+                  Start verification
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>

@@ -49,23 +49,25 @@ export default function Hero() {
     <>
       <Navbar />
 
-      <section className="md:min-h-screen flex flex-col md:flex-row md:items-center overflow-hidden pt-20 pb-16 md:pt-28 md:pb-24">
+      <section className="md:min-h-screen flex flex-col md:flex-row md:items-center overflow-hidden pt-20 pb-20 md:pt-36 md:pb-32">
         <div className="w-full max-w-6xl mx-auto px-6 lg:pl-10 lg:pr-0 flex flex-col md:flex-row md:items-center">
 
           {/* TEXT */}
           <div className="w-full md:w-5/12">
 
             <h1
-              className="font-semibold text-white tracking-tight leading-[1.1]"
-              style={{ fontSize: "clamp(2rem, 5vw, 3.25rem)" }}
+              className="max-w-2xl font-semibold text-white tracking-tight leading-[1.1]"
+              style={{ fontSize: "clamp(2.5rem, 6vw, 4rem)" }}
             >
-              You don&apos;t just buy the car.<br />
-              <span className="text-[var(--accent)]">You inherit the problem.</span>
+              Don&apos;t get scammed buying a car
             </h1>
 
             <p className="text-[16px] text-[var(--foreground-muted)] leading-relaxed max-w-xl mt-4">
-              In Mexico, liens, unpaid fines, cloned VINs, and falsified documents transfer with the vehicle.
-              MexGuardian verifies what&apos;s real before you pay.
+              We verify ownership, documents, and hidden risks before you pay.
+            </p>
+
+            <p className="text-[15px] text-[var(--foreground-muted)] leading-relaxed max-w-xl mt-2">
+              Avoid costly mistakes. Know exactly what you&apos;re buying.
             </p>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-6">
@@ -75,7 +77,7 @@ export default function Hero() {
                 href="/#pricing"
                 className="inline-flex items-center gap-2 bg-[var(--accent)] text-white text-[15px] font-semibold rounded-lg px-5 py-3 hover:opacity-90 transition-opacity"
               >
-                Start my verification →
+                Start verification
               </Link>
 
               <Link
@@ -84,6 +86,11 @@ export default function Hero() {
               >
                 See how it works →
               </Link>
+            </div>
+
+            <div className="flex flex-col gap-1.5 mt-5">
+              <p className="text-sm text-[var(--foreground-muted)]">✔ Avoid hidden debts and ownership issues</p>
+              <p className="text-sm text-[var(--foreground-muted)]">✔ Know exactly what you&apos;re buying</p>
             </div>
 
           </div>
