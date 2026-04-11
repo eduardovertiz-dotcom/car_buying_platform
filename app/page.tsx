@@ -430,7 +430,9 @@ export default function Home() {
               </p>
 
               <h2 className="text-3xl sm:text-[2.25rem] font-semibold text-white tracking-tight leading-[1.1] mb-4">
-                Don&apos;t risk it. Know before you pay
+                Don&apos;t risk it.
+                <br />
+                Know before you pay
               </h2>
 
               <p className="text-[15px] text-white/75 leading-relaxed max-w-[360px] mx-auto">

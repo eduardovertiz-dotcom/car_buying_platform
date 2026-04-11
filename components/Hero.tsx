@@ -49,11 +49,11 @@ export default function Hero() {
     <>
       <Navbar />
 
-      <section className="md:min-h-screen flex flex-col md:flex-row md:items-center overflow-hidden pt-20 pb-20 md:pt-36 md:pb-36">
-        <div className="w-full max-w-6xl mx-auto px-6 lg:pl-10 lg:pr-0 flex flex-col md:flex-row md:items-center">
+      <section className="overflow-hidden pt-20 pb-20 md:pt-36 md:pb-36">
+        <div className="w-full max-w-6xl mx-auto px-6 lg:pl-10 lg:pr-0 grid lg:grid-cols-[48%_52%] items-center">
 
           {/* TEXT */}
-          <div className="w-full md:w-5/12 lg:w-[45%] max-w-xl shrink-0">
+          <div className="max-w-xl">
 
             <h1
               className="max-w-2xl font-semibold text-white tracking-tight leading-[1.1]"
@@ -94,7 +94,7 @@ export default function Hero() {
           </div>
 
           {/* IMAGE */}
-          <div className="hidden md:flex lg:w-[55%] w-7/12 items-center pl-6 -mr-32">
+          <div className="hidden md:flex items-center pl-6 -mr-32">
             <img
               src="/hero_image.png"
               alt="MexGuardian vehicle verification"
