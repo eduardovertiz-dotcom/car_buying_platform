@@ -141,7 +141,7 @@ export default function Home() {
                 <div key={title} className="bg-white/[0.04] rounded-xl px-6 py-6 lg:px-7 lg:py-8">
                   <div className="text-[var(--foreground-muted)] mb-4 lg:mb-5">{icon}</div>
                   <p className="text-base lg:text-lg font-medium text-white mb-3">{title}</p>
-                  <p className="text-sm lg:text-base text-[var(--foreground-muted)] leading-relaxed">{body}</p>
+                  <p className="text-sm lg:text-base text-white/75 leading-relaxed">{body}</p>
                 </div>
               ))}
             </div>
@@ -171,7 +171,7 @@ export default function Home() {
                 <div key={step} className="bg-white/[0.04] border border-white/[0.15] rounded-xl px-5 py-5 lg:px-6 lg:py-6">
                   <p className="text-xs font-mono text-[var(--foreground-muted)] mb-3">{step}</p>
                   <p className="text-sm lg:text-base font-medium text-white mb-2">{label}</p>
-                  <p className="text-sm text-[var(--foreground-muted)] leading-relaxed">{description}</p>
+                  <p className="text-sm text-white/75 leading-relaxed">{description}</p>
                 </div>
               ))}
             </div>
@@ -190,7 +190,7 @@ export default function Home() {
                 <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-5">
                   Where most buyers make costly mistakes
                 </h2>
-                <p className="text-sm lg:text-base text-[var(--foreground-muted)] leading-relaxed max-w-[420px]">
+                <p className="text-sm lg:text-base text-white/75 leading-relaxed max-w-[420px]">
                   The majority of fraud in the Mexican secondary market isn&apos;t hidden — it&apos;s unverified. These are the five most consistent failure patterns.
                 </p>
               </div>
@@ -208,7 +208,7 @@ export default function Home() {
                     className={`flex items-start gap-4 px-6 py-5 lg:py-6 ${i < arr.length - 1 ? "border-b border-white/[0.06]" : ""}`}
                   >
                     <span className="text-[var(--foreground-muted)] shrink-0 mt-0.5"><IconX /></span>
-                    <p className="text-sm lg:text-base text-[var(--foreground-muted)] leading-relaxed">{item}</p>
+                    <p className="text-sm lg:text-base text-white/75 leading-relaxed">{item}</p>
                   </div>
                 ))}
               </div>
@@ -236,7 +236,7 @@ export default function Home() {
                   <p className="text-base lg:text-lg font-semibold text-white mb-1.5">
                     Most problems are discovered after payment.
                   </p>
-                  <p className="text-sm lg:text-base text-[var(--foreground-muted)]">At that point, they are yours.</p>
+                  <p className="text-sm lg:text-base text-white/75">At that point, they are yours.</p>
                 </div>
               </div>
 
@@ -248,7 +248,7 @@ export default function Home() {
                 ].map(({ stat, detail }) => (
                   <div key={stat} className="bg-white/[0.04] rounded-xl px-5 py-5 lg:px-6 lg:py-6">
                     <p className="text-2xl lg:text-3xl font-semibold text-white">{stat}</p>
-                    <p className="text-sm lg:text-base text-white/60 leading-relaxed mt-2">{detail}</p>
+                    <p className="text-sm lg:text-base text-white/75 leading-relaxed mt-2">{detail}</p>
                   </div>
                 ))}
               </div>
@@ -279,18 +279,18 @@ export default function Home() {
                 </div>
                 <p className="text-sm font-medium text-white mb-3">Issues detected</p>
                 <ul className="flex flex-col gap-2 mb-5">
-                  <li className="flex items-start gap-2 text-sm text-[var(--foreground-muted)]">
+                  <li className="flex items-start gap-2 text-sm text-white/75">
                     <span className="shrink-0 mt-0.5 text-amber-400"><IconX /></span>
                     Ownership inconsistency
                   </li>
-                  <li className="flex items-start gap-2 text-sm text-[var(--foreground-muted)]">
+                  <li className="flex items-start gap-2 text-sm text-white/75">
                     <span className="shrink-0 mt-0.5 text-amber-400"><IconX /></span>
                     Pending fines
                   </li>
                 </ul>
                 <div className="h-px bg-white/[0.08] mb-5" />
                 <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-1">Recommendation</p>
-                <p className="text-sm text-[var(--foreground-muted)] leading-relaxed">
+                <p className="text-sm text-white/75 leading-relaxed">
                   Proceed only after resolving these issues.
                 </p>
               </div>
@@ -310,7 +310,7 @@ export default function Home() {
                 <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-2">
                   Avoid costly mistakes before you buy
                 </h2>
-                <p className="text-sm lg:text-base text-[var(--foreground-muted)]">
+                <p className="text-sm lg:text-base text-white/75">
                   Verify the vehicle, the seller, and the risk before committing.
                 </p>
               </div>
@@ -409,7 +409,7 @@ export default function Home() {
 
               </div>
 
-              <p className="text-xs lg:text-sm text-[var(--foreground-muted)] leading-relaxed mt-10 text-center">
+              <p className="text-xs lg:text-sm text-white/75 leading-relaxed mt-10 text-center">
                 <span className="text-white">Progressive certainty:</span>{" "}
                 Start with system-based validation or escalate to professional verification for higher confidence.
               </p>
@@ -435,7 +435,7 @@ export default function Home() {
                 Know before you pay
               </h2>
 
-              <p className="text-[15px] text-white/75 leading-relaxed max-w-[360px] mx-auto">
+              <p className="text-[15px] text-white/80 leading-relaxed max-w-[360px] mx-auto">
                 A few minutes now can save you thousands later.
               </p>
 
