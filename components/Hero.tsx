@@ -49,11 +49,11 @@ export default function Hero() {
     <>
       <Navbar />
 
-      <section className="md:min-h-screen flex flex-col md:flex-row md:items-center overflow-hidden pt-20 pb-20 md:pt-36 md:pb-32">
+      <section className="md:min-h-screen flex flex-col md:flex-row md:items-center overflow-hidden pt-20 pb-20 md:pt-36 md:pb-36">
         <div className="w-full max-w-6xl mx-auto px-6 lg:pl-10 lg:pr-0 flex flex-col md:flex-row md:items-center">
 
           {/* TEXT */}
-          <div className="w-full md:w-5/12">
+          <div className="w-full md:w-5/12 lg:w-[45%]">
 
             <h1
               className="max-w-2xl font-semibold text-white tracking-tight leading-[1.1]"
@@ -62,12 +62,10 @@ export default function Hero() {
               Don&apos;t get scammed buying a car
             </h1>
 
-            <p className="text-[16px] text-[var(--foreground-muted)] leading-relaxed max-w-xl mt-4">
+            <p className="text-[16px] text-[var(--foreground-muted)]/75 leading-relaxed max-w-xl mt-4">
               We verify ownership, documents, and hidden risks before you pay.
-            </p>
-
-            <p className="text-[15px] text-[var(--foreground-muted)] leading-relaxed max-w-xl mt-2">
-              Avoid costly mistakes. Know exactly what you&apos;re buying.
+              <br className="hidden sm:block" />
+              So you know exactly what you&apos;re buying.
             </p>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-6">
@@ -88,19 +86,19 @@ export default function Hero() {
               </Link>
             </div>
 
-            <div className="flex flex-col gap-1.5 mt-5">
-              <p className="text-sm text-[var(--foreground-muted)]">✔ Avoid hidden debts and ownership issues</p>
-              <p className="text-sm text-[var(--foreground-muted)]">✔ Know exactly what you&apos;re buying</p>
+            <div className="flex flex-col gap-1.5 mt-6">
+              <p className="text-sm text-[var(--foreground-muted)]/70">✔ Avoid hidden debts and ownership issues</p>
+              <p className="text-sm text-[var(--foreground-muted)]/70">✔ Know exactly what you&apos;re buying</p>
             </div>
 
           </div>
 
           {/* IMAGE */}
-          <div className="hidden md:flex w-7/12 items-center pl-6 -mr-32">
+          <div className="hidden md:flex lg:w-[55%] w-7/12 items-center pl-6 -mr-32">
             <img
               src="/hero_image.png"
               alt="MexGuardian vehicle verification"
-              className="w-full object-contain"
+              className="w-full object-contain lg:scale-125 lg:translate-x-6 brightness-110 contrast-110"
             />
           </div>
 
