@@ -50,10 +50,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "notes is required" }, { status: 400 });
   }
 
-  // ── Fetch transaction (need email for user notification) ─────────────────
+  // ── Fetch transaction (need email + created_at for processing time) ───────
   const { data: txData, error: fetchError } = await supabase
     .from("transactions")
-    .select("email")
+    .select("email, created_at")
     .eq("id", transactionId)
     .single();
 
@@ -61,13 +61,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
   }
 
+  // ── Compute processing time ───────────────────────────────────────────────
+  const now = new Date();
+  const createdAt = txData.created_at ? new Date(txData.created_at) : null;
+  const processingTimeSeconds = createdAt
+    ? Math.round((now.getTime() - createdAt.getTime()) / 1000)
+    : null;
+
   // ── Update transaction ───────────────────────────────────────────────────
   const { error: updateError } = await supabase
     .from("transactions")
     .update({
       admin_verification_status: status,
       admin_verification_notes: notes.trim(),
-      admin_verified_at: new Date().toISOString(),
+      admin_verified_at: now.toISOString(),
+      admin_verified_by: user.email ?? null,
+      processing_time_seconds: processingTimeSeconds,
     })
     .eq("id", transactionId);
 
