@@ -247,8 +247,8 @@ export default function Home() {
                   { stat: "Thousands", detail: "of buyers inherit hidden liabilities every year" },
                 ].map(({ stat, detail }) => (
                   <div key={stat} className="bg-white/[0.04] rounded-xl px-5 py-5 lg:px-6 lg:py-6">
-                    <p className="text-2xl lg:text-3xl font-semibold text-white mb-1.5">{stat}</p>
-                    <p className="text-sm lg:text-base text-white/60 leading-relaxed">{detail}</p>
+                    <p className="text-2xl lg:text-3xl font-semibold text-white">{stat}</p>
+                    <p className="text-sm lg:text-base text-white/60 leading-relaxed mt-2">{detail}</p>
                   </div>
                 ))}
               </div>
@@ -271,7 +271,7 @@ export default function Home() {
 
             <div className="max-w-lg mx-auto">
               <p className="text-xs uppercase tracking-wide text-white/60 text-center mb-4">Sample verification result</p>
-              <div className="bg-white/[0.04] border border-white/20 rounded-xl px-8 py-8 lg:px-10 lg:py-10">
+              <div className="bg-white/[0.04] border border-white/30 rounded-xl px-8 py-8 lg:px-10 lg:py-10">
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-xs font-medium uppercase tracking-widest text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
                     CAUTION
@@ -307,15 +307,12 @@ export default function Home() {
 
               <div className="mb-8 lg:mb-14 text-center">
                 <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">Pricing</p>
-                <p className="text-sm text-white/60 text-center mb-2">One check can save you thousands</p>
                 <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-2">
                   Avoid costly mistakes before you buy
                 </h2>
                 <p className="text-sm lg:text-base text-[var(--foreground-muted)]">
                   Verify the vehicle, the seller, and the risk before committing.
                 </p>
-                <p className="text-sm text-white/60 text-center mt-4 mb-2">Choose your level of protection</p>
-                <p className="text-sm text-white/60 text-center mt-2 mb-10">Most buyers choose full protection for high-value purchases.</p>
               </div>
 
               {/* Mobile: $79 first (flex-col-reverse), Desktop: $49 left (flex-row) */}
@@ -436,7 +433,7 @@ export default function Home() {
                 Don&apos;t risk it. Know before you pay
               </h2>
 
-              <p className="text-[15px] text-[var(--foreground-muted)] leading-relaxed max-w-[360px] mx-auto">
+              <p className="text-[15px] text-white/75 leading-relaxed max-w-[360px] mx-auto">
                 A few minutes now can save you thousands later.
               </p>
 

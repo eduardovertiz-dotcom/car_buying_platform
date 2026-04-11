@@ -53,7 +53,7 @@ export default function Hero() {
         <div className="w-full max-w-6xl mx-auto px-6 lg:pl-10 lg:pr-0 flex flex-col md:flex-row md:items-center">
 
           {/* TEXT */}
-          <div className="w-full md:w-5/12 lg:w-[45%]">
+          <div className="w-full md:w-5/12 lg:w-[45%] max-w-xl shrink-0">
 
             <h1
               className="max-w-2xl font-semibold text-white tracking-tight leading-[1.1]"
@@ -62,10 +62,10 @@ export default function Hero() {
               Don&apos;t get scammed buying a car
             </h1>
 
-            <p className="text-[16px] text-[var(--foreground-muted)]/75 leading-relaxed max-w-xl mt-4">
-              We verify ownership, documents, and hidden risks before you pay.
+            <p className="max-w-lg text-white/75 leading-relaxed mt-4">
+              We verify ownership, documents, and hidden risks before you pay,
               <br className="hidden sm:block" />
-              So you know exactly what you&apos;re buying.
+              so you know exactly what you&apos;re buying.
             </p>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-6">
@@ -87,8 +87,8 @@ export default function Hero() {
             </div>
 
             <div className="flex flex-col gap-1.5 mt-6">
-              <p className="text-sm text-[var(--foreground-muted)]/70">✔ Avoid hidden debts and ownership issues</p>
-              <p className="text-sm text-[var(--foreground-muted)]/70">✔ Know exactly what you&apos;re buying</p>
+              <p className="text-sm text-[var(--foreground-muted)]/80">✔ Avoid hidden debts and ownership issues</p>
+              <p className="text-sm text-[var(--foreground-muted)]/80">✔ Know exactly what you&apos;re buying</p>
             </div>
 
           </div>
