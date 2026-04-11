@@ -70,16 +70,16 @@ type VerifyChecks = {
 type MappedCheck = { status: "success" | "warning" | "unavailable"; text: string };
 
 function mapRepuve(check: RepuveCheck): MappedCheck {
-  if (!check.ok) return { status: "unavailable", text: "REPUVE verification unavailable" };
+  if (!check.ok) return { status: "unavailable", text: "Registry check unavailable" };
   if (check.data?.theft) return { status: "warning", text: "Potential theft record detected" };
-  return { status: "success", text: "No theft record found" };
+  return { status: "success", text: "No theft record found in official registry" };
 }
 
 function mapFactura(check: FacturaCheck): MappedCheck | null {
   if (check.error === "not_provided") return null;
-  if (!check.ok) return { status: "unavailable", text: "Factura could not be validated" };
-  if (!check.data?.valid) return { status: "warning", text: "Invoice is not valid" };
-  return { status: "success", text: "Invoice is valid" };
+  if (!check.ok) return { status: "unavailable", text: "Invoice validation unavailable" };
+  if (!check.data?.valid) return { status: "warning", text: "Invoice is not valid or has been cancelled" };
+  return { status: "success", text: "Invoice is valid (SAT verified)" };
 }
 
 function checksToVerificationResult(checks: VerifyChecks): VerificationResult {
@@ -143,6 +143,10 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
 
     if (!shouldRunProfessional && !shouldRunBasic) return;
 
+    // Require at least one vehicle identifier before calling API
+    const plate = vehicle.plate || vehicle.vin;
+    if (!plate) return;
+
     if (shouldRunProfessional) requestProfessionalVerification();
     else requestBasicVerification();
 
@@ -150,7 +154,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     fetch("/api/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plate: vehicle.vin ?? "" }),
+      body: JSON.stringify({ plate }),
     })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -233,7 +237,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
         </p>
         <div className="border border-[var(--border)] rounded-lg px-5 py-4">
           <p className="text-sm text-[var(--foreground-muted)]">
-            Querying registries — do not close this page.
+            Running official vehicle checks — do not close this page.
           </p>
         </div>
       </>
@@ -251,7 +255,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
         </p>
         <div className="border border-[var(--border)] rounded-lg px-5 py-4">
           <p className="text-sm text-[var(--foreground-muted)]">
-            Full review in progress — do not close this page.
+            Running official vehicle checks — do not close this page.
           </p>
         </div>
       </>
@@ -267,30 +271,42 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
       <>
         {verifyError && (
           <p className="text-sm text-amber-400 leading-relaxed mb-4">
-            Verification could not be completed. Results may be incomplete.
+            Some checks could not be completed. You can still proceed.
           </p>
         )}
 
-        {repuveResult && (
-          <div className="mb-3">
-            <p className={`text-sm font-medium leading-relaxed ${
-              repuveResult.status === "success" ? "text-green-400"
-              : repuveResult.status === "warning" ? "text-amber-400"
-              : "text-[var(--foreground-muted)]"
-            }`}>
-              REPUVE — {repuveResult.text}
+        {(repuveResult || facturaResult) && (
+          <div className="mb-6">
+            <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
+              Verification Results
             </p>
-          </div>
-        )}
 
-        {facturaResult && (
-          <div className="mb-4">
-            <p className={`text-sm font-medium leading-relaxed ${
-              facturaResult.status === "success" ? "text-green-400"
-              : facturaResult.status === "warning" ? "text-amber-400"
-              : "text-[var(--foreground-muted)]"
-            }`}>
-              Factura — {facturaResult.text}
+            {repuveResult && (
+              <div className="mb-2">
+                <p className={`text-sm font-medium leading-relaxed ${
+                  repuveResult.status === "success" ? "text-green-400"
+                  : repuveResult.status === "warning" ? "text-amber-400"
+                  : "text-[var(--foreground-muted)]"
+                }`}>
+                  REPUVE — {repuveResult.text}
+                </p>
+              </div>
+            )}
+
+            {facturaResult && (
+              <div className="mb-2">
+                <p className={`text-sm font-medium leading-relaxed ${
+                  facturaResult.status === "success" ? "text-green-400"
+                  : facturaResult.status === "warning" ? "text-amber-400"
+                  : "text-[var(--foreground-muted)]"
+                }`}>
+                  Factura — {facturaResult.text}
+                </p>
+              </div>
+            )}
+
+            <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-3">
+              If any issues appear, we recommend verifying directly with the seller before proceeding.
             </p>
           </div>
         )}
@@ -350,39 +366,44 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
 
         {verifyError && (
           <p className="text-sm text-amber-400 leading-relaxed mb-4">
-            Verification could not be completed. Results may be incomplete.
+            Some checks could not be completed. You can still proceed.
           </p>
         )}
 
-        {repuveResult && (
-          <div className="mb-3">
-            <p className={`text-sm font-medium leading-relaxed ${
-              repuveResult.status === "success" ? "text-green-400"
-              : repuveResult.status === "warning" ? "text-amber-400"
-              : "text-[var(--foreground-muted)]"
-            }`}>
-              REPUVE — {repuveResult.text}
-            </p>
-          </div>
-        )}
-
-        {facturaResult && (
+        {(repuveResult || facturaResult) && (
           <div className="mb-6">
-            <p className={`text-sm font-medium leading-relaxed ${
-              facturaResult.status === "success" ? "text-green-400"
-              : facturaResult.status === "warning" ? "text-amber-400"
-              : "text-[var(--foreground-muted)]"
-            }`}>
-              Factura — {facturaResult.text}
+            <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
+              Verification Results
+            </p>
+
+            {repuveResult && (
+              <div className="mb-2">
+                <p className={`text-sm font-medium leading-relaxed ${
+                  repuveResult.status === "success" ? "text-green-400"
+                  : repuveResult.status === "warning" ? "text-amber-400"
+                  : "text-[var(--foreground-muted)]"
+                }`}>
+                  REPUVE — {repuveResult.text}
+                </p>
+              </div>
+            )}
+
+            {facturaResult && (
+              <div className="mb-2">
+                <p className={`text-sm font-medium leading-relaxed ${
+                  facturaResult.status === "success" ? "text-green-400"
+                  : facturaResult.status === "warning" ? "text-amber-400"
+                  : "text-[var(--foreground-muted)]"
+                }`}>
+                  Factura — {facturaResult.text}
+                </p>
+              </div>
+            )}
+
+            <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-3">
+              If any issues appear, we recommend verifying directly with the seller before proceeding.
             </p>
           </div>
-        )}
-
-        {!repuveResult && !facturaResult && (
-          <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
-            All results are shown below. Review the findings before proceeding
-            to complete the transaction.
-          </p>
         )}
 
         <button

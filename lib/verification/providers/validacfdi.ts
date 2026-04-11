@@ -18,7 +18,7 @@ export async function validateFactura(
     factura.total <= 0
   ) {
     console.error("VALIDACFDI: invalid input fields");
-    return { ok: false, error: "invalid_response", source: "validacfdi" };
+    return { ok: false, error: "not_provided", source: "validacfdi" };
   }
 
   const apiKey = process.env.VALIDACFDI_API_KEY;

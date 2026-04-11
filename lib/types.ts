@@ -66,6 +66,7 @@ export type Transaction = {
     model: string;
     year: number;
     vin?: string;
+    plate?: string;
   };
   current_step: Step;
   checklist_progress: number;
