@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import JSZip from "jszip";
 import { useTransaction } from "@/context/TransactionContext";
 import { STEPS, Step, MaintenanceRecordType } from "@/lib/types";
-import { mockBasicResults, mockProfessionalResults } from "@/lib/mock";
+import type { VerificationResult } from "@/lib/types";
 
 type StepContent = {
   heading: string;
@@ -48,6 +48,67 @@ const stepContent: Record<Step, StepContent> = {
 
 // ─── Verify ──────────────────────────────────────────────────────────────────
 
+// ── Verification result types (local, mirrors backend shape) ─────────────────
+
+type RepuveCheck = {
+  ok: boolean;
+  data?: { theft: boolean; status: string };
+  error?: string;
+};
+
+type FacturaCheck = {
+  ok: boolean;
+  data?: { valid: boolean; status: string };
+  error?: string;
+};
+
+type VerifyChecks = {
+  repuve: RepuveCheck;
+  factura: FacturaCheck;
+};
+
+type MappedCheck = { status: "success" | "warning" | "unavailable"; text: string };
+
+function mapRepuve(check: RepuveCheck): MappedCheck {
+  if (!check.ok) return { status: "unavailable", text: "REPUVE verification unavailable" };
+  if (check.data?.theft) return { status: "warning", text: "Potential theft record detected" };
+  return { status: "success", text: "No theft record found" };
+}
+
+function mapFactura(check: FacturaCheck): MappedCheck | null {
+  if (check.error === "not_provided") return null;
+  if (!check.ok) return { status: "unavailable", text: "Factura could not be validated" };
+  if (!check.data?.valid) return { status: "warning", text: "Invoice is not valid" };
+  return { status: "success", text: "Invoice is valid" };
+}
+
+function checksToVerificationResult(checks: VerifyChecks): VerificationResult {
+  const theft = checks.repuve.ok && checks.repuve.data?.theft === true;
+  const facturaInvalid = checks.factura.ok && checks.factura.data?.valid === false;
+  const findings: string[] = [];
+
+  if (!checks.repuve.ok) findings.push("REPUVE check could not be completed");
+  else if (theft) findings.push("Theft record detected in REPUVE");
+  else findings.push("No theft record found in REPUVE");
+
+  if (checks.factura.error !== "not_provided") {
+    if (!checks.factura.ok) findings.push("Factura validation could not be completed");
+    else if (facturaInvalid) findings.push("Invoice validation failed");
+    else findings.push("Invoice validated successfully");
+  }
+
+  return {
+    status: theft ? "high_risk" : facturaInvalid ? "review" : "safe",
+    summary: theft
+      ? "Potential theft record detected. Proceed with caution."
+      : facturaInvalid
+      ? "Invoice concern detected. Verify with seller."
+      : "No major issues detected.",
+    findings,
+    confidence: theft ? 90 : facturaInvalid ? 72 : 85,
+  };
+}
+
 function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
   const {
     transaction,
@@ -58,9 +119,11 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     completeProfessionalVerification,
   } = useTransaction();
 
-  const { verification_status, documents } = transaction;
+  const { verification_status, documents, vehicle } = transaction;
   const [showDocWarning, setShowDocWarning] = useState(false);
   const [upsellLoading, setUpsellLoading] = useState(false);
+  const [verifyChecks, setVerifyChecks] = useState<VerifyChecks | null>(null);
+  const [verifyError, setVerifyError] = useState(false);
 
   const allDocumentsUploaded =
     documents.ine.status === "uploaded" &&
@@ -72,25 +135,46 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
   useEffect(() => {
     if (!plan) return;
 
-    if (plan === "79") {
-      // Trigger professional for: fresh start OR upgrading from basic_complete
-      if (
-        verification_status === "not_started" ||
-        verification_status === "basic_complete"
-      ) {
-        requestProfessionalVerification();
-        setTimeout(() => {
-          completeProfessionalVerification(mockProfessionalResults);
-        }, 4000);
-      }
-    } else {
-      // plan === "49" — only trigger basic on first arrival
-      if (verification_status !== "not_started") return;
-      requestBasicVerification();
-      setTimeout(() => {
-        completeBasicVerification(mockBasicResults);
-      }, 3000);
-    }
+    const shouldRunProfessional =
+      plan === "79" &&
+      (verification_status === "not_started" || verification_status === "basic_complete");
+    const shouldRunBasic =
+      plan === "49" && verification_status === "not_started";
+
+    if (!shouldRunProfessional && !shouldRunBasic) return;
+
+    if (shouldRunProfessional) requestProfessionalVerification();
+    else requestBasicVerification();
+
+    // Call real verification API
+    fetch("/api/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plate: vehicle.vin ?? "" }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: { success: boolean; checks: VerifyChecks }) => {
+        const checks = data.checks;
+        setVerifyChecks(checks);
+        const result = checksToVerificationResult(checks);
+        if (shouldRunProfessional) completeProfessionalVerification(result);
+        else completeBasicVerification(result);
+      })
+      .catch(() => {
+        setVerifyError(true);
+        // Proceed to complete state so UX isn't blocked
+        const fallbackResult: VerificationResult = {
+          status: "review",
+          summary: "Verification could not be completed. Review manually.",
+          findings: ["Automated verification unavailable"],
+          confidence: 0,
+        };
+        if (shouldRunProfessional) completeProfessionalVerification(fallbackResult);
+        else completeBasicVerification(fallbackResult);
+      });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -176,16 +260,40 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
 
   // ── Basic complete — show results + upsell ($49 users only) ─────────────
   if (verification_status === "basic_complete") {
+    const repuveResult = verifyChecks ? mapRepuve(verifyChecks.repuve) : null;
+    const facturaResult = verifyChecks ? mapFactura(verifyChecks.factura) : null;
+
     return (
       <>
-        <p className="text-sm text-white leading-relaxed mb-4">
-          Based on the checks, there is an outstanding lien associated with this vehicle.
-        </p>
-        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
-          This does not necessarily prevent the transaction, but it should be clarified
-          with the seller before proceeding. Liens can delay or block ownership transfer
-          if unresolved.
-        </p>
+        {verifyError && (
+          <p className="text-sm text-amber-400 leading-relaxed mb-4">
+            Verification could not be completed. Results may be incomplete.
+          </p>
+        )}
+
+        {repuveResult && (
+          <div className="mb-3">
+            <p className={`text-sm font-medium leading-relaxed ${
+              repuveResult.status === "success" ? "text-green-400"
+              : repuveResult.status === "warning" ? "text-amber-400"
+              : "text-[var(--foreground-muted)]"
+            }`}>
+              REPUVE — {repuveResult.text}
+            </p>
+          </div>
+        )}
+
+        {facturaResult && (
+          <div className="mb-4">
+            <p className={`text-sm font-medium leading-relaxed ${
+              facturaResult.status === "success" ? "text-green-400"
+              : facturaResult.status === "warning" ? "text-amber-400"
+              : "text-[var(--foreground-muted)]"
+            }`}>
+              Factura — {facturaResult.text}
+            </p>
+          </div>
+        )}
 
         <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
           Public records checked. Some risks won&apos;t appear here.
@@ -231,15 +339,52 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
 
   // ── Professional complete ────────────────────────────────────────────────
   if (verification_status === "professional_complete") {
+    const repuveResult = verifyChecks ? mapRepuve(verifyChecks.repuve) : null;
+    const facturaResult = verifyChecks ? mapFactura(verifyChecks.factura) : null;
+
     return (
       <>
         <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
           Full verification complete
         </h2>
-        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-8">
-          All results are shown below. Review the findings before proceeding
-          to complete the transaction.
-        </p>
+
+        {verifyError && (
+          <p className="text-sm text-amber-400 leading-relaxed mb-4">
+            Verification could not be completed. Results may be incomplete.
+          </p>
+        )}
+
+        {repuveResult && (
+          <div className="mb-3">
+            <p className={`text-sm font-medium leading-relaxed ${
+              repuveResult.status === "success" ? "text-green-400"
+              : repuveResult.status === "warning" ? "text-amber-400"
+              : "text-[var(--foreground-muted)]"
+            }`}>
+              REPUVE — {repuveResult.text}
+            </p>
+          </div>
+        )}
+
+        {facturaResult && (
+          <div className="mb-6">
+            <p className={`text-sm font-medium leading-relaxed ${
+              facturaResult.status === "success" ? "text-green-400"
+              : facturaResult.status === "warning" ? "text-amber-400"
+              : "text-[var(--foreground-muted)]"
+            }`}>
+              Factura — {facturaResult.text}
+            </p>
+          </div>
+        )}
+
+        {!repuveResult && !facturaResult && (
+          <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
+            All results are shown below. Review the findings before proceeding
+            to complete the transaction.
+          </p>
+        )}
+
         <button
           onClick={advanceStep}
           className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
