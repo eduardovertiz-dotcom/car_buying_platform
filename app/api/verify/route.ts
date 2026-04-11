@@ -2,11 +2,29 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkRepuve } from "@/lib/verification/providers/verifik";
 import { validateFactura } from "@/lib/verification/providers/validacfdi";
-import type { ProviderResult, FacturaResult, VerifyInput } from "@/lib/verification/types";
+import type {
+  ProviderResult,
+  RepuveResult,
+  FacturaResult,
+  VerifyInput,
+} from "@/lib/verification/types";
+
+// Fallback constants — used when an adapter unexpectedly throws
+const REPUVE_FALLBACK: ProviderResult<RepuveResult> = {
+  ok: false,
+  error: "network_error",
+  source: "verifik",
+};
 
 const FACTURA_NOT_PROVIDED: ProviderResult<FacturaResult> = {
   ok: false,
   error: "not_provided",
+  source: "validacfdi",
+};
+
+const FACTURA_FALLBACK: ProviderResult<FacturaResult> = {
+  ok: false,
+  error: "network_error",
   source: "validacfdi",
 };
 
@@ -18,7 +36,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Parse and validate input
+  // Parse body
   let body: Partial<VerifyInput>;
   try {
     body = await req.json();
@@ -26,15 +44,28 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const plate = body.plate?.trim().toUpperCase();
-  if (!plate) {
+  // Defensive plate validation — must be a non-empty string
+  if (typeof body.plate !== "string" || !body.plate.trim()) {
     return NextResponse.json({ error: "plate is required" }, { status: 400 });
   }
 
-  // Run Verifik + ValidaCFDI in parallel
+  // Normalize once, centrally, before any provider call
+  const plate = body.plate.trim().toUpperCase();
+
+  // Run both providers in parallel.
+  // Each call is guarded with .catch() so an unexpected throw
+  // never crashes the route — checks object is always complete.
   const [repuve, factura] = await Promise.all([
-    checkRepuve(plate),
-    body.factura ? validateFactura(body.factura) : Promise.resolve(FACTURA_NOT_PROVIDED),
+    checkRepuve(plate).catch((): ProviderResult<RepuveResult> => {
+      console.error("VERIFIK: unexpected throw in adapter");
+      return REPUVE_FALLBACK;
+    }),
+    body.factura
+      ? validateFactura(body.factura).catch((): ProviderResult<FacturaResult> => {
+          console.error("VALIDACFDI: unexpected throw in adapter");
+          return FACTURA_FALLBACK;
+        })
+      : Promise.resolve(FACTURA_NOT_PROVIDED),
   ]);
 
   return NextResponse.json({
