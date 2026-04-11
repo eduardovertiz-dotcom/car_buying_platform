@@ -13,7 +13,6 @@ const handleCheckout = async (priceId: string) => {
     });
 
     const data = await res.json();
-    console.log("[checkout] response:", data);
 
     if (!res.ok || !data.url) {
       console.error("[checkout] missing url:", data);

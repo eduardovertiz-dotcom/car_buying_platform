@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import JSZip from "jszip";
 import { useTransaction } from "@/context/TransactionContext";
 import { STEPS, Step, MaintenanceRecordType } from "@/lib/types";
 import { mockBasicResults, mockProfessionalResults } from "@/lib/mock";
@@ -262,6 +263,7 @@ function CompleteInterface() {
   const [showForm, setShowForm] = useState(false);
   const [showMaintenanceSaved, setShowMaintenanceSaved] = useState(false);
   const [showShared, setShowShared] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
 
   function handleShare() {
     const token =
@@ -270,7 +272,20 @@ function CompleteInterface() {
     if (!share.enabled) {
       enableShare(token);
     }
-    navigator.clipboard.writeText(`${window.location.origin}/share/${token}`);
+    const storageKey = `transaction_${transaction.id}`;
+    const raw = localStorage.getItem(storageKey);
+    const parsed = raw ? JSON.parse(raw) : transaction;
+    const snapshot = {
+      ...parsed,
+      share: {
+        enabled: true,
+        token,
+      },
+    };
+    localStorage.setItem(`share_${token}`, JSON.stringify(snapshot));
+    const url = `${window.location.origin}/share/${token}`;
+    navigator.clipboard.writeText(url);
+    setShareUrl(url);
     setShowShared(true);
   }
 
@@ -278,6 +293,313 @@ function CompleteInterface() {
   function handleRevokeShare() {
     revokeShare();
     setShowShared(false);
+  }
+
+  async function handleDownloadAll() {
+    const zip = new JSZip();
+
+    type DocEntry = { fileData?: string; name?: string };
+    type MaintenanceEntry = { fileData?: string; fileName?: string };
+    type ContractEntry = { status: string; fileData?: string };
+
+    // Documents
+    (Object.values(transaction.documents) as DocEntry[]).forEach((doc) => {
+      if (doc?.fileData) {
+        zip.file(
+          `documents/${doc.name}`,
+          doc.fileData.split(",")[1],
+          { base64: true }
+        );
+      }
+    });
+
+    // Maintenance records
+    (transaction.maintenance.records as MaintenanceEntry[]).forEach((r) => {
+      if (r.fileData) {
+        zip.file(
+          `maintenance/${r.fileName}`,
+          r.fileData.split(",")[1],
+          { base64: true }
+        );
+      }
+    });
+
+    // Contract
+    const contract = transaction.contract as ContractEntry;
+    if (contract?.fileData) {
+      zip.file(
+        "contract.pdf",
+        contract.fileData.split(",")[1],
+        { base64: true }
+      );
+    }
+
+    // Metadata
+    zip.file("metadata.json", JSON.stringify(transaction, null, 2));
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `vehicle_record_${transaction.id}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  }
+
+  function handleDownload() {
+    const { vehicle, id } = transaction;
+
+    const date = new Date().toLocaleDateString("es-MX", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    const location = "___________________________";
+    const buyer = "___________________________";
+    const seller = "___________________________";
+    const price = "___________________________";
+
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Contrato de Compraventa - MexGuardian</title>
+<style>
+body {
+  font-family: Georgia, serif;
+  max-width: 760px;
+  margin: 60px auto;
+  padding: 0 28px;
+  color: #111;
+  line-height: 1.75;
+}
+h1 {
+  text-align: center;
+  font-size: 22px;
+  margin-bottom: 4px;
+  letter-spacing: 0.3px;
+}
+.subtitle {
+  text-align: center;
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 18px;
+}
+.meta, .ref {
+  text-align: center;
+  font-size: 12px;
+  color: #666;
+}
+.section {
+  margin-top: 30px;
+}
+h2 {
+  font-size: 14px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+p {
+  margin: 6px 0;
+}
+.vehicle-box {
+  background: #f7f7f7;
+  border: 1px solid #ddd;
+  padding: 12px;
+  margin-top: 10px;
+}
+.vehicle-box p {
+  margin: 4px 0;
+}
+.sig {
+  margin-top: 80px;
+  display: flex;
+  justify-content: space-between;
+}
+.sig-block {
+  width: 45%;
+}
+.sig-line {
+  border-top: 1px solid #111;
+  margin-top: 50px;
+  padding-top: 6px;
+  text-align: center;
+  font-size: 12px;
+  color: #555;
+}
+.divider {
+  margin: 60px 0;
+  border-top: 2px dashed #ccc;
+}
+@media print {
+  body { margin: 40px; }
+}
+</style>
+</head>
+<body>
+
+<h1>Contrato de Compraventa de Vehículo Automotor</h1>
+<p class="subtitle">MexGuardian — Registro de Transacción Verificada</p>
+<p class="meta">${location}, ${date}</p>
+<p class="ref">Referencia: ${id}</p>
+
+<div class="section">
+  <h2>I. PARTES</h2>
+  <p><strong>VENDEDOR:</strong> ${seller}</p>
+  <p><strong>COMPRADOR:</strong> ${buyer}</p>
+</div>
+
+<div class="section">
+  <h2>II. OBJETO</h2>
+  <div class="vehicle-box">
+    <p><strong>Marca:</strong> ${vehicle?.make ?? ""}</p>
+    <p><strong>Modelo:</strong> ${vehicle?.model ?? ""}</p>
+    <p><strong>Año:</strong> ${vehicle?.year ?? ""}</p>
+    <p><strong>VIN:</strong> ${vehicle?.vin ?? ""}</p>
+    <p><strong>Placas:</strong> ___________________________</p>
+  </div>
+</div>
+
+<div class="section">
+  <h2>III. PRECIO</h2>
+  <p>$${price} MXN</p>
+</div>
+
+<div class="section">
+  <h2>IV. DECLARACIONES</h2>
+  <p>El VENDEDOR declara ser el legítimo propietario, que el vehículo no cuenta con reporte de robo y que se encuentra libre de gravámenes salvo lo indicado.</p>
+  <p>El COMPRADOR declara haber revisado el vehículo y aceptar su estado.</p>
+</div>
+
+<div class="section">
+  <h2>V. CONDICIÓN</h2>
+  <p>El vehículo se vende en el estado en que se encuentra ("como está").</p>
+</div>
+
+<div class="section">
+  <h2>VI. ENTREGA</h2>
+  <p>El vendedor entrega factura, tarjeta de circulación y documentos disponibles en ${location}.</p>
+</div>
+
+<div class="section">
+  <h2>VII. FUNDAMENTO LEGAL</h2>
+  <p>Este contrato se celebra conforme al Código Civil Federal y legislación aplicable en México.</p>
+</div>
+
+<div class="section">
+  <h2>VIII. JURISDICCIÓN</h2>
+  <p>Las partes se someten a tribunales de ${location}.</p>
+</div>
+
+<div class="sig">
+  <div class="sig-block">
+    <div class="sig-line">VENDEDOR</div>
+  </div>
+  <div class="sig-block">
+    <div class="sig-line">COMPRADOR</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<h1>Vehicle Purchase Agreement (Reference)</h1>
+<p class="subtitle">MexGuardian — Verified Transaction Record</p>
+<p class="meta">${location}, ${date}</p>
+<p class="ref">Reference: ${id}</p>
+
+<div class="section">
+  <h2>PARTIES</h2>
+  <p>Seller: ${seller}</p>
+  <p>Buyer: ${buyer}</p>
+</div>
+
+<div class="section">
+  <h2>VEHICLE</h2>
+  <div class="vehicle-box">
+    <p><strong>Make:</strong> ${vehicle?.make ?? ""}</p>
+    <p><strong>Model:</strong> ${vehicle?.model ?? ""}</p>
+    <p><strong>Year:</strong> ${vehicle?.year ?? ""}</p>
+    <p><strong>VIN:</strong> ${vehicle?.vin ?? ""}</p>
+    <p><strong>Plates:</strong> ___________________________</p>
+  </div>
+</div>
+
+<div class="section">
+  <h2>PRICE</h2>
+  <p>$${price} MXN</p>
+</div>
+
+<div class="section">
+  <h2>TERMS</h2>
+  <p>The vehicle is sold "as is". The seller transfers ownership and the buyer accepts the condition.</p>
+</div>
+
+<div class="section">
+  <h2>JURISDICTION</h2>
+  <p>${location}, Mexico</p>
+</div>
+
+<div class="sig">
+  <div class="sig-block">
+    <div class="sig-line">SELLER</div>
+  </div>
+  <div class="sig-block">
+    <div class="sig-line">BUYER</div>
+  </div>
+</div>
+
+<p style="margin-top:40px; font-size:12px; color:#777; text-align:center;">
+Documento generado mediante MexGuardian como apoyo en una transacción vehicular.
+</p>
+
+</body>
+</html>`;
+
+    const printWindow = window.open("", "_blank");
+
+    if (!printWindow) {
+      alert("Please allow popups to generate the document.");
+      return;
+    }
+
+    printWindow.document.open();
+
+    printWindow.document.write(`
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>MexGuardian Agreement</title>
+<style>
+body {
+  font-family: Georgia, serif;
+  max-width: 720px;
+  margin: 40px auto;
+  padding: 0 24px;
+  color: #111;
+  line-height: 1.7;
+}
+@media print {
+  body { margin: 40px; }
+}
+</style>
+</head>
+<body>
+${html}
+<script>
+window.onload = function() {
+  window.focus();
+  window.print();
+};
+<\/script>
+</body>
+</html>
+`);
+
+    printWindow.document.close();
   }
 
   const [recordType, setRecordType] = useState<MaintenanceRecordType>("service");
@@ -316,7 +638,7 @@ function CompleteInterface() {
           <p className="text-sm text-[var(--foreground-muted)] mb-2">
             Purchase agreement generated
           </p>
-          <button className="text-sm text-white underline mb-4">
+          <button onClick={handleDownload} className="text-sm text-white underline mb-4">
             Download purchase agreement
           </button>
           <div className="mb-8">
@@ -324,12 +646,31 @@ function CompleteInterface() {
               onClick={handleShare}
               className="text-sm text-[var(--accent)] hover:text-blue-400 transition-colors"
             >
-              Copy share link
+              Share verified transaction
             </button>
+            <p className="text-sm text-gray-400 mt-1">
+              Anyone with this link can view the verification and contract
+            </p>
             {showShared && (
-              <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-3">
-                Share link copied.
-              </p>
+              <>
+                <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-3">
+                  Link copied. You can now share this transaction.
+                </p>
+                <div className="flex gap-4 mt-2">
+                  <button
+                    onClick={() => window.open(shareUrl, "_blank")}
+                    className="text-sm text-blue-400 underline"
+                  >
+                    Open link
+                  </button>
+                  <button
+                    onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(shareUrl)}`, "_blank")}
+                    className="text-sm text-green-400 underline"
+                  >
+                    Share via WhatsApp
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </>
@@ -341,6 +682,15 @@ function CompleteInterface() {
           Generate purchase agreement
         </button>
       )}
+
+      <div className="mb-8">
+        <button
+          onClick={handleDownloadAll}
+          className="text-sm text-[var(--foreground-muted)] hover:text-white transition-colors"
+        >
+          Download full vehicle record (.zip)
+        </button>
+      </div>
 
       {showForm ? (
         <div>
