@@ -233,7 +233,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
           A verification plan is required to run checks on this vehicle.
         </p>
         <a
-          href="/#pricing"
+          href="/start"
           className="inline-block w-full bg-[var(--accent)] text-white text-sm font-medium px-5 py-3 rounded-lg text-center hover:opacity-90 transition-opacity"
         >
           View plans →

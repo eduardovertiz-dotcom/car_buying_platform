@@ -14,8 +14,8 @@ function ErrorPage({ title, body }: { title: string; body: string }) {
       <div className="max-w-md text-center">
         <p className="text-white font-semibold text-lg mb-2">{title}</p>
         <p className="text-[var(--foreground-muted)] text-sm mb-6">{body}</p>
-        <Link href="/" className="text-sm text-[var(--accent)] hover:opacity-80 transition-opacity">
-          ← Back to home
+        <Link href="/start" className="text-sm text-[var(--accent)] hover:opacity-80 transition-opacity">
+          ← Start new verification
         </Link>
       </div>
     </main>
