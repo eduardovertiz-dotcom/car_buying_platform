@@ -11,13 +11,14 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Resend } from "resend";
 
 const ALLOWED_STATUSES = ["safe", "caution", "high_risk"] as const;
 type AdminStatus = (typeof ALLOWED_STATUSES)[number];
 
 export async function POST(req: Request) {
-  // ── Auth ─────────────────────────────────────────────────────────────────
+  // ── Auth (session client) ────────────────────────────────────────────────
   const supabase = createClient();
   const {
     data: { user },
@@ -25,6 +26,9 @@ export async function POST(req: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // ── Admin DB client (service role — bypasses RLS) ────────────────────────
+  const adminDb = createAdminClient();
 
   // ── Parse body ───────────────────────────────────────────────────────────
   let body: Record<string, unknown>;
@@ -51,7 +55,7 @@ export async function POST(req: Request) {
   }
 
   // ── Fetch transaction (need email + created_at for processing time) ───────
-  const { data: txData, error: fetchError } = await supabase
+  const { data: txData, error: fetchError } = await adminDb
     .from("transactions")
     .select("email, created_at")
     .eq("id", transactionId)
@@ -69,7 +73,7 @@ export async function POST(req: Request) {
     : null;
 
   // ── Update transaction ───────────────────────────────────────────────────
-  const { error: updateError } = await supabase
+  const { error: updateError } = await adminDb
     .from("transactions")
     .update({
       admin_verification_status: status,

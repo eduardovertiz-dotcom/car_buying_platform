@@ -7,16 +7,18 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(req: Request) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const adminDb = createAdminClient();
   const { searchParams } = new URL(req.url);
   const exclude = searchParams.get("exclude") ?? "";
 
-  let query = supabase
+  let query = adminDb
     .from("transactions")
     .select("id")
     .eq("status", "paid")

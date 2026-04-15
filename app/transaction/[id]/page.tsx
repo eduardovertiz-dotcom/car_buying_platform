@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isManualMode } from "@/lib/verification/mode";
 import AIInterface from "@/components/AIInterface";
 import BindBanner from "@/components/BindBanner";
@@ -37,12 +38,13 @@ export default async function TransactionPage({
     return renderError("This transaction link is invalid.");
   }
 
+  // Auth check via session client; data fetch via admin client (works without session)
   const supabase = createClient();
+  const adminDb = createAdminClient();
 
-  // Run auth check and transaction fetch in parallel
   const [authResult, txResult] = await Promise.all([
     supabase.auth.getUser(),
-    supabase
+    adminDb
       .from("transactions")
       .select("id, status, email, plan, user_id, admin_verification_status, admin_verification_notes")
       .eq("id", id)

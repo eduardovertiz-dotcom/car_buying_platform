@@ -15,6 +15,7 @@ export const dynamic = "force-dynamic";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isManualMode } from "@/lib/verification/mode";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -41,9 +42,10 @@ export default async function AdminQueuePage() {
   if (!user) redirect("/login");
 
   const manualMode = isManualMode();
+  const adminDb = createAdminClient();
 
   // Fetch pending queue regardless of mode — page still loads, just shows notice
-  const { data: rows, error } = await supabase
+  const { data: rows, error } = await adminDb
     .from("transactions")
     .select("id, created_at, email, documents")
     .eq("status", "paid")
