@@ -71,6 +71,9 @@ export default function TransactionsPage() {
     const supabase = createClient();
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
+      console.log("[TX_FLOW] URL:", window.location.href);
+      console.log("[TX_FLOW] user:", user ? { id: user.id, email: user.email } : null);
+
       if (!user) {
         // Preserve ?new param for bind and for returning to this screen after login
         const currentUrl = window.location.pathname + window.location.search;
@@ -84,12 +87,14 @@ export default function TransactionsPage() {
 
       // Execute any pending bind immediately after returning from login
       const pendingBind = localStorage.getItem("bind_pending");
+      console.log("[TX_FLOW] bind_pending:", pendingBind);
       if (pendingBind) {
         const res = await fetch("/api/bind-transaction", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ transactionId: pendingBind }),
         });
+        console.log("[TX_FLOW] bind result status:", res.status);
         localStorage.removeItem("bind_pending");
         if (!res.ok) {
           const status = res.status;
@@ -119,6 +124,14 @@ export default function TransactionsPage() {
       const { data, error } = await filteredQuery
         .order("created_at", { ascending: false });
 
+      console.log("[TX_FLOW] main query →", {
+        userEmail,
+        userId: user.id,
+        rowCount: data?.length ?? 0,
+        error: error ? { code: error.code, message: error.message } : null,
+        rows: (data ?? []).map(r => ({ id: r.id, status: r.status })),
+      });
+
       if (error) {
         console.error("TRANSACTIONS FETCH FAILED", error);
         setLoaded(true);
@@ -129,30 +142,45 @@ export default function TransactionsPage() {
         (t) => t.id && UUID_RE.test(t.id)
       ) as TxnRow[];
 
+      console.log("[TX_FLOW] valid.length:", valid.length);
+
       // ── Recovery mechanism ────────────────────────────────────────────────
-      // No transactions visible + no ?new param = redirect context was lost
-      // (e.g. Supabase OAuth stripped query params from redirectTo).
-      // Before sending to /start, attempt to recover the most recent paid
-      // transaction by email — case-insensitive, most recent first.
       if (valid.length === 0) {
+        console.log("[TX_FLOW] running recovery — userEmail:", userEmail);
+
         if (userEmail) {
-          const { data: recovered } = await supabase
+          const { data: recovered, error: recoveryError } = await supabase
             .from("transactions")
-            .select("id")
+            .select("id, email, user_id, status")
             .eq("status", "paid")
             .ilike("email", userEmail)
             .order("created_at", { ascending: false })
             .limit(1)
             .maybeSingle();
 
+          console.log("[TX_FLOW] recovery result:", {
+            recovered,
+            recoveryError: recoveryError ? { code: recoveryError.code, message: recoveryError.message } : null,
+          });
+
           if (recovered?.id && UUID_RE.test(recovered.id)) {
+            console.log("[TX_FLOW] redirecting to transaction:", recovered.id);
             router.replace(`/transaction/${recovered.id}`);
             return;
           }
         }
 
-        // No paid transaction found for this email — send to pricing
-        router.replace("/start");
+        // No paid transaction found for this email — BLOCKED: logging instead of redirecting
+        console.log("[TX_FLOW] redirect blocked — would have gone to /start");
+        console.log("[TX_FLOW] STATE DUMP:", {
+          url: window.location.href,
+          userEmail,
+          userId: user.id,
+          validLength: valid.length,
+          mainQueryRows: data?.length ?? 0,
+          mainQueryError: error,
+        });
+        setLoaded(true); // show the page as-is instead of redirecting
         return;
       }
       // ─────────────────────────────────────────────────────────────────────
