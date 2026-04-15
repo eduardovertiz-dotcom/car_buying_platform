@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 const SUPABASE_URL =
   process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
@@ -11,6 +12,19 @@ const ALLOWED_STATUSES = ["pending", "processing", "completed"] as const;
 type Status = (typeof ALLOWED_STATUSES)[number];
 
 export async function POST(req: NextRequest) {
+  // ── Auth + admin guard (fail-secure) ──────────────────────────────────────
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  if (ADMIN_EMAILS.length === 0 || !ADMIN_EMAILS.includes((user.email ?? "").toLowerCase())) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const { transaction_id, status } = await req.json();
 
   if (!transaction_id) {

@@ -47,7 +47,7 @@ export default async function AdminQueuePage() {
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
   const isAdmin =
-    ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes((user.email ?? "").toLowerCase());
+    ADMIN_EMAILS.length > 0 && ADMIN_EMAILS.includes((user.email ?? "").toLowerCase());
   if (!isAdmin) redirect("/transactions");
 
   const manualMode = isManualMode();

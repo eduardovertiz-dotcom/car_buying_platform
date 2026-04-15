@@ -21,8 +21,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid price ID" }, { status: 400 })
     }
 
-    const origin = req.headers.get("origin")
-    const baseUrl = origin ?? process.env.NEXT_PUBLIC_BASE_URL ?? "https://www.mexguardian.com"
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://www.mexguardian.com"
 
     // Build metadata — include transaction_id when upgrading an existing transaction
     const metadata: Record<string, string> = { plan }

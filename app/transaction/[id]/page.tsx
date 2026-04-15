@@ -65,10 +65,20 @@ export default async function TransactionPage({
     return renderError("This transaction has not been completed.");
   }
 
-  // Ownership check — authenticated users must own this transaction.
+  // Resolve admin status — fail-secure: if ADMIN_EMAILS is not set, no one is an admin
+  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  const isAdmin =
+    ADMIN_EMAILS.length > 0 &&
+    ADMIN_EMAILS.includes((sessionUser?.email ?? "").toLowerCase());
+
+  // Ownership check — authenticated non-admins must own this transaction.
+  // Admins bypass so they can review transactions from the queue.
   // Unauthenticated users (first-access / shared link) are allowed through;
   // they will see the BindBanner prompting them to sign in and claim it.
-  if (isAuthenticated) {
+  if (isAuthenticated && !isAdmin) {
     const ownsById = data.user_id === sessionUser!.id;
     const ownsByEmail =
       data.user_id === null &&
@@ -85,8 +95,8 @@ export default async function TransactionPage({
   const adminStatus = ((data as Record<string, unknown>).admin_verification_status as AdminStatus) ?? "pending";
   const adminNotes = ((data as Record<string, unknown>).admin_verification_notes as string | null) ?? null;
 
-  // Admin panel: show in manual mode when user is logged in and result not yet submitted
-  const showAdminPanel = isManualMode() && isAuthenticated && adminStatus === "pending";
+  // Admin panel: show in manual mode only to admins when result not yet submitted
+  const showAdminPanel = isManualMode() && isAdmin && adminStatus === "pending";
 
   // Report: show when admin has submitted a result
   const showReport = adminStatus === "safe" || adminStatus === "caution" || adminStatus === "high_risk";

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validate as isUUID } from "uuid";
+import { createClient } from "@/lib/supabase/server";
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -15,6 +16,11 @@ function logError(event: string, fields: Record<string, unknown>) {
 }
 
 export async function POST(req: NextRequest) {
+  // ── Auth required ─────────────────────────────────────────────────────────
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   // ── Correlation ID ────────────────────────────────────────────────────────
   const request_id = crypto.randomUUID();
 
@@ -78,6 +84,12 @@ export async function POST(req: NextRequest) {
   // ── Not paid ──────────────────────────────────────────────────────────────
   if (transaction.status !== "paid") {
     return NextResponse.json({ error: "Transaction is not paid" }, { status: 403 });
+  }
+
+  // ── Ownership check — caller's email must match the transaction ───────────
+  if ((transaction.email ?? "").toLowerCase() !== (user.email ?? "").toLowerCase()) {
+    logError("factura.forbidden", { request_id, transaction_id, stage: "ownership_check" });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const email = transaction.email ?? "";

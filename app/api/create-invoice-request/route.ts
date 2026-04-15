@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
+import { createClient } from "@/lib/supabase/server";
 
 const SUPABASE_URL =
   process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
@@ -16,9 +17,9 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@mexguardian.com";
 const RFC_REGEX = /^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/;
 const CP_REGEX  = /^[0-9]{5}$/;
 
+// email removed from REQUIRED — derived from auth session, not request body
 const REQUIRED = [
   "transaction_id",
-  "email",
   "amount",
   "plan",
   "rfc",
@@ -29,6 +30,11 @@ const REQUIRED = [
 ] as const;
 
 export async function POST(req: NextRequest) {
+  // ── Auth required ─────────────────────────────────────────────────────────
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const body = await req.json();
 
   // ── Required field check ──────────────────────────────────────────────────
@@ -46,7 +52,8 @@ export async function POST(req: NextRequest) {
   const codigo_postal  = String(body.codigo_postal).trim();
   const razon_social   = String(body.razon_social).trim();
   const transaction_id = String(body.transaction_id).trim();
-  const email          = String(body.email).trim();
+  // Email comes from the verified session — never from the request body
+  const email          = user.email ?? "";
 
   // ── RFC validation ────────────────────────────────────────────────────────
   if (!RFC_REGEX.test(rfc)) {

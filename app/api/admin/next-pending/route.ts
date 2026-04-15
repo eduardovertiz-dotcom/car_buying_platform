@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     .split(",")
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
-  if (ADMIN_EMAILS.length > 0 && !ADMIN_EMAILS.includes((user.email ?? "").toLowerCase())) {
+  if (ADMIN_EMAILS.length === 0 || !ADMIN_EMAILS.includes((user.email ?? "").toLowerCase())) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
