@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import Stripe from "stripe";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendAdminAlert } from "@/lib/notifications/sendAdminAlert";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
-const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
 function ErrorPage({ title, body }: { title: string; body: string }) {
   return (
@@ -61,24 +59,18 @@ export default async function TransactionSuccessPage({
   const amount = session.amount_total ?? 0;
   const existingTransactionId = session.metadata?.transaction_id ?? null;
 
+  // Service role client — bypasses RLS, required for unauthenticated writes
+  const adminDb = createAdminClient();
+
   // ── UPGRADE: update plan on existing transaction ──────────────────────────
   if (existingTransactionId) {
-    const update = await fetch(
-      `${SUPABASE_URL}/rest/v1/transactions?id=eq.${encodeURIComponent(existingTransactionId)}`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
-          Prefer: "return=minimal",
-        },
-        body: JSON.stringify({ plan, stripe_session_id: sessionId }),
-      }
-    );
+    const { error: upgradeError } = await adminDb
+      .from("transactions")
+      .update({ plan, stripe_session_id: sessionId })
+      .eq("id", existingTransactionId);
 
-    if (!update.ok) {
-      console.error("Supabase upgrade PATCH failed:", await update.text());
+    if (upgradeError) {
+      console.error("Supabase upgrade PATCH failed:", upgradeError.message);
       return <ErrorPage title="Something went wrong" body="Your payment was received but we could not upgrade your transaction. Please contact support." />;
     }
 
@@ -96,33 +88,20 @@ export default async function TransactionSuccessPage({
   }
 
   // ── NEW TRANSACTION: upsert — safe under concurrent/duplicate requests ────
-  const upsert = await fetch(
-    `${SUPABASE_URL}/rest/v1/transactions?on_conflict=stripe_session_id`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        Prefer: "resolution=merge-duplicates,return=representation",
-      },
-      body: JSON.stringify({
-        stripe_session_id: sessionId,
-        email,
-        amount,
-        plan,
-        status: "paid",
-      }),
-    }
-  );
+  const { data: rows, error: upsertError } = await adminDb
+    .from("transactions")
+    .upsert(
+      { stripe_session_id: sessionId, email, amount, plan, status: "paid" },
+      { onConflict: "stripe_session_id" }
+    )
+    .select("id");
 
-  if (!upsert.ok) {
-    console.error("Supabase upsert failed:", await upsert.text());
+  if (upsertError) {
+    console.error("Supabase upsert failed:", upsertError.message);
     return <ErrorPage title="Something went wrong" body="Your payment was received but we could not initialize your transaction. Please contact support." />;
   }
 
-  const rows: { id: string }[] = await upsert.json();
-  const transactionId: string | null = rows[0]?.id ?? null;
+  const transactionId: string | null = rows?.[0]?.id ?? null;
 
   if (!transactionId) {
     return <ErrorPage title="Something went wrong" body="Could not retrieve your transaction ID. Please contact support." />;
