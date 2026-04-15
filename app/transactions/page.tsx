@@ -102,13 +102,19 @@ export default function TransactionsPage() {
         }
       }
 
+      // Normalize email once — used in both the main query and recovery query
+      const userEmail = (user.email ?? "").toLowerCase().trim();
+      const hasNewParam = !!new URLSearchParams(window.location.search).get("new");
+
       const query = supabase
         .from("transactions")
         .select("id, created_at, status, plan")
         .eq("status", "paid");
 
-      const filteredQuery = user.email
-        ? query.or(`user_id.eq.${user.id},and(user_id.is.null,email.eq.${user.email})`)
+      // ilike = case-insensitive match — prevents misses when Stripe email
+      // casing differs from Google OAuth email (e.g. "User@Gmail.com" vs "user@gmail.com")
+      const filteredQuery = userEmail
+        ? query.or(`user_id.eq.${user.id},and(user_id.is.null,email.ilike.${userEmail})`)
         : query.eq("user_id", user.id);
 
       const { data, error } = await filteredQuery
@@ -124,11 +130,33 @@ export default function TransactionsPage() {
         (t) => t.id && UUID_RE.test(t.id)
       ) as TxnRow[];
 
-      // Auto-redirect to /start when user has no transactions (and not on ?new confirmation)
-      if (valid.length === 0 && !new URLSearchParams(window.location.search).get("new")) {
+      // ── Recovery mechanism ────────────────────────────────────────────────
+      // No transactions visible + no ?new param = redirect context was lost
+      // (e.g. Supabase OAuth stripped query params from redirectTo).
+      // Before sending to /start, attempt to recover the most recent paid
+      // transaction by email — case-insensitive, most recent first.
+      if (valid.length === 0 && !hasNewParam) {
+        if (userEmail) {
+          const { data: recovered } = await supabase
+            .from("transactions")
+            .select("id")
+            .eq("status", "paid")
+            .ilike("email", userEmail)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (recovered?.id && UUID_RE.test(recovered.id)) {
+            router.replace(`/transaction/${recovered.id}`);
+            return;
+          }
+        }
+
+        // No paid transaction found for this email — send to pricing
         router.replace("/start");
         return;
       }
+      // ─────────────────────────────────────────────────────────────────────
 
       setTransactions(valid);
       setLoaded(true);
