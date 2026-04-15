@@ -41,6 +41,15 @@ export default async function AdminQueuePage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  // Admin allowlist guard — non-admins see 403 page rather than the queue
+  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  const isAdmin =
+    ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes((user.email ?? "").toLowerCase());
+  if (!isAdmin) redirect("/transactions");
+
   const manualMode = isManualMode();
   const adminDb = createAdminClient();
 

@@ -52,7 +52,8 @@ export default async function TransactionPage({
   ]);
 
   const { data, error } = txResult;
-  const isAuthenticated = !!authResult.data.user;
+  const sessionUser = authResult.data.user;
+  const isAuthenticated = !!sessionUser;
 
   if (error || !data) {
     console.error("TRANSACTION FETCH FAILED", { id, error: error?.message });
@@ -62,6 +63,21 @@ export default async function TransactionPage({
   if (data.status !== "paid") {
     console.error("TRANSACTION NOT PAID", { id, status: data.status });
     return renderError("This transaction has not been completed.");
+  }
+
+  // Ownership check — authenticated users must own this transaction.
+  // Unauthenticated users (first-access / shared link) are allowed through;
+  // they will see the BindBanner prompting them to sign in and claim it.
+  if (isAuthenticated) {
+    const ownsById = data.user_id === sessionUser!.id;
+    const ownsByEmail =
+      data.user_id === null &&
+      data.email != null &&
+      data.email.toLowerCase() === (sessionUser!.email ?? "").toLowerCase();
+    if (!ownsById && !ownsByEmail) {
+      console.warn("TRANSACTION ACCESS DENIED", { id, userId: sessionUser!.id });
+      return renderError("You don't have access to this transaction.");
+    }
   }
 
   const plan = (data.plan as "49" | "79" | null) ?? null;
