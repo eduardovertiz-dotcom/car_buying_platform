@@ -49,20 +49,46 @@ export default async function TransactionPage({
       .from("transactions")
       .select("id, status, email, plan, user_id, admin_verification_status, admin_verification_notes")
       .eq("id", id)
-      .single(),
+      .maybeSingle(),                 // maybeSingle: no error when row absent (vs .single() throws)
   ]);
 
   const { data, error } = txResult;
   const sessionUser = authResult.data.user;
   const isAuthenticated = !!sessionUser;
 
-  if (error || !data) {
-    console.error("TRANSACTION FETCH FAILED", { id, error: error?.message });
-    return renderError("We could not load this transaction. Please try again or contact support.");
+  // ── Diagnostic logging — remove after root cause confirmed ───────────────
+  console.log("[TX_LOAD] id:", id);
+  console.log("[TX_LOAD] auth:", {
+    isAuthenticated,
+    userId: sessionUser?.id ?? null,
+    userEmail: sessionUser?.email ?? null,
+  });
+  console.log("[TX_LOAD] query result:", {
+    hasData: !!data,
+    dataId: data?.id ?? null,
+    dataEmail: data?.email ?? null,
+    dataUserId: data?.user_id ?? null,
+    dataStatus: data?.status ?? null,
+    errorCode: error?.code ?? null,
+    errorMessage: error?.message ?? null,
+    errorDetails: error?.details ?? null,
+  });
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // ── Query error — show actual Postgres error, not generic message ─────────
+  if (error) {
+    console.error("[TX_LOAD] QUERY ERROR", { id, code: error.code, message: error.message });
+    return renderError(`Query failed: ${error.message} (code: ${error.code})`);
+  }
+
+  // ── Row not found ─────────────────────────────────────────────────────────
+  if (!data) {
+    console.error("[TX_LOAD] NOT FOUND", { id });
+    return renderError("Transaction not found. The link may be invalid or the transaction may not exist yet.");
   }
 
   if (data.status !== "paid") {
-    console.error("TRANSACTION NOT PAID", { id, status: data.status });
+    console.error("[TX_LOAD] NOT PAID", { id, status: data.status });
     return renderError("This transaction has not been completed.");
   }
 
@@ -82,18 +108,35 @@ export default async function TransactionPage({
 
   // Ownership check — authenticated non-admins must own this transaction.
   // Admins bypass so they can review transactions from the queue.
-  // Unauthenticated users (first-access / shared link) are allowed through;
-  // they will see the BindBanner prompting them to sign in and claim it.
   if (isAuthenticated && !isAdmin) {
     const ownsById = data.user_id === sessionUser!.id;
-    const ownsByEmail =
-      data.user_id === null &&
-      data.email != null &&
-      data.email.toLowerCase() === (sessionUser!.email ?? "").toLowerCase();
+
+    // Email comparison: normalize both sides (lowercase + trim)
+    const txEmail  = (data.email ?? "").toLowerCase().trim();
+    const authEmail = (sessionUser!.email ?? "").toLowerCase().trim();
+    const ownsByEmail = data.user_id === null && txEmail !== "" && txEmail === authEmail;
+
+    // ── Ownership diagnostic log ──────────────────────────────────────────
+    console.log("[TX_LOAD] ownership check:", {
+      ownsById,
+      ownsByEmail,
+      dataUserId: data.user_id,
+      sessionUserId: sessionUser!.id,
+      txEmail,
+      authEmail,
+      emailMatch: txEmail === authEmail,
+    });
+    // ─────────────────────────────────────────────────────────────────────
+
     if (!ownsById && !ownsByEmail) {
-      console.warn("TRANSACTION ACCESS DENIED", { id, userId: sessionUser!.id });
+      console.warn("[TX_LOAD] ACCESS DENIED", {
+        id,
+        sessionUserId: sessionUser!.id,
+        txEmail,
+        authEmail,
+      });
       return renderError(
-        "You don't have access to this transaction. Sign in with the email address used at checkout."
+        `Access denied. Transaction email (${txEmail || "none"}) does not match your account email (${authEmail}). Sign in with the email address used at checkout.`
       );
     }
   }
