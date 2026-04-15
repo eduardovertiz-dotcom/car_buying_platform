@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isManualMode } from "@/lib/verification/mode";
@@ -65,6 +66,11 @@ export default async function TransactionPage({
     return renderError("This transaction has not been completed.");
   }
 
+  // Require authentication — unauthenticated users are sent to login with return URL
+  if (!isAuthenticated) {
+    redirect(`/login?redirect=/transaction/${id}`);
+  }
+
   // Resolve admin status — fail-secure: if ADMIN_EMAILS is not set, no one is an admin
   const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
     .split(",")
@@ -86,7 +92,9 @@ export default async function TransactionPage({
       data.email.toLowerCase() === (sessionUser!.email ?? "").toLowerCase();
     if (!ownsById && !ownsByEmail) {
       console.warn("TRANSACTION ACCESS DENIED", { id, userId: sessionUser!.id });
-      return renderError("You don't have access to this transaction.");
+      return renderError(
+        "You don't have access to this transaction. Sign in with the email address used at checkout."
+      );
     }
   }
 

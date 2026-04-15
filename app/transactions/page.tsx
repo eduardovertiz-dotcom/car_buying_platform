@@ -32,6 +32,7 @@ export default function TransactionsPage() {
   const [newId, setNewId] = useState<string | null>(null);
   const [newEmail, setNewEmail] = useState<string | null>(null);
   const [isFacturaOpen, setIsFacturaOpen] = useState(false);
+  const [bindError, setBindError] = useState<string | null>(null);
   const facturaRef = useRef<HTMLDivElement>(null);
 
   async function handleLogout() {
@@ -71,11 +72,17 @@ export default function TransactionsPage() {
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) {
-        router.replace("/login");
+        // Preserve ?new param for bind and for returning to this screen after login
+        const currentUrl = window.location.pathname + window.location.search;
+        const newParam = new URLSearchParams(window.location.search).get("new");
+        if (newParam) {
+          try { localStorage.setItem("bind_pending", newParam); } catch {}
+        }
+        router.replace("/login?redirect=" + encodeURIComponent(currentUrl));
         return;
       }
 
-      // Execute any pending bind immediately after login
+      // Execute any pending bind immediately after returning from login
       const pendingBind = localStorage.getItem("bind_pending");
       if (pendingBind) {
         const res = await fetch("/api/bind-transaction", {
@@ -83,8 +90,15 @@ export default function TransactionsPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ transactionId: pendingBind }),
         });
-        if (res.ok) {
-          localStorage.removeItem("bind_pending");
+        localStorage.removeItem("bind_pending");
+        if (!res.ok) {
+          const status = res.status;
+          if (status === 403) {
+            setBindError(
+              "This transaction is linked to a different email. Sign in with the email address used at checkout."
+            );
+          }
+          // Non-403 errors: silently continue — transaction still accessible by email match
         }
       }
 
@@ -146,12 +160,24 @@ export default function TransactionsPage() {
               </div>
 
               <div className="mt-8">
-                <Link
-                  href={`/transaction/${newId}`}
-                  className="inline-flex items-center gap-2 bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-6 py-3.5 hover:opacity-90 transition-opacity"
-                >
-                  Start verification →
-                </Link>
+                {bindError ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-red-400">{bindError}</p>
+                    <button
+                      onClick={handleLogout}
+                      className="text-sm text-white/60 underline hover:text-white transition-colors"
+                    >
+                      Sign out and try a different account
+                    </button>
+                  </div>
+                ) : (
+                  <Link
+                    href={`/transaction/${newId}`}
+                    className="inline-flex items-center gap-2 bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-6 py-3.5 hover:opacity-90 transition-opacity"
+                  >
+                    Start verification →
+                  </Link>
+                )}
               </div>
 
               <div className="mt-6">

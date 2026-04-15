@@ -9,21 +9,25 @@ export default function LoginPage() {
   const [sent, setSent] = useState(false);
 
   async function handleGoogle() {
+    const redirect = new URLSearchParams(window.location.search).get("redirect") ?? "";
+    const callbackUrl = redirect
+      ? `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}`
+      : `${window.location.origin}/auth/callback`;
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options: { redirectTo: callbackUrl },
     });
   }
 
   async function handleMagicLink() {
     if (!email) return;
+    const redirect = new URLSearchParams(window.location.search).get("redirect") ?? "";
+    const callbackUrl = redirect
+      ? `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}`
+      : `${window.location.origin}/auth/callback`;
     await supabase.auth.signInWithOtp({
       email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options: { emailRedirectTo: callbackUrl },
     });
     setSent(true);
   }
