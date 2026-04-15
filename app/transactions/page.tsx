@@ -104,7 +104,6 @@ export default function TransactionsPage() {
 
       // Normalize email once — used in both the main query and recovery query
       const userEmail = (user.email ?? "").toLowerCase().trim();
-      const hasNewParam = !!new URLSearchParams(window.location.search).get("new");
 
       const query = supabase
         .from("transactions")
@@ -135,7 +134,7 @@ export default function TransactionsPage() {
       // (e.g. Supabase OAuth stripped query params from redirectTo).
       // Before sending to /start, attempt to recover the most recent paid
       // transaction by email — case-insensitive, most recent first.
-      if (valid.length === 0 && !hasNewParam) {
+      if (valid.length === 0) {
         if (userEmail) {
           const { data: recovered } = await supabase
             .from("transactions")
