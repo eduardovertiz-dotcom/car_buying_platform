@@ -90,7 +90,7 @@ export type Transaction = {
 };
 
 export const STEPS: { key: Step; label: string; index: number }[] = [
-  { key: "understand", label: "Prepare", index: 0 },
+  { key: "understand", label: "Upload", index: 0 },
   { key: "find", label: "Review", index: 1 },
   { key: "evaluate", label: "Analyze", index: 2 },
   { key: "verify", label: "Verify", index: 3 },
@@ -98,9 +98,9 @@ export const STEPS: { key: Step; label: string; index: number }[] = [
 ];
 
 export const DOCUMENT_LABELS: Record<DocumentType, string> = {
-  ine: "INE / Identificación oficial",
-  registration: "Tarjeta de circulación",
-  invoice: "Factura",
+  ine: "Seller ID (INE / official ID)",
+  registration: "Vehicle registration (Tarjeta de circulación)",
+  invoice: "Ownership invoice (Factura)",
 };
 
 export const DEFAULT_DOCUMENTS: DocumentCollection = {

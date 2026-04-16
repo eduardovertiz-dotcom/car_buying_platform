@@ -3,7 +3,7 @@
 import { useTransaction } from "@/context/TransactionContext";
 
 const statusLabel: Record<string, string> = {
-  not_started: "Not started",
+  not_started: "Waiting for documents",
   basic_processing: "Running basic checks",
   basic_complete: "Basic complete",
   professional_processing: "Professional review in progress",
@@ -66,8 +66,7 @@ export default function VerificationPanel() {
 
       {verification_status === "not_started" && (
         <p className="text-xs text-[var(--foreground-muted)]">
-          Verification data may be incomplete. Results do not guarantee the
-          absence of risk.
+          Your verification begins once all required documents are uploaded.
         </p>
       )}
     </section>

@@ -11,14 +11,16 @@ type StepContent = {
   body: string;
   action: string;
   completedAction: string;
+  contextLine?: string;
 };
 
 const stepContent: Record<Step, StepContent> = {
   understand: {
-    heading: "Prepare before you search",
-    body: "Before looking at any listing, define your budget, the type of vehicle you need, and the risks you're not willing to accept. Buyers who skip this step make worse decisions under pressure.",
-    action: "I'm ready — I know what I'm looking for",
+    heading: "Start your vehicle verification",
+    body: "Upload the required documents so we can verify the vehicle, ownership, and risk before you proceed with payment.",
+    action: "Upload documents to start",
     completedAction: "Step completed",
+    contextLine: "Most issues are discovered after payment. This step helps you avoid that.",
   },
   find: {
     heading: "Review listings carefully",
@@ -1053,6 +1055,12 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
       >
         {content.action}
       </button>
+
+      {content.contextLine && (
+        <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-3">
+          {content.contextLine}
+        </p>
+      )}
     </section>
   );
 }

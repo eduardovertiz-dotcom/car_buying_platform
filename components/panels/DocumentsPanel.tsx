@@ -60,7 +60,7 @@ export default function DocumentsPanel() {
   return (
     <section className="border-t border-[var(--border)] py-6">
       <h3 className="text-xs uppercase tracking-widest text-[var(--foreground-muted)] mb-4">
-        Documents
+        Required documents
       </h3>
 
       <ul className="flex flex-col gap-4">
@@ -104,7 +104,7 @@ export default function DocumentsPanel() {
                     onClick={() => inputRefs.current[docType]?.click()}
                     className="text-xs text-[var(--accent)] hover:text-blue-400 transition-colors"
                   >
-                    Upload
+                    Upload document
                   </button>
                 )}
               </div>

@@ -1,10 +1,19 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useTransaction } from "@/context/TransactionContext";
 import { STEPS } from "@/lib/types";
+import { createClient } from "@/lib/supabase/client";
 
 export default function Header() {
   const { transaction } = useTransaction();
+  const router = useRouter();
+
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+  }
   const currentStepIndex = STEPS.findIndex(
     (s) => s.key === transaction.current_step
   );
@@ -29,6 +38,12 @@ export default function Header() {
             <p className="text-xs text-[var(--foreground-muted)] mt-0.5">
               {transaction.checklist_progress}% complete
             </p>
+            <button
+              onClick={handleLogout}
+              className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors mt-1"
+            >
+              Logout
+            </button>
           </div>
         </div>
 

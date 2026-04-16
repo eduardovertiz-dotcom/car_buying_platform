@@ -7,7 +7,7 @@ function formatEntry(entry: ActivityEntry): string {
   const stepLabel = STEPS.find((s) => s.key === entry.step)?.label ?? entry.step;
   switch (entry.type) {
     case "transaction_created":
-      return "Transaction created";
+      return "Verification started";
     case "step_completed":
       return `Completed: ${stepLabel}`;
     case "basic_verification_requested":
