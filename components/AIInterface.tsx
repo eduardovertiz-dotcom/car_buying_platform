@@ -24,9 +24,9 @@ const stepContent: Record<Step, StepContent> = {
     contextLine: "Most issues are discovered after payment. This step helps you avoid that.",
   },
   find: {
-    heading: "Review listings carefully",
-    body: "Not all listings are what they appear. Scan for pricing inconsistencies, rushed sellers, missing documentation, and photos that don't match. Shortlist only vehicles that pass initial review.",
-    action: "I have a vehicle to analyze — continue",
+    heading: "Reviewing official records",
+    body: "We check the vehicle, ownership, and registry data against official records to identify inconsistencies.",
+    action: "Continue verification",
     completedAction: "Step completed",
   },
   evaluate: {
