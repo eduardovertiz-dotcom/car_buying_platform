@@ -53,13 +53,13 @@ export default function Hero() {
         <div className="w-full max-w-6xl mx-auto px-6 lg:pl-10 lg:pr-0 grid lg:grid-cols-[48%_52%] items-center">
 
           {/* TEXT */}
-          <div className="max-w-xl">
+          <div className="max-w-xl pr-8">
 
             <h1
               className="max-w-2xl font-semibold text-white tracking-tight leading-[1.1]"
               style={{ fontSize: "clamp(2.5rem, 6vw, 4rem)" }}
             >
-              Most car scams in Mexico happen after you send the money
+              In Mexico, car scams happen after you send the money.
             </h1>
 
             <p className="max-w-lg text-white/75 leading-relaxed mt-4">
