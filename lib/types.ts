@@ -90,9 +90,9 @@ export type Transaction = {
 };
 
 export const STEPS: { key: Step; label: string; index: number }[] = [
-  { key: "understand", label: "Understand", index: 0 },
-  { key: "find", label: "Find", index: 1 },
-  { key: "evaluate", label: "Evaluate", index: 2 },
+  { key: "understand", label: "Prepare", index: 0 },
+  { key: "find", label: "Review", index: 1 },
+  { key: "evaluate", label: "Analyze", index: 2 },
   { key: "verify", label: "Verify", index: 3 },
   { key: "complete", label: "Complete", index: 4 },
 ];

@@ -15,21 +15,21 @@ type StepContent = {
 
 const stepContent: Record<Step, StepContent> = {
   understand: {
-    heading: "Let's begin your verification",
-    body: "We'll guide you through each step to verify the vehicle, documents, and ownership. This ensures you don't miss anything critical before completing your purchase.",
-    action: "Begin verification",
+    heading: "Prepare before you search",
+    body: "Before looking at any listing, define your budget, the type of vehicle you need, and the risks you're not willing to accept. Buyers who skip this step make worse decisions under pressure.",
+    action: "I'm ready — I know what I'm looking for",
     completedAction: "Step completed",
   },
   find: {
-    heading: "Finding the right vehicle",
-    body: "Before evaluating a specific car, define what you're looking for and where to look. Knowing the year, make, and model that fits your budget and needs reduces exposure to bad deals.",
-    action: "I have a vehicle in mind — continue",
+    heading: "Review listings carefully",
+    body: "Not all listings are what they appear. Scan for pricing inconsistencies, rushed sellers, missing documentation, and photos that don't match. Shortlist only vehicles that pass initial review.",
+    action: "I have a vehicle to analyze — continue",
     completedAction: "Step completed",
   },
   evaluate: {
-    heading: "Evaluating this vehicle",
-    body: "Assess the vehicle critically. Review the physical condition, documentation, and seller behavior. Red flags at this stage are easier to walk away from than problems discovered after payment.",
-    action: "Evaluation complete — proceed to verification",
+    heading: "Analyze this vehicle",
+    body: "Go deeper on the vehicle you've shortlisted. Assess physical condition, confirm the documentation makes sense, and read seller behavior. Red flags here are cheaper to walk away from than problems found after payment.",
+    action: "Analysis complete — proceed to verification",
     completedAction: "Step completed",
   },
   verify: {
@@ -247,7 +247,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     return (
       <>
         <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
-          Running basic verification
+          Verifying this vehicle
         </h2>
         <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
           Checking REPUVE, outstanding liabilities, factura validity, and VIN
@@ -266,10 +266,10 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     return (
       <>
         <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
-          Running full verification
+          Running full protection checks
         </h2>
         <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
-          Verifying identity, documents, and running advanced fraud checks.
+          Verifying identity, documents, ownership, and running advanced fraud pattern checks.
         </p>
         <div className="border border-[var(--border)] rounded-lg px-5 py-4">
           <p className="text-sm text-[var(--foreground-muted)]">
