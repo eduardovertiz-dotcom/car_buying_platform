@@ -35,15 +35,17 @@ export default function Header() {
               {transaction.vehicle.year} {transaction.vehicle.make}{" "}
               {transaction.vehicle.model}
             </p>
-            <p className="text-xs text-[var(--foreground-muted)] mt-0.5">
-              {transaction.checklist_progress}% complete
-            </p>
-            <button
-              onClick={handleLogout}
-              className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors mt-1"
-            >
-              Logout
-            </button>
+            <div className="flex items-center justify-end gap-4 mt-0.5">
+              <p className="text-xs text-[var(--foreground-muted)]">
+                {transaction.checklist_progress}% complete
+              </p>
+              <button
+                onClick={handleLogout}
+                className="text-xs text-white hover:underline cursor-pointer transition-colors"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
 
