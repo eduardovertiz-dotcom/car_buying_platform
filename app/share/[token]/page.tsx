@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Transaction } from "@/lib/types";
 import { DOCUMENT_LABELS, STEPS } from "@/lib/types";
+import { generateAgreementHTML } from "@/lib/agreement";
 
 function findTransactionByToken(token: string): Transaction | null {
   const raw = localStorage.getItem(`share_${token}`);
@@ -57,95 +58,25 @@ export default function SharePage() {
 
   function handleDownload() {
     if (!transaction) return;
-    const { vehicle, id } = transaction;
-
-    const date = new Date().toLocaleDateString("en-MX", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
+    const date = new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" });
+    const html = generateAgreementHTML({
+      id:           transaction.id,
+      date,
+      vehicle:      transaction.vehicle,
+      buyer_name:   transaction.buyer_name,
+      buyer_email:  transaction.buyer_email,
+      seller_name:  transaction.seller_name,
+      seller_email: transaction.seller_email,
+      price:        transaction.price,
+      location:     transaction.location,
     });
-
-    const vehicleStr = vehicle
-      ? `${vehicle.year ?? ""} ${vehicle.make ?? ""} ${vehicle.model ?? ""}${
-          vehicle.vin ? ` (VIN: ${vehicle.vin})` : ""
-        }`
-      : "Vehicle details not provided";
-
-    const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Vehicle Purchase Agreement</title>
-  <style>
-    body { font-family: Georgia, serif; max-width: 680px; margin: 60px auto; padding: 0 24px; color: #111; line-height: 1.7; }
-    h1 { text-align: center; font-size: 22px; margin-bottom: 8px; }
-    .meta { text-align: center; color: #555; font-size: 14px; margin-bottom: 40px; }
-    h2 { font-size: 15px; margin-top: 32px; border-bottom: 1px solid #ddd; padding-bottom: 6px; }
-    .sig { margin-top: 60px; display: flex; gap: 60px; }
-    .sig-block { flex: 1; }
-    .sig-line { border-top: 1px solid #111; margin-top: 48px; padding-top: 6px; font-size: 13px; color: #555; }
-  </style>
-</head>
-<body>
-  <h1>Vehicle Purchase Agreement</h1>
-  <p class="meta">Date: ${date} &nbsp;|&nbsp; Reference: ${id}</p>
-  <h2>Parties</h2>
-  <p><strong>Buyer:</strong> ___________________________</p>
-  <p><strong>Seller:</strong> ___________________________</p>
-  <h2>Vehicle</h2>
-  <p>${vehicleStr}</p>
-  <h2>Agreement</h2>
-  <p>The Buyer agrees to purchase the vehicle described above from the Seller. The Seller agrees to transfer full legal ownership of the vehicle to the Buyer upon receipt of agreed payment. Both parties confirm that all information provided is accurate and complete.</p>
-  <h2>Terms</h2>
-  <p>This agreement is entered into voluntarily by both parties. The vehicle is sold in its current condition as verified through MexGuardian.</p>
-  <div class="sig">
-    <div class="sig-block"><div class="sig-line">Buyer signature &amp; date</div></div>
-    <div class="sig-block"><div class="sig-line">Seller signature &amp; date</div></div>
-  </div>
-</body>
-</html>`;
-
     const printWindow = window.open("", "_blank");
-
     if (!printWindow) {
       alert("Please allow popups to generate the document.");
       return;
     }
-
     printWindow.document.open();
-
-    printWindow.document.write(`
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8" />
-<title>MexGuardian Agreement</title>
-<style>
-body {
-  font-family: Georgia, serif;
-  max-width: 720px;
-  margin: 40px auto;
-  padding: 0 24px;
-  color: #111;
-  line-height: 1.7;
-}
-@media print {
-  body { margin: 40px; }
-}
-</style>
-</head>
-<body>
-${html}
-<script>
-window.onload = function() {
-  window.focus();
-  window.print();
-};
-<\/script>
-</body>
-</html>
-`);
-
+    printWindow.document.write(html);
     printWindow.document.close();
   }
 

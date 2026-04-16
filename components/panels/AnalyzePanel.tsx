@@ -56,7 +56,7 @@ function IconInfo() {
 }
 
 export default function AnalyzePanel({ plan }: { plan: "49" | "79" | null }) {
-  const { advanceStep } = useTransaction();
+  const { advanceStep, advanceToStep } = useTransaction();
   const [upsellLoading, setUpsellLoading] = useState(false);
   const showUpgrade = plan === "49";
 
@@ -142,9 +142,9 @@ export default function AnalyzePanel({ plan }: { plan: "49" | "79" | null }) {
         </div>
       )}
 
-      {/* Continue on basic */}
+      {/* Continue — Basic skips Verify and goes directly to Complete */}
       <button
-        onClick={advanceStep}
+        onClick={() => plan === "49" ? advanceToStep("complete") : advanceStep()}
         className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors underline underline-offset-2"
       >
         Continue with basic results

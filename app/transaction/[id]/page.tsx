@@ -143,7 +143,7 @@ export default async function TransactionPage({
 
   return (
     <>
-      <Header />
+      <Header plan={plan} />
       <main className="px-6 pb-16">
         <div className="max-w-[680px] mx-auto">
           <BindBanner transactionId={id} hasOwner={hasOwner} />

@@ -25,6 +25,7 @@ import { mockTransactions } from "@/lib/mock";
 
 type Action =
   | { type: "ADVANCE_STEP" }
+  | { type: "ADVANCE_TO_STEP"; payload: Step }
   | { type: "GO_TO_STEP"; payload: Step }
   | { type: "HYDRATE"; payload: Transaction }
   | { type: "REQUEST_BASIC_VERIFICATION" }
@@ -35,7 +36,8 @@ type Action =
   | { type: "GENERATE_CONTRACT" }
   | { type: "ADD_MAINTENANCE_RECORD"; payload: { type: MaintenanceRecordType; title: string; date: string } }
   | { type: "ENABLE_SHARE"; payload: { token: string } }
-  | { type: "REVOKE_SHARE" };
+  | { type: "REVOKE_SHARE" }
+  | { type: "UPDATE_AGREEMENT_FIELDS"; payload: { buyer_name?: string; buyer_email?: string; seller_name?: string; seller_email?: string; price?: string; location?: string } };
 
 // ─── Reducer ────────────────────────────────────────────────────────────────
 
@@ -43,6 +45,16 @@ function reducer(state: Transaction, action: Action): Transaction {
   switch (action.type) {
     case "HYDRATE": {
       const payload = action.payload;
+      // Migration: remap legacy step keys to new keys
+      const STEP_MIGRATION: Record<string, Step> = {
+        understand: "upload",
+        find: "check",
+        evaluate: "analyze",
+      };
+      const migratedStep = STEP_MIGRATION[payload.current_step as string];
+      if (migratedStep) {
+        (payload as Transaction).current_step = migratedStep;
+      }
       // Migration: remap legacy "none" status to "not_started"
       const verification_status =
         (payload.verification_status as string) === "none"
@@ -226,6 +238,24 @@ function reducer(state: Transaction, action: Action): Transaction {
       };
     }
 
+    case "UPDATE_AGREEMENT_FIELDS": {
+      return { ...state, ...action.payload };
+    }
+
+    case "ADVANCE_TO_STEP": {
+      // Forward jump to a specific step — used by Basic plan to skip "verify"
+      const targetKey = action.payload;
+      const targetIndex = STEPS.findIndex((s) => s.key === targetKey);
+      const currentIndex = STEPS.findIndex((s) => s.key === state.current_step);
+      if (targetIndex <= currentIndex) return state;
+      const newProgress = Math.round((targetIndex / (STEPS.length - 1)) * 100);
+      return {
+        ...state,
+        current_step: targetKey,
+        checklist_progress: newProgress,
+      };
+    }
+
     case "GO_TO_STEP": {
       const targetKey = action.payload;
       const targetIndex = STEPS.findIndex((s) => s.key === targetKey);
@@ -267,6 +297,7 @@ function reducer(state: Transaction, action: Action): Transaction {
 type TransactionContextValue = {
   transaction: Transaction;
   advanceStep: () => void;
+  advanceToStep: (step: Step) => void;
   goToStep: (step: Step) => void;
   returnedToStep: Step | null;
   isAtFinalStep: boolean;
@@ -279,6 +310,7 @@ type TransactionContextValue = {
   addMaintenanceRecord: (type: MaintenanceRecordType, title: string, date: string) => void;
   enableShare: (token: string) => void;
   revokeShare: () => void;
+  updateAgreementFields: (fields: { buyer_name?: string; buyer_email?: string; seller_name?: string; seller_email?: string; price?: string; location?: string }) => void;
 };
 
 const TransactionContext = createContext<TransactionContextValue | null>(null);
@@ -294,7 +326,7 @@ function createFreshTransaction(id: string): Transaction {
   return {
     id,
     vehicle: { make: "", model: "", year: new Date().getFullYear() },
-    current_step: "understand",
+    current_step: "upload",
     checklist_progress: 0,
     verification_status: "not_started",
     documents: { ...DEFAULT_DOCUMENTS },
@@ -303,7 +335,7 @@ function createFreshTransaction(id: string): Transaction {
       {
         id: `act_${Date.now()}`,
         type: "transaction_created",
-        step: "understand",
+        step: "upload",
         timestamp: new Date().toISOString(),
       },
     ],
@@ -363,6 +395,9 @@ export function TransactionProvider({ transactionId, children }: Props) {
       dispatch({ type: "ADVANCE_STEP" });
       setReturnedToStep(null);
     },
+    advanceToStep(step) {
+      dispatch({ type: "ADVANCE_TO_STEP", payload: step });
+    },
     goToStep(step) {
       dispatch({ type: "GO_TO_STEP", payload: step });
       setReturnedToStep(step);
@@ -393,6 +428,9 @@ export function TransactionProvider({ transactionId, children }: Props) {
     },
     revokeShare() {
       dispatch({ type: "REVOKE_SHARE" });
+    },
+    updateAgreementFields(fields) {
+      dispatch({ type: "UPDATE_AGREEMENT_FIELDS", payload: fields });
     },
   };
 

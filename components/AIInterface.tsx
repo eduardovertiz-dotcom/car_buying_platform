@@ -6,6 +6,7 @@ import { useTransaction } from "@/context/TransactionContext";
 import { STEPS, Step, MaintenanceRecordType } from "@/lib/types";
 import type { VerificationResult } from "@/lib/types";
 import AnalyzePanel from "@/components/panels/AnalyzePanel";
+import { generateAgreementHTML } from "@/lib/agreement";
 
 type StepContent = {
   heading: string;
@@ -16,37 +17,25 @@ type StepContent = {
 };
 
 const stepContent: Record<Step, StepContent> = {
-  understand: {
+  upload: {
     heading: "Start your vehicle verification",
     body: "Upload the required documents so we can verify the vehicle, ownership, and risk before you proceed with payment.",
-    action: "Upload documents to start",
+    action: "Upload documents to begin",
     completedAction: "Step completed",
     contextLine: "Most issues are discovered after payment. This step helps you avoid that.",
   },
-  find: {
-    heading: "Reviewing official records",
-    body: "We check the vehicle, ownership, and registry data against official records to identify inconsistencies.",
-    action: "Continue verification",
+  check: {
+    heading: "Initial risk check",
+    body: "We scan the documents and listing for common red flags before deeper analysis.",
+    action: "Continue to risk analysis",
     completedAction: "Step completed",
   },
-  evaluate: {
-    heading: "Analyze this vehicle",
-    body: "Go deeper on the vehicle you've shortlisted. Assess physical condition, confirm the documentation makes sense, and read seller behavior. Red flags here are cheaper to walk away from than problems found after payment.",
-    action: "Analysis complete — proceed to verification",
-    completedAction: "Step completed",
-  },
-  verify: {
-    heading: "",
-    body: "",
-    action: "",
-    completedAction: "",
-  },
-  complete: {
-    heading: "Transaction completed",
-    body: "This record will remain accessible whenever you need it.",
-    action: "Add first maintenance record",
-    completedAction: "Add first maintenance record",
-  },
+  // "analyze" is handled by AnalyzePanel — these values are never rendered
+  analyze: { heading: "", body: "", action: "", completedAction: "" },
+  // "verify" is handled by VerifyInterface — these values are never rendered
+  verify:  { heading: "", body: "", action: "", completedAction: "" },
+  // "complete" is handled by CompleteInterface — these values are never rendered
+  complete: { heading: "", body: "", action: "", completedAction: "" },
 };
 
 // ─── Verify ──────────────────────────────────────────────────────────────────
@@ -502,10 +491,36 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
 
 // ─── Complete ────────────────────────────────────────────────────────────────
 
-function CompleteInterface() {
-  const { transaction, generateContract, addMaintenanceRecord, enableShare, revokeShare } = useTransaction();
+function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
+  const { transaction, generateContract, updateAgreementFields, addMaintenanceRecord, enableShare, revokeShare } = useTransaction();
   const { contract, share } = transaction;
-  const content = stepContent["complete"];
+
+  const isBasic = plan === "49";
+
+  // Agreement form state — pre-filled from persisted transaction
+  const [buyerName,     setBuyerName]     = useState(transaction.buyer_name  ?? "");
+  const [buyerEmail,    setBuyerEmail]    = useState(transaction.buyer_email ?? "");
+  const [sellerName,    setSellerName]    = useState(transaction.seller_name ?? "");
+  const [sellerEmail,   setSellerEmail]   = useState(transaction.seller_email ?? "");
+  const [salePrice,     setSalePrice]     = useState(transaction.price    ?? "");
+  const [saleLocation,  setSaleLocation]  = useState(transaction.location ?? "");
+
+  const canGenerate =
+    buyerName.trim() && buyerEmail.trim() &&
+    sellerName.trim() && sellerEmail.trim() &&
+    salePrice.trim() && saleLocation.trim();
+
+  function handleGenerate() {
+    updateAgreementFields({
+      buyer_name:   buyerName.trim(),
+      buyer_email:  buyerEmail.trim(),
+      seller_name:  sellerName.trim(),
+      seller_email: sellerEmail.trim(),
+      price:        salePrice.trim(),
+      location:     saleLocation.trim(),
+    });
+    generateContract();
+  }
 
   const [showForm, setShowForm] = useState(false);
   const [showMaintenanceSaved, setShowMaintenanceSaved] = useState(false);
@@ -547,7 +562,6 @@ function CompleteInterface() {
 
     type DocEntry = { fileData?: string; name?: string };
     type MaintenanceEntry = { fileData?: string; fileName?: string };
-    type ContractEntry = { status: string; fileData?: string };
 
     // Documents
     (Object.values(transaction.documents) as DocEntry[]).forEach((doc) => {
@@ -571,16 +585,6 @@ function CompleteInterface() {
       }
     });
 
-    // Contract
-    const contract = transaction.contract as ContractEntry;
-    if (contract?.fileData) {
-      zip.file(
-        "contract.pdf",
-        contract.fileData.split(",")[1],
-        { base64: true }
-      );
-    }
-
     // Metadata
     zip.file("metadata.json", JSON.stringify(transaction, null, 2));
 
@@ -595,257 +599,26 @@ function CompleteInterface() {
   }
 
   function handleDownload() {
-    const { vehicle, id } = transaction;
-
-    const date = new Date().toLocaleDateString("es-MX", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
+    const date = new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" });
+    const html = generateAgreementHTML({
+      id:           transaction.id,
+      date,
+      vehicle:      transaction.vehicle,
+      buyer_name:   transaction.buyer_name,
+      buyer_email:  transaction.buyer_email,
+      seller_name:  transaction.seller_name,
+      seller_email: transaction.seller_email,
+      price:        transaction.price,
+      location:     transaction.location,
     });
 
-    const location = "___________________________";
-    const buyer = "___________________________";
-    const seller = "___________________________";
-    const price = "___________________________";
-
-    const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8" />
-<title>Contrato de Compraventa - MexGuardian</title>
-<style>
-body {
-  font-family: Georgia, serif;
-  max-width: 760px;
-  margin: 60px auto;
-  padding: 0 28px;
-  color: #111;
-  line-height: 1.75;
-}
-h1 {
-  text-align: center;
-  font-size: 22px;
-  margin-bottom: 4px;
-  letter-spacing: 0.3px;
-}
-.subtitle {
-  text-align: center;
-  font-size: 14px;
-  color: #555;
-  margin-bottom: 18px;
-}
-.meta, .ref {
-  text-align: center;
-  font-size: 12px;
-  color: #666;
-}
-.section {
-  margin-top: 30px;
-}
-h2 {
-  font-size: 14px;
-  margin-bottom: 8px;
-  border-bottom: 1px solid #ddd;
-  padding-bottom: 4px;
-  letter-spacing: 0.5px;
-}
-p {
-  margin: 6px 0;
-}
-.vehicle-box {
-  background: #f7f7f7;
-  border: 1px solid #ddd;
-  padding: 12px;
-  margin-top: 10px;
-}
-.vehicle-box p {
-  margin: 4px 0;
-}
-.sig {
-  margin-top: 80px;
-  display: flex;
-  justify-content: space-between;
-}
-.sig-block {
-  width: 45%;
-}
-.sig-line {
-  border-top: 1px solid #111;
-  margin-top: 50px;
-  padding-top: 6px;
-  text-align: center;
-  font-size: 12px;
-  color: #555;
-}
-.divider {
-  margin: 60px 0;
-  border-top: 2px dashed #ccc;
-}
-@media print {
-  body { margin: 40px; }
-}
-</style>
-</head>
-<body>
-
-<h1>Contrato de Compraventa de Vehículo Automotor</h1>
-<p class="subtitle">MexGuardian — Registro de Transacción Verificada</p>
-<p class="meta">${location}, ${date}</p>
-<p class="ref">Referencia: ${id}</p>
-
-<div class="section">
-  <h2>I. PARTES</h2>
-  <p><strong>VENDEDOR:</strong> ${seller}</p>
-  <p><strong>COMPRADOR:</strong> ${buyer}</p>
-</div>
-
-<div class="section">
-  <h2>II. OBJETO</h2>
-  <div class="vehicle-box">
-    <p><strong>Marca:</strong> ${vehicle?.make ?? ""}</p>
-    <p><strong>Modelo:</strong> ${vehicle?.model ?? ""}</p>
-    <p><strong>Año:</strong> ${vehicle?.year ?? ""}</p>
-    <p><strong>VIN:</strong> ${vehicle?.vin ?? ""}</p>
-    <p><strong>Placas:</strong> ___________________________</p>
-  </div>
-</div>
-
-<div class="section">
-  <h2>III. PRECIO</h2>
-  <p>$${price} MXN</p>
-</div>
-
-<div class="section">
-  <h2>IV. DECLARACIONES</h2>
-  <p>El VENDEDOR declara ser el legítimo propietario, que el vehículo no cuenta con reporte de robo y que se encuentra libre de gravámenes salvo lo indicado.</p>
-  <p>El COMPRADOR declara haber revisado el vehículo y aceptar su estado.</p>
-</div>
-
-<div class="section">
-  <h2>V. CONDICIÓN</h2>
-  <p>El vehículo se vende en el estado en que se encuentra ("como está").</p>
-</div>
-
-<div class="section">
-  <h2>VI. ENTREGA</h2>
-  <p>El vendedor entrega factura, tarjeta de circulación y documentos disponibles en ${location}.</p>
-</div>
-
-<div class="section">
-  <h2>VII. FUNDAMENTO LEGAL</h2>
-  <p>Este contrato se celebra conforme al Código Civil Federal y legislación aplicable en México.</p>
-</div>
-
-<div class="section">
-  <h2>VIII. JURISDICCIÓN</h2>
-  <p>Las partes se someten a tribunales de ${location}.</p>
-</div>
-
-<div class="sig">
-  <div class="sig-block">
-    <div class="sig-line">VENDEDOR</div>
-  </div>
-  <div class="sig-block">
-    <div class="sig-line">COMPRADOR</div>
-  </div>
-</div>
-
-<div class="divider"></div>
-
-<h1>Vehicle Purchase Agreement (Reference)</h1>
-<p class="subtitle">MexGuardian — Verified Transaction Record</p>
-<p class="meta">${location}, ${date}</p>
-<p class="ref">Reference: ${id}</p>
-
-<div class="section">
-  <h2>PARTIES</h2>
-  <p>Seller: ${seller}</p>
-  <p>Buyer: ${buyer}</p>
-</div>
-
-<div class="section">
-  <h2>VEHICLE</h2>
-  <div class="vehicle-box">
-    <p><strong>Make:</strong> ${vehicle?.make ?? ""}</p>
-    <p><strong>Model:</strong> ${vehicle?.model ?? ""}</p>
-    <p><strong>Year:</strong> ${vehicle?.year ?? ""}</p>
-    <p><strong>VIN:</strong> ${vehicle?.vin ?? ""}</p>
-    <p><strong>Plates:</strong> ___________________________</p>
-  </div>
-</div>
-
-<div class="section">
-  <h2>PRICE</h2>
-  <p>$${price} MXN</p>
-</div>
-
-<div class="section">
-  <h2>TERMS</h2>
-  <p>The vehicle is sold "as is". The seller transfers ownership and the buyer accepts the condition.</p>
-</div>
-
-<div class="section">
-  <h2>JURISDICTION</h2>
-  <p>${location}, Mexico</p>
-</div>
-
-<div class="sig">
-  <div class="sig-block">
-    <div class="sig-line">SELLER</div>
-  </div>
-  <div class="sig-block">
-    <div class="sig-line">BUYER</div>
-  </div>
-</div>
-
-<p style="margin-top:40px; font-size:12px; color:#777; text-align:center;">
-Documento generado mediante MexGuardian como apoyo en una transacción vehicular.
-</p>
-
-</body>
-</html>`;
-
     const printWindow = window.open("", "_blank");
-
     if (!printWindow) {
       alert("Please allow popups to generate the document.");
       return;
     }
-
     printWindow.document.open();
-
-    printWindow.document.write(`
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8" />
-<title>MexGuardian Agreement</title>
-<style>
-body {
-  font-family: Georgia, serif;
-  max-width: 720px;
-  margin: 40px auto;
-  padding: 0 24px;
-  color: #111;
-  line-height: 1.7;
-}
-@media print {
-  body { margin: 40px; }
-}
-</style>
-</head>
-<body>
-${html}
-<script>
-window.onload = function() {
-  window.focus();
-  window.print();
-};
-<\/script>
-</body>
-</html>
-`);
-
+    printWindow.document.write(html);
     printWindow.document.close();
   }
 
@@ -873,12 +646,22 @@ window.onload = function() {
       </div>
 
       <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
-        {content.heading}
+        {isBasic ? "Your risk summary" : "Final verification results"}
       </h2>
 
       <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-8">
-        {content.body}
+        {isBasic
+          ? "Basic checks are complete. Some risks — document alterations, seller identity, off-record fraud — cannot be verified automatically."
+          : "Full verification is complete. Documents, ownership, and risk signals have been reviewed."}
       </p>
+
+      {isBasic && (
+        <div className="border border-amber-400/20 bg-amber-400/[0.06] rounded-lg px-4 py-4 mb-6">
+          <p className="text-xs text-amber-400 leading-relaxed">
+            This report covers public records only. Proceed at your own risk, or upgrade for expert review.
+          </p>
+        </div>
+      )}
 
       {contract.status === "generated" ? (
         <>
@@ -922,12 +705,84 @@ window.onload = function() {
           </div>
         </>
       ) : (
-        <button
-          onClick={generateContract}
-          className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left mb-8"
-        >
-          Generate purchase agreement
-        </button>
+        <div className="mb-8">
+          <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-4">
+            Agreement details
+          </p>
+          <div className="flex flex-col gap-3 mb-4">
+            <div>
+              <p className="text-xs text-[var(--foreground-muted)] mb-1">Buyer full name</p>
+              <input
+                type="text"
+                value={buyerName}
+                onChange={(e) => setBuyerName(e.target.value)}
+                placeholder="Full legal name"
+                className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
+              />
+            </div>
+            <div>
+              <p className="text-xs text-[var(--foreground-muted)] mb-1">Buyer email</p>
+              <input
+                type="email"
+                value={buyerEmail}
+                onChange={(e) => setBuyerEmail(e.target.value)}
+                placeholder="buyer@email.com"
+                className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
+              />
+            </div>
+            <div>
+              <p className="text-xs text-[var(--foreground-muted)] mb-1">Seller full name</p>
+              <input
+                type="text"
+                value={sellerName}
+                onChange={(e) => setSellerName(e.target.value)}
+                placeholder="Full legal name"
+                className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
+              />
+            </div>
+            <div>
+              <p className="text-xs text-[var(--foreground-muted)] mb-1">Seller email</p>
+              <input
+                type="email"
+                value={sellerEmail}
+                onChange={(e) => setSellerEmail(e.target.value)}
+                placeholder="seller@email.com"
+                className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
+              />
+            </div>
+            <div>
+              <p className="text-xs text-[var(--foreground-muted)] mb-1">Sale price (MXN)</p>
+              <input
+                type="text"
+                value={salePrice}
+                onChange={(e) => setSalePrice(e.target.value)}
+                placeholder="e.g. 120,000"
+                className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
+              />
+            </div>
+            <div>
+              <p className="text-xs text-[var(--foreground-muted)] mb-1">City / State</p>
+              <input
+                type="text"
+                value={saleLocation}
+                onChange={(e) => setSaleLocation(e.target.value)}
+                placeholder="e.g. Ciudad de México, CDMX"
+                className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
+              />
+            </div>
+          </div>
+          <button
+            onClick={handleGenerate}
+            disabled={!canGenerate}
+            className={`w-full text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left ${
+              !canGenerate
+                ? "bg-[var(--border)] text-[var(--foreground-muted)] cursor-default"
+                : "bg-[var(--accent)] hover:bg-blue-600 text-white"
+            }`}
+          >
+            Generate purchase agreement
+          </button>
+        </div>
       )}
 
       <div className="mb-8">
@@ -1036,7 +891,7 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
     </div>
   ) : null;
 
-  if (current_step === "evaluate") {
+  if (current_step === "analyze") {
     return (
       <>
         {backLink}
@@ -1075,7 +930,7 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
       <>
         {backLink}
         {changesBanner}
-        <CompleteInterface />
+        <CompleteInterface plan={plan} />
       </>
     );
   }

@@ -1,4 +1,4 @@
-export type Step = "understand" | "find" | "evaluate" | "verify" | "complete";
+export type Step = "upload" | "check" | "analyze" | "verify" | "complete";
 
 export type VerificationStatus =
   | "not_started"
@@ -86,16 +86,30 @@ export type Transaction = {
     token?: string;
     enabled: boolean;
   };
+  buyer_name?: string;
+  buyer_email?: string;
+  seller_name?: string;
+  seller_email?: string;
+  price?: string;
+  location?: string;
   created_at: string;
 };
 
+// All 5 steps — Pro users see all; Basic users skip "verify"
 export const STEPS: { key: Step; label: string; index: number }[] = [
-  { key: "understand", label: "Upload", index: 0 },
-  { key: "find", label: "Review", index: 1 },
-  { key: "evaluate", label: "Analyze", index: 2 },
-  { key: "verify", label: "Verify", index: 3 },
+  { key: "upload",   label: "Upload",   index: 0 },
+  { key: "check",    label: "Check",    index: 1 },
+  { key: "analyze",  label: "Analyze",  index: 2 },
+  { key: "verify",   label: "Verify",   index: 3 },
   { key: "complete", label: "Complete", index: 4 },
 ];
+
+// Returns plan-appropriate step list:
+// Basic ($39): Upload → Check → Analyze → Complete
+// Pro   ($69): Upload → Check → Analyze → Verify → Complete
+export function getSteps(plan: "49" | "79" | null): typeof STEPS {
+  return plan === "79" ? STEPS : STEPS.filter((s) => s.key !== "verify");
+}
 
 export const DOCUMENT_LABELS: Record<DocumentType, string> = {
   ine: "Seller ID (INE / official ID)",
