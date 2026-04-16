@@ -329,6 +329,10 @@ export default function Home() {
                 </p>
               </div>
 
+              <p className="text-sm text-white/50 text-center mb-8 lg:mb-10">
+                Most scams happen after everything looks legitimate.
+              </p>
+
               {/* Mobile: $79 first (flex-col-reverse), Desktop: $49 left (flex-row) */}
               <div className="flex flex-col-reverse md:flex-row justify-center gap-8 lg:gap-12">
 
@@ -351,11 +355,11 @@ export default function Home() {
 
                   <ul className="flex flex-col gap-3 mb-6 lg:mb-8 flex-1">
                     {[
-                      "Official vehicle data (VIN, model, year, status)",
-                      "Ownership and registration verification",
+                      "Vehicle details and registry status",
+                      "Ownership verification",
                       "REPUVE and record checks",
                       "Detection of inconsistencies or altered data",
-                      "AI-assisted risk flags",
+                      "Risk flags based on available data",
                     ].map((f) => (
                       <li key={f} className="flex items-start gap-3">
                         <span className="shrink-0 mt-0.5 text-[var(--foreground-muted)] opacity-70"><IconCheck /></span>
@@ -408,7 +412,7 @@ export default function Home() {
                   </ul>
 
                   <p className="text-xs text-white/70 leading-relaxed mb-6">
-                    You don&apos;t just get data. You get a clear decision before paying.
+                    You don&apos;t just get data. You get a clear go or no-go before paying.
                   </p>
 
                   {/* 🔥 $69 BUTTON */}
