@@ -44,16 +44,16 @@ function usePaidGuard() {
   }, [router]);
 }
 
-const handleCheckout = async (priceId: string) => {
+const handleCheckout = async (plan: "basic" | "pro") => {
   try {
     const res = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ priceId }),
+      body: JSON.stringify({ plan }),
     });
     const data = await res.json();
     if (!res.ok || !data.url) {
-      console.error("[checkout] missing url:", data);
+      console.error("[checkout] failed:", data);
       return;
     }
     window.location.href = data.url;
@@ -128,7 +128,7 @@ export default function StartPage() {
             </ul>
 
             <button
-              onClick={() => handleCheckout("price_1TKnooBgMSWbEFIIv0Pg5V1P")}
+              onClick={() => handleCheckout("basic")}
               className="w-full bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-4 py-3 hover:opacity-90 transition-opacity"
             >
               Get Basic Report
@@ -180,7 +180,7 @@ export default function StartPage() {
             </p>
 
             <button
-              onClick={() => handleCheckout("price_1TKnpHBgMSWbEFIIbmJUc4C7")}
+              onClick={() => handleCheckout("pro")}
               className="w-full bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-4 py-3 hover:opacity-90 transition-opacity"
             >
               Get Full Protection
