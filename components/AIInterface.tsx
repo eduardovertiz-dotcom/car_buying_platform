@@ -5,6 +5,7 @@ import JSZip from "jszip";
 import { useTransaction } from "@/context/TransactionContext";
 import { STEPS, Step, MaintenanceRecordType } from "@/lib/types";
 import type { VerificationResult } from "@/lib/types";
+import AnalyzePanel from "@/components/panels/AnalyzePanel";
 
 type StepContent = {
   heading: string;
@@ -1013,6 +1014,19 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
   const { transaction, advanceStep } = useTransaction();
   const { current_step } = transaction;
   const currentIndex = STEPS.findIndex((s) => s.key === current_step);
+
+  if (current_step === "evaluate") {
+    return (
+      <section className="py-8">
+        <div className="mb-2">
+          <span className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">
+            {STEPS[currentIndex].label}
+          </span>
+        </div>
+        <AnalyzePanel plan={plan} />
+      </section>
+    );
+  }
 
   if (current_step === "verify") {
     return (
