@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 function IconCheck() {
   return (
@@ -8,6 +11,37 @@ function IconCheck() {
       <polyline points="20,6 9,17 4,12" />
     </svg>
   );
+}
+
+// Paid-user guard — runs once on mount.
+// If the user already has a paid transaction, send them straight to it.
+// This prevents paying users from accidentally landing on pricing again.
+function usePaidGuard() {
+  const router = useRouter();
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return; // unauthenticated users should see pricing
+
+      const userEmail = (user.email ?? "").toLowerCase().trim();
+      const orFilter  = userEmail
+        ? `user_id.eq.${user.id},email.ilike.${userEmail}`
+        : `user_id.eq.${user.id}`;
+
+      const { data } = await supabase
+        .from("transactions")
+        .select("id")
+        .or(orFilter)
+        .eq("status", "paid")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (data?.id) {
+        router.replace(`/transaction/${data.id}`);
+      }
+    });
+  }, [router]);
 }
 
 const handleCheckout = async (priceId: string) => {
@@ -29,6 +63,8 @@ const handleCheckout = async (priceId: string) => {
 };
 
 export default function StartPage() {
+  usePaidGuard();
+
   return (
     <main className="min-h-screen px-6 py-12">
       <div className="max-w-[760px] mx-auto">

@@ -6,33 +6,16 @@ import { useRouter } from "next/navigation";
 import FacturaForm from "@/components/FacturaForm";
 import { createClient } from "@/lib/supabase/client";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
-
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-type TxnRow = {
-  id: string;
-  created_at: string;
-  status: string;
-  plan: string | null;
-};
-
-function planLabel(plan: string | null): string {
-  if (plan === "79") return "Professional";
-  if (plan === "49") return "Basic";
-  return "Verification";
-}
-
 export default function TransactionsPage() {
   const router = useRouter();
-  const [transactions, setTransactions] = useState<TxnRow[]>([]);
-  const [loaded, setLoaded] = useState(false);
-  const [newId, setNewId] = useState<string | null>(null);
-  const [newEmail, setNewEmail] = useState<string | null>(null);
-  const [isFacturaOpen, setIsFacturaOpen] = useState(false);
-  const [bindError, setBindError] = useState<string | null>(null);
+  const [loaded, setLoaded]           = useState(false);
+  const [newId, setNewId]             = useState<string | null>(null);
+  const [newEmail, setNewEmail]       = useState<string | null>(null);
+  const [isFacturaOpen, setFactura]   = useState(false);
+  const [bindError, setBindError]     = useState<string | null>(null);
   const facturaRef = useRef<HTMLDivElement>(null);
 
   async function handleLogout() {
@@ -42,159 +25,105 @@ export default function TransactionsPage() {
   }
 
   function handleOpenFactura() {
-    setIsFacturaOpen(true);
+    setFactura(true);
     setTimeout(() => {
       facturaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 0);
   }
 
-  // Read ?new param and prefetch email for factura
-  useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get("new");
-    setNewId(id);
-
-    if (id && SUPABASE_URL && SUPABASE_KEY) {
-      fetch(
-        `${SUPABASE_URL}/rest/v1/transactions?id=eq.${encodeURIComponent(id)}&select=email&limit=1`,
-        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
-      )
-        .then((r) => r.json())
-        .then((rows: { email: string | null }[]) => {
-          setNewEmail(rows[0]?.email ?? null);
-        })
-        .catch(() => {});
-    }
-  }, []);
-
-  // Auth guard + fetch transactions from Supabase
+  // Single effect: auth guard → bind → query → route
   useEffect(() => {
     const supabase = createClient();
+    const params   = new URLSearchParams(window.location.search);
+    const newParam = params.get("new");
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
-      console.log("[TX_FLOW] URL:", window.location.href);
-      console.log("[TX_FLOW] user:", user ? { id: user.id, email: user.email } : null);
-
+      // ── Unauthenticated ───────────────────────────────────────────────────
       if (!user) {
-        // Preserve ?new param for bind and for returning to this screen after login
-        const currentUrl = window.location.pathname + window.location.search;
-        const newParam = new URLSearchParams(window.location.search).get("new");
         if (newParam) {
           try { localStorage.setItem("bind_pending", newParam); } catch {}
         }
-        router.replace("/login?redirect=" + encodeURIComponent(currentUrl));
+        router.replace(
+          "/login?redirect=" + encodeURIComponent(window.location.pathname + window.location.search)
+        );
         return;
       }
 
-      // Execute any pending bind immediately after returning from login
+      // ── Execute any pending bind ──────────────────────────────────────────
       const pendingBind = localStorage.getItem("bind_pending");
-      console.log("[TX_FLOW] bind_pending:", pendingBind);
       if (pendingBind) {
         const res = await fetch("/api/bind-transaction", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ transactionId: pendingBind }),
         });
-        console.log("[TX_FLOW] bind result status:", res.status);
         localStorage.removeItem("bind_pending");
-        if (!res.ok) {
-          const status = res.status;
-          if (status === 403) {
-            setBindError(
-              "This transaction is linked to a different email. Sign in with the email address used at checkout."
-            );
-          }
-          // Non-403 errors: silently continue — transaction still accessible by email match
+        if (!res.ok && res.status === 403) {
+          setBindError(
+            "This transaction is linked to a different email. Sign in with the email address used at checkout."
+          );
         }
       }
 
-      // Normalize email once — used in both the main query and recovery query
+      // ── Query: most recent paid transaction owned by this user ────────────
+      // Ownership = user_id match OR email match (case-insensitive).
+      // No user_id IS NULL constraint — covers both bound and unbound states.
       const userEmail = (user.email ?? "").toLowerCase().trim();
+      const orFilter  = userEmail
+        ? `user_id.eq.${user.id},email.ilike.${userEmail}`
+        : `user_id.eq.${user.id}`;
 
-      const query = supabase
+      const { data, error } = await supabase
         .from("transactions")
-        .select("id, created_at, status, plan")
-        .eq("status", "paid");
+        .select("id, email, status, created_at")
+        .or(orFilter)
+        .eq("status", "paid")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      // ilike = case-insensitive match — prevents misses when Stripe email
-      // casing differs from Google OAuth email (e.g. "User@Gmail.com" vs "user@gmail.com")
-      const filteredQuery = userEmail
-        ? query.or(`user_id.eq.${user.id},and(user_id.is.null,email.ilike.${userEmail})`)
-        : query.eq("user_id", user.id);
-
-      const { data, error } = await filteredQuery
-        .order("created_at", { ascending: false });
-
-      console.log("[TX_FLOW] main query →", {
-        userEmail,
-        userId: user.id,
-        rowCount: data?.length ?? 0,
-        error: error ? { code: error.code, message: error.message } : null,
-        rows: (data ?? []).map(r => ({ id: r.id, status: r.status })),
+      console.log("[TX_STATE]", {
+        userId:          user.id,
+        email:           userEmail,
+        foundTransaction: !!data,
+        transactionId:   data?.id ?? null,
+        error:           error ? { code: error.code, message: error.message } : null,
       });
 
       if (error) {
-        console.error("TRANSACTIONS FETCH FAILED", error);
+        console.error("[TX_STATE] query error:", error);
         setLoaded(true);
         return;
       }
 
-      const valid = (data ?? []).filter(
-        (t) => t.id && UUID_RE.test(t.id)
-      ) as TxnRow[];
-
-      console.log("[TX_FLOW] valid.length:", valid.length);
-
-      // ── Recovery mechanism ────────────────────────────────────────────────
-      if (valid.length === 0) {
-        console.log("[TX_FLOW] running recovery — userEmail:", userEmail);
-
-        if (userEmail) {
-          const { data: recovered, error: recoveryError } = await supabase
-            .from("transactions")
-            .select("id, email, user_id, status")
-            .eq("status", "paid")
-            .ilike("email", userEmail)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          console.log("[TX_FLOW] recovery result:", {
-            recovered,
-            recoveryError: recoveryError ? { code: recoveryError.code, message: recoveryError.message } : null,
-          });
-
-          if (recovered?.id && UUID_RE.test(recovered.id)) {
-            console.log("[TX_FLOW] redirecting to transaction:", recovered.id);
-            router.replace(`/transaction/${recovered.id}`);
-            return;
-          }
-        }
-
-        // No paid transaction found for this email — BLOCKED: logging instead of redirecting
-        console.log("[TX_FLOW] redirect blocked — would have gone to /start");
-        console.log("[TX_FLOW] STATE DUMP:", {
-          url: window.location.href,
-          userEmail,
-          userId: user.id,
-          validLength: valid.length,
-          mainQueryRows: data?.length ?? 0,
-          mainQueryError: error,
-        });
-        setLoaded(true); // show the page as-is instead of redirecting
+      // ── Post-payment confirmation screen (?new=<uuid>) ────────────────────
+      // Stay on this page so the user can see confirmation + request a factura.
+      // The ?new id is the freshly created transaction.
+      if (newParam && UUID_RE.test(newParam)) {
+        setNewId(newParam);
+        // Prefetch the transaction email for the factura form using the auth'd client
+        setNewEmail(data?.email ?? null);
+        setLoaded(true);
         return;
       }
-      // ─────────────────────────────────────────────────────────────────────
 
-      setTransactions(valid);
+      // ── Returning user: redirect immediately to their transaction ─────────
+      if (data?.id && UUID_RE.test(data.id)) {
+        router.replace(`/transaction/${data.id}`);
+        return;
+      }
+
+      // ── No paid transaction found — show empty state ──────────────────────
       setLoaded(true);
     });
   }, [router]);
 
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <main className="min-h-screen px-6 py-12">
       <div className="max-w-[680px] mx-auto">
 
-        {/* ── Payment confirmed — only when ?new is present ────────────────── */}
+        {/* ── Post-payment confirmation (?new present) ── */}
         {newId && (
           <div className="min-h-[65vh] flex flex-col justify-center">
             <div className="max-w-[560px] mx-auto px-6">
@@ -244,7 +173,6 @@ export default function TransactionsPage() {
                     Request invoice (Factura)
                   </button>
                 )}
-
                 {isFacturaOpen && (
                   <div ref={facturaRef}>
                     <FacturaForm transactionId={newId} prefillEmail={newEmail} />
@@ -255,8 +183,8 @@ export default function TransactionsPage() {
           </div>
         )}
 
-        {/* ── Transaction list — only when ?new is absent ───────────────────── */}
-        {!newId && (
+        {/* ── Empty state (no ?new, no paid transaction found) ── */}
+        {!newId && loaded && (
           <>
             <div className="mb-10 flex items-center justify-between gap-4">
               <div>
@@ -283,57 +211,19 @@ export default function TransactionsPage() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-3">
-              {loaded && transactions.length === 0 && (
-                <div className="text-center mt-20">
-                  <h2 className="text-lg font-semibold text-white mb-2">
-                    No transactions yet
-                  </h2>
-                  <p className="text-sm text-[var(--foreground-muted)] mb-6">
-                    Start your first vehicle verification
-                  </p>
-                  <Link
-                    href="/start"
-                    className="inline-flex items-center gap-2 bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-5 py-3 hover:opacity-90 transition-opacity"
-                  >
-                    Start new transaction →
-                  </Link>
-                </div>
-              )}
-
-              {transactions.map((txn) => {
-                const label = planLabel(txn.plan);
-                const date = new Date(txn.created_at).toLocaleDateString("en-MX", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                });
-
-                return (
-                  <Link
-                    key={txn.id}
-                    href={`/transaction/${txn.id}`}
-                    className="block border border-[var(--border)] rounded-lg px-5 py-4 hover:border-[var(--accent)] transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-white font-medium">{label}</p>
-                        <p className="text-xs text-[var(--foreground-muted)] mt-0.5 font-mono">
-                          {txn.id.slice(0, 8).toUpperCase()}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest">
-                          {date}
-                        </p>
-                        <p className="text-sm text-[var(--accent)] font-medium mt-0.5">
-                          Active
-                        </p>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+            <div className="text-center mt-20">
+              <h2 className="text-lg font-semibold text-white mb-2">
+                No transactions yet
+              </h2>
+              <p className="text-sm text-[var(--foreground-muted)] mb-6">
+                Start your first vehicle verification
+              </p>
+              <Link
+                href="/start"
+                className="inline-flex items-center gap-2 bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-5 py-3 hover:opacity-90 transition-opacity"
+              >
+                Start new transaction →
+              </Link>
             </div>
           </>
         )}

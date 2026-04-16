@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isManualMode } from "@/lib/verification/mode";
+import { ownsTransaction } from "@/lib/owns-transaction";
 import AIInterface from "@/components/AIInterface";
 import BindBanner from "@/components/BindBanner";
 import Header from "@/components/Header";
@@ -109,32 +110,20 @@ export default async function TransactionPage({
   // Ownership check — authenticated non-admins must own this transaction.
   // Admins bypass so they can review transactions from the queue.
   if (isAuthenticated && !isAdmin) {
-    const ownsById = data.user_id === sessionUser!.id;
+    const owned = ownsTransaction(data, sessionUser!);
 
-    // Email comparison: normalize both sides (lowercase + trim)
-    const txEmail  = (data.email ?? "").toLowerCase().trim();
-    const authEmail = (sessionUser!.email ?? "").toLowerCase().trim();
-    const ownsByEmail = data.user_id === null && txEmail !== "" && txEmail === authEmail;
-
-    // ── Ownership diagnostic log ──────────────────────────────────────────
     console.log("[TX_LOAD] ownership check:", {
-      ownsById,
-      ownsByEmail,
-      dataUserId: data.user_id,
+      owned,
+      dataUserId:    data.user_id,
       sessionUserId: sessionUser!.id,
-      txEmail,
-      authEmail,
-      emailMatch: txEmail === authEmail,
+      txEmail:       (data.email ?? "").toLowerCase().trim(),
+      authEmail:     (sessionUser!.email ?? "").toLowerCase().trim(),
     });
-    // ─────────────────────────────────────────────────────────────────────
 
-    if (!ownsById && !ownsByEmail) {
-      console.warn("[TX_LOAD] ACCESS DENIED", {
-        id,
-        sessionUserId: sessionUser!.id,
-        txEmail,
-        authEmail,
-      });
+    if (!owned) {
+      const txEmail   = (data.email   ?? "").toLowerCase().trim();
+      const authEmail = (sessionUser!.email ?? "").toLowerCase().trim();
+      console.warn("[TX_LOAD] ACCESS DENIED", { id, txEmail, authEmail });
       return renderError(
         `Access denied. Transaction email (${txEmail || "none"}) does not match your account email (${authEmail}). Sign in with the email address used at checkout.`
       );
