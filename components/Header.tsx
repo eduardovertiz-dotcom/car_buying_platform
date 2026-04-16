@@ -6,7 +6,7 @@ import { STEPS } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 
 export default function Header() {
-  const { transaction } = useTransaction();
+  const { transaction, goToStep } = useTransaction();
   const router = useRouter();
 
   async function handleLogout() {
@@ -64,20 +64,28 @@ export default function Header() {
         </div>
 
         <div className="flex justify-between mt-1.5">
-          {STEPS.map((step, i) => (
-            <p
-              key={step.key}
-              className={`text-[10px] uppercase tracking-wider transition-colors duration-300 ${
-                i === currentStepIndex
-                  ? "text-[var(--accent)]"
-                  : i < currentStepIndex
-                  ? "text-[var(--foreground-muted)]"
-                  : "text-[var(--border)]"
-              }`}
-            >
-              {step.label}
-            </p>
-          ))}
+          {STEPS.map((step, i) => {
+            const isCompleted = i < currentStepIndex;
+            const isCurrent = i === currentStepIndex;
+            return isCompleted ? (
+              <button
+                key={step.key}
+                onClick={() => goToStep(step.key)}
+                className="text-[10px] uppercase tracking-wider transition-colors duration-300 text-[var(--foreground-muted)] hover:text-white cursor-pointer"
+              >
+                {step.label}
+              </button>
+            ) : (
+              <p
+                key={step.key}
+                className={`text-[10px] uppercase tracking-wider transition-colors duration-300 ${
+                  isCurrent ? "text-[var(--accent)]" : "text-[var(--border)]"
+                }`}
+              >
+                {step.label}
+              </p>
+            );
+          })}
         </div>
       </div>
     </header>

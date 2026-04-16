@@ -1011,43 +1011,81 @@ window.onload = function() {
 // ─── Main export ─────────────────────────────────────────────────────────────
 
 export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
-  const { transaction, advanceStep } = useTransaction();
+  const { transaction, advanceStep, goToStep, returnedToStep } = useTransaction();
   const { current_step } = transaction;
   const currentIndex = STEPS.findIndex((s) => s.key === current_step);
 
+  const prevStep = currentIndex > 0 ? STEPS[currentIndex - 1] : null;
+
+  const backLink = prevStep ? (
+    <div className="pt-6 pb-1">
+      <button
+        onClick={() => goToStep(prevStep.key)}
+        className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors"
+      >
+        ← Back to {prevStep.label}
+      </button>
+    </div>
+  ) : null;
+
+  const changesBanner = returnedToStep === current_step ? (
+    <div className="mt-3 mb-1 rounded-lg border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3">
+      <p className="text-xs text-amber-400 leading-relaxed">
+        Changes detected. Verification will restart from this step.
+      </p>
+    </div>
+  ) : null;
+
   if (current_step === "evaluate") {
     return (
-      <section className="py-8">
-        <div className="mb-2">
-          <span className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">
-            {STEPS[currentIndex].label}
-          </span>
-        </div>
-        <AnalyzePanel plan={plan} />
-      </section>
+      <>
+        {backLink}
+        {changesBanner}
+        <section className="py-8">
+          <div className="mb-2">
+            <span className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">
+              {STEPS[currentIndex].label}
+            </span>
+          </div>
+          <AnalyzePanel plan={plan} />
+        </section>
+      </>
     );
   }
 
   if (current_step === "verify") {
     return (
-      <section className="py-8">
-        <div className="mb-2">
-          <span className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">
-            Verify
-          </span>
-        </div>
-        <VerifyInterface plan={plan} />
-      </section>
+      <>
+        {backLink}
+        {changesBanner}
+        <section className="py-8">
+          <div className="mb-2">
+            <span className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">
+              Verify
+            </span>
+          </div>
+          <VerifyInterface plan={plan} />
+        </section>
+      </>
     );
   }
 
   if (current_step === "complete") {
-    return <CompleteInterface />;
+    return (
+      <>
+        {backLink}
+        {changesBanner}
+        <CompleteInterface />
+      </>
+    );
   }
 
   const content = stepContent[current_step];
 
   return (
+    <>
+    {backLink}
+    {changesBanner}
     <section className="py-8">
       <div className="mb-2">
         <span className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">
@@ -1076,5 +1114,6 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
         </p>
       )}
     </section>
+    </>
   );
 }

@@ -25,6 +25,7 @@ import { mockTransactions } from "@/lib/mock";
 
 type Action =
   | { type: "ADVANCE_STEP" }
+  | { type: "GO_TO_STEP"; payload: Step }
   | { type: "HYDRATE"; payload: Transaction }
   | { type: "REQUEST_BASIC_VERIFICATION" }
   | { type: "COMPLETE_BASIC_VERIFICATION"; payload: VerificationResult }
@@ -225,6 +226,37 @@ function reducer(state: Transaction, action: Action): Transaction {
       };
     }
 
+    case "GO_TO_STEP": {
+      const targetKey = action.payload;
+      const targetIndex = STEPS.findIndex((s) => s.key === targetKey);
+      const currentIndex = STEPS.findIndex((s) => s.key === state.current_step);
+
+      // Guard: only allow going backward
+      if (targetIndex >= currentIndex) return state;
+
+      // Guard: block navigation while verification is actively processing
+      if (
+        state.verification_status === "basic_processing" ||
+        state.verification_status === "professional_processing"
+      ) {
+        return state;
+      }
+
+      const verifyIndex = STEPS.findIndex((s) => s.key === "verify");
+      const shouldResetVerification = targetIndex < verifyIndex;
+      const newProgress = Math.round((targetIndex / (STEPS.length - 1)) * 100);
+
+      return {
+        ...state,
+        current_step: targetKey,
+        checklist_progress: newProgress,
+        ...(shouldResetVerification && {
+          verification_status: "not_started" as const,
+          verification_results: null,
+        }),
+      };
+    }
+
     default:
       return state;
   }
@@ -235,6 +267,8 @@ function reducer(state: Transaction, action: Action): Transaction {
 type TransactionContextValue = {
   transaction: Transaction;
   advanceStep: () => void;
+  goToStep: (step: Step) => void;
+  returnedToStep: Step | null;
   isAtFinalStep: boolean;
   requestBasicVerification: () => void;
   completeBasicVerification: (results: VerificationResult) => void;
@@ -290,6 +324,7 @@ export function TransactionProvider({ transactionId, children }: Props) {
     transactionId,
     getInitialState
   );
+  const [returnedToStep, setReturnedToStep] = useState<Step | null>(null);
 
   // Gate persist until after hydration to prevent mock state overwriting localStorage
   const [hydrated, setHydrated] = useState(false);
@@ -323,8 +358,14 @@ export function TransactionProvider({ transactionId, children }: Props) {
   const value: TransactionContextValue = {
     transaction,
     isAtFinalStep,
+    returnedToStep,
     advanceStep() {
       dispatch({ type: "ADVANCE_STEP" });
+      setReturnedToStep(null);
+    },
+    goToStep(step) {
+      dispatch({ type: "GO_TO_STEP", payload: step });
+      setReturnedToStep(step);
     },
     requestBasicVerification() {
       dispatch({ type: "REQUEST_BASIC_VERIFICATION" });
