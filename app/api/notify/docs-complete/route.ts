@@ -10,10 +10,18 @@
  */
 
 import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendAdminAlert } from "@/lib/notifications/sendAdminAlert";
 
 export async function POST(req: Request) {
+  // ── Auth required — prevents anonymous spam to admin inbox ───────────────
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   let body: Record<string, unknown>;
   try {
     body = await req.json();

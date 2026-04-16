@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
-
-const SUPABASE_URL =
-  process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-const SUPABASE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  "";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { ownsTransaction } from "@/lib/owns-transaction";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -65,62 +60,65 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid postal code" }, { status: 400 });
   }
 
-  // ── Duplicate check ───────────────────────────────────────────────────────
-  const checkRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/invoice_requests?transaction_id=eq.${encodeURIComponent(transaction_id)}&select=id&limit=1`,
-    {
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-      },
-    }
-  );
+  // ── Ownership check — user must own the transaction ───────────────────────
+  // Uses service role to fetch the transaction so we always get a row even if
+  // the user's session client can't see it yet (e.g. unbound, RLS timing).
+  const adminDb = createAdminClient();
+  const { data: tx } = await adminDb
+    .from("transactions")
+    .select("id, email, user_id")
+    .eq("id", transaction_id)
+    .maybeSingle();
 
-  if (checkRes.ok) {
-    const existing = await checkRes.json();
-    if (existing.length > 0) {
-      return NextResponse.json(
-        { error: "Factura already requested for this transaction" },
-        { status: 409 }
-      );
-    }
+  if (!tx || !ownsTransaction(tx, user)) {
+    console.warn("[invoice-request] ownership check failed", {
+      transaction_id,
+      userId: user.id,
+      userEmail: user.email,
+    });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // ── Duplicate check (admin client — bypasses RLS on invoice_requests) ─────
+  const { data: existing } = await adminDb
+    .from("invoice_requests")
+    .select("id")
+    .eq("transaction_id", transaction_id)
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) {
+    return NextResponse.json(
+      { error: "Factura already requested for this transaction" },
+      { status: 409 }
+    );
   }
 
   // ── Insert ────────────────────────────────────────────────────────────────
-  const row = {
-    transaction_id,
-    email,
-    amount:         body.amount,
-    plan:           String(body.plan).trim(),
-    rfc,
-    razon_social,
-    regimen_fiscal: String(body.regimen_fiscal).trim(),
-    uso_cfdi:       String(body.uso_cfdi).trim(),
-    codigo_postal,
-    status:         "pending",
-    created_at:     new Date().toISOString(),
-  };
+  const { error: insertError } = await adminDb
+    .from("invoice_requests")
+    .insert({
+      transaction_id,
+      email,
+      amount:         body.amount,
+      plan:           String(body.plan).trim(),
+      rfc,
+      razon_social,
+      regimen_fiscal: String(body.regimen_fiscal).trim(),
+      uso_cfdi:       String(body.uso_cfdi).trim(),
+      codigo_postal,
+      status:         "pending",
+      created_at:     new Date().toISOString(),
+    });
 
-  const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/invoice_requests`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      Prefer: "return=minimal",
-    },
-    body: JSON.stringify(row),
-  });
-
-  if (!insertRes.ok) {
-    const detail = await insertRes.text();
-    if (detail.includes("unique") || detail.includes("23505")) {
+  if (insertError) {
+    if (insertError.code === "23505") {
       return NextResponse.json(
         { error: "Factura already requested for this transaction" },
         { status: 409 }
       );
     }
-    console.error("Supabase insert failed:", detail);
+    console.error("[invoice-request] insert failed:", insertError.message);
     return NextResponse.json(
       { error: "Failed to save invoice request" },
       { status: 500 }

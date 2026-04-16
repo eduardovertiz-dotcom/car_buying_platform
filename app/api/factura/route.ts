@@ -3,7 +3,7 @@ import { validate as isUUID } from "uuid";
 import { createClient } from "@/lib/supabase/server";
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 
 const REQUIRED_FIELDS = ["transaction_id", "rfc", "razon_social", "regimen_fiscal", "uso_cfdi"] as const;
 
@@ -20,6 +20,12 @@ export async function POST(req: NextRequest) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // ── Fail loud if service role key not configured ──────────────────────────
+  if (!SUPABASE_KEY) {
+    console.error("[factura] SUPABASE_SERVICE_ROLE_KEY is not set");
+    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+  }
 
   // ── Correlation ID ────────────────────────────────────────────────────────
   const request_id = crypto.randomUUID();
