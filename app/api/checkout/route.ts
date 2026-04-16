@@ -43,7 +43,16 @@ export async function POST(req: Request) {
 
     console.log("[API] resolved priceId:", priceId)
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://www.mexguardian.com"
+    const baseUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`)
+
+    if (!baseUrl || !baseUrl.startsWith("http")) {
+      throw new Error("[checkout] Invalid base URL configuration")
+    }
+
+    console.log("[checkout] baseUrl:", baseUrl)
+    console.log("[checkout] success_url:", `${baseUrl}/transaction/success`)
 
     const metadata: Record<string, string> = { plan: dbPlan }
     if (transactionId) metadata.transaction_id = transactionId
