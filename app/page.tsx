@@ -7,18 +7,19 @@ import Hero from "@/components/Hero";
 import { createClient } from "@/lib/supabase/client";
 
 // 🔥 STRIPE HANDLER
-const handleCheckout = async (priceId: string) => {
+const handleCheckout = async (plan: "basic" | "pro") => {
+  console.log("[CLICK] plan:", plan);
   try {
     const res = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ priceId }),
+      body: JSON.stringify({ plan }),
     });
 
     const data = await res.json();
 
     if (!res.ok || !data.url) {
-      console.error("[checkout] missing url:", data);
+      console.error("[checkout] failed:", data);
       return;
     }
 
@@ -366,7 +367,7 @@ export default function Home() {
 
                   {/* 🔥 $49 BUTTON */}
                   <button
-                    onClick={() => handleCheckout("price_1TKnooBgMSWbEFIIv0Pg5V1P")}
+                    onClick={() => handleCheckout("basic")}
                     className="block w-full bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-4 py-3 text-center hover:opacity-90 transition-opacity"
                   >
                     Get Basic Report
@@ -413,7 +414,7 @@ export default function Home() {
 
                   {/* 🔥 $79 BUTTON */}
                   <button
-                    onClick={() => handleCheckout("price_1TKnpHBgMSWbEFIIbmJUc4C7")}
+                    onClick={() => handleCheckout("pro")}
                     className="block w-full bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-4 py-3 text-center hover:opacity-90 transition-opacity"
                   >
                     Get Full Protection

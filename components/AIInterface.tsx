@@ -211,7 +211,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId: "price_1TKtx4BgMSWbEFIIdUeEhJn0", transactionId: transaction.id }),
+        body: JSON.stringify({ plan: "pro", transactionId: transaction.id }),
       });
       const { url, error } = await res.json();
       if (error || !url) throw new Error(error ?? "No checkout URL");
