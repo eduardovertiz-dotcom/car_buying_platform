@@ -59,7 +59,7 @@ export default function Hero() {
               className="max-w-2xl font-semibold text-white tracking-tight leading-[1.1]"
               style={{ fontSize: "clamp(2.5rem, 6vw, 4rem)" }}
             >
-              In Mexico, car scams happen after you send the money.
+              Don&apos;t get scammed when buying a car in Mexico.
             </h1>
 
             <p className="max-w-lg text-white/75 leading-relaxed mt-4">
