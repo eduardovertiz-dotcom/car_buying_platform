@@ -322,10 +322,10 @@ export default function Home() {
               <div className="mb-8 lg:mb-14 text-center">
                 <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">Pricing</p>
                 <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-2">
-                  Avoid costly mistakes before you buy
+                  Avoid getting scammed before you send money
                 </h2>
                 <p className="text-sm lg:text-base text-white/75">
-                  Verify the vehicle, the seller, and the risk before committing.
+                  Verify the vehicle, the seller, and the risk before you pay.
                 </p>
               </div>
 
