@@ -170,14 +170,15 @@ export default function Home() {
             <div className="mb-8 lg:mb-14">
               <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">Process</p>
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight">
-                A clear path to buying safely
+                Verify the deal step by step before you pay
               </h2>
+              <p className="text-sm text-white/75 mt-3">Most scams happen after everything looks legitimate.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
               {[
                 { step: "01", label: "Prepare", description: "Upload your documents and basic details to start the verification." },
-                { step: "02", label: "Review", description: "We check the vehicle and ownership data across official records." },
+                { step: "02", label: "Review", description: "We verify the vehicle and ownership across official records." },
                 { step: "03", label: "Analyze", description: "We detect inconsistencies, risks, and potential fraud signals." },
                 { step: "04", label: "Verify", description: "We validate identity, documents, and key risk factors — with expert review." },
                 { step: "05", label: "Complete", description: "Finalize your purchase securely with a signed agreement." },
@@ -329,8 +330,11 @@ export default function Home() {
                 </p>
               </div>
 
-              <p className="text-sm text-white/50 text-center mb-8 lg:mb-10">
-                Most scams happen after everything looks legitimate.
+              <p className="text-sm text-white/50 text-center mb-2">
+                Once you send the money, it&apos;s already too late.
+              </p>
+              <p className="text-sm text-white/40 text-center mb-8 lg:mb-10">
+                That&apos;s when most scams happen.
               </p>
 
               {/* Mobile: $79 first (flex-col-reverse), Desktop: $49 left (flex-row) */}

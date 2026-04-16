@@ -59,15 +59,11 @@ export default function Hero() {
               className="max-w-2xl font-semibold text-white tracking-tight leading-[1.1]"
               style={{ fontSize: "clamp(2.5rem, 6vw, 4rem)" }}
             >
-              Don&apos;t get scammed buying a car
+              Most car scams in Mexico happen after you send the money
             </h1>
 
             <p className="max-w-lg text-white/75 leading-relaxed mt-4">
-              We verify ownership, documents, and hidden risks before you pay,{" "}
-              <span className="hidden sm:inline">
-                <br />
-              </span>
-              so you know exactly what you&apos;re buying.
+              Verify the vehicle, the seller, and the risk before you pay.
             </p>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-6">
@@ -89,8 +85,8 @@ export default function Hero() {
             </div>
 
             <div className="flex flex-col gap-1.5 mt-6">
-              <p className="text-sm text-[var(--foreground-muted)]/80">✔ Avoid hidden debts and ownership issues</p>
-              <p className="text-sm text-[var(--foreground-muted)]/80">✔ Know exactly what you&apos;re buying</p>
+              <p className="text-sm text-[var(--foreground-muted)]/80">✔ Avoid inheriting debts, fines, or legal issues</p>
+              <p className="text-sm text-[var(--foreground-muted)]/80">✔ Verify who actually owns the vehicle</p>
             </div>
 
           </div>
