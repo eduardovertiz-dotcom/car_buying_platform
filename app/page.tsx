@@ -148,7 +148,7 @@ export default function Home() {
                 },
                 {
                   icon: <IconEye />,
-                  title: "What you see is incomplete",
+                  title: "What you see is rarely the full picture",
                   body: "Listings rarely show the full picture.",
                 },
               ].map(({ icon, title, body }) => (
@@ -179,7 +179,7 @@ export default function Home() {
               {[
                 { step: "01", label: "Prepare", description: "Upload your documents and basic details to start the verification." },
                 { step: "02", label: "Review", description: "We verify the vehicle and ownership across official records." },
-                { step: "03", label: "Analyze", description: "We detect inconsistencies, risks, and potential fraud signals." },
+                { step: "03", label: "Analyze", description: "We identify hidden risks, inconsistencies, and signs of fraud before they become your problem." },
                 { step: "04", label: "Verify", description: "We validate identity, documents, and key risk factors — with expert review." },
                 { step: "05", label: "Complete", description: "Finalize your purchase securely with a signed agreement." },
               ].map(({ step, label, description }) => (
@@ -323,7 +323,7 @@ export default function Home() {
               <div className="mb-8 lg:mb-14 text-center">
                 <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">Pricing</p>
                 <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-2">
-                  Avoid getting scammed before you send money
+                  Verify before you pay. Not after.
                 </h2>
                 <p className="text-sm lg:text-base text-white/75">
                   Verify the vehicle, the seller, and the risk before you pay.
@@ -455,9 +455,7 @@ export default function Home() {
               </p>
 
               <h2 className="text-3xl sm:text-[2.25rem] font-semibold text-white tracking-tight leading-[1.1] mb-4">
-                Don&apos;t risk it.
-                <br />
-                Know before you pay
+                Know before you pay. Or deal with it after.
               </h2>
 
               <p className="text-[15px] text-white/80 leading-relaxed max-w-[360px] mx-auto">
