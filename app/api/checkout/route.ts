@@ -22,32 +22,33 @@ const PRICE_MAP: Record<Plan, { priceId: string; dbPlan: "49" | "79" }> = {
 
 export async function POST(req: Request) {
   try {
-    const { plan, transactionId }: { plan: string; transactionId?: string } = await req.json()
+    const body = await req.json()
+    const { plan, transactionId }: { plan: string; transactionId?: string } = body
 
-    console.log("[checkout] plan:", plan)
+    console.log("[API] body:", JSON.stringify(body))
+    console.log("[API] env STRIPE_PRICE_BASIC:", process.env.STRIPE_PRICE_BASIC ?? "(not set)")
+    console.log("[API] env STRIPE_PRICE_PRO:  ", process.env.STRIPE_PRICE_PRO   ?? "(not set)")
+    console.log("[API] env STRIPE_SECRET_KEY present:", !!process.env.STRIPE_SECRET_KEY)
 
     // Validate plan
     if (!plan || !(plan in PRICE_MAP)) {
-      console.error("[checkout] unknown plan:", plan)
-      return NextResponse.json({ error: "Invalid plan" }, { status: 400 })
+      throw new Error(`CHECKOUT FAILED: unknown plan "${plan}"`)
     }
 
     const { priceId, dbPlan } = PRICE_MAP[plan as Plan]
 
-    // Fail loudly if the env var is not set rather than sending an empty price ID to Stripe
     if (!priceId) {
-      console.error("[checkout] priceId not configured for plan:", plan)
-      return NextResponse.json({ error: "Plan not configured on server" }, { status: 500 })
+      throw new Error(`CHECKOUT FAILED: env var not set for plan "${plan}" — set STRIPE_PRICE_BASIC / STRIPE_PRICE_PRO in Vercel`)
     }
 
-    console.log("[checkout] resolved priceId:", priceId)
+    console.log("[API] resolved priceId:", priceId)
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://www.mexguardian.com"
 
-    // dbPlan goes into Stripe metadata so the success page / webhook can store it in DB.
-    // transactionId is only present when upgrading an existing transaction.
     const metadata: Record<string, string> = { plan: dbPlan }
     if (transactionId) metadata.transaction_id = transactionId
+
+    console.log("[STRIPE] creating session with priceId:", priceId)
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -57,15 +58,20 @@ export async function POST(req: Request) {
       cancel_url:  `${baseUrl}/start`,
     })
 
-    if (!session.url) {
-      throw new Error("Missing Stripe session URL")
-    }
+    console.log("[STRIPE] session id:", session.id)
+    console.log("[STRIPE] session.url:", session.url ?? "(null)")
+    console.log("[STRIPE] payment_status:", session.payment_status)
 
-    console.log("[checkout] session.url:", session.url)
+    if (!session.url) {
+      throw new Error("CHECKOUT FAILED: Stripe returned a session but session.url is null")
+    }
 
     return NextResponse.json({ url: session.url })
   } catch (err) {
-    console.error("[checkout] error:", err)
-    return NextResponse.json({ error: "Error creating checkout" }, { status: 500 })
+    console.error("[checkout] EXCEPTION:", err instanceof Error ? err.message : err)
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Error creating checkout" },
+      { status: 500 }
+    )
   }
 }
