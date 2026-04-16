@@ -332,31 +332,30 @@ export default function Home() {
               {/* Mobile: $79 first (flex-col-reverse), Desktop: $49 left (flex-row) */}
               <div className="flex flex-col-reverse md:flex-row justify-center gap-8 lg:gap-12">
 
-                {/* $49 — secondary */}
-                <div className="flex flex-col bg-white/[0.04] rounded-xl px-6 py-8 lg:px-8 lg:py-10 w-full max-w-[460px]">
-                  <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-1">Basic Coverage</p>
-                  <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
-                    Essential vehicle history and risk overview.
+                {/* $39 — secondary */}
+                <div className="flex flex-col bg-white/[0.04] rounded-xl px-6 py-8 lg:px-8 lg:py-10 w-full max-w-[460px] opacity-90">
+                  <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-1">Basic Vehicle Check</p>
+                  <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-1">
+                    Verify official vehicle and ownership data before engaging with the seller.
+                  </p>
+                  <p className="text-xs text-[var(--foreground-muted)] opacity-60 leading-relaxed mb-6">
+                    Automated verification only. No expert review.
                   </p>
 
                   <div className="flex items-end gap-1.5 mb-3">
-                    <span className="text-[3.5rem] lg:text-[4rem] font-semibold text-white leading-none tracking-tight">$49</span>
+                    <span className="text-[3.5rem] lg:text-[4rem] font-semibold text-white leading-none tracking-tight">$39</span>
                     <span className="text-sm text-[var(--foreground-muted)] mb-2">one-time</span>
                   </div>
-
-                  <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mb-6">
-                    Does not include identity or fraud risk verification.
-                  </p>
 
                   <div className="h-px bg-white/[0.08] mb-6" />
 
                   <ul className="flex flex-col gap-3 mb-6 lg:mb-8 flex-1">
                     {[
-                      "Full AI-guided process (Find → Evaluate → Verify → Complete)",
-                      "AI-assisted deal evaluation (red flags, missing information)",
-                      "Basic verification (registry, ownership, fines)",
-                      "Risk interpretation layer",
-                      "Guided contract generation and transaction record",
+                      "Official vehicle data (VIN, model, year, status)",
+                      "Ownership and registration verification",
+                      "REPUVE and record checks",
+                      "Detection of inconsistencies or altered data",
+                      "AI-assisted risk flags",
                     ].map((f) => (
                       <li key={f} className="flex items-start gap-3">
                         <span className="shrink-0 mt-0.5 text-[var(--foreground-muted)] opacity-70"><IconCheck /></span>
@@ -365,41 +364,41 @@ export default function Home() {
                     ))}
                   </ul>
 
-                  {/* 🔥 $49 BUTTON */}
+                  {/* 🔥 $39 BUTTON */}
                   <button
                     onClick={() => handleCheckout("basic")}
                     className="block w-full bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-4 py-3 text-center hover:opacity-90 transition-opacity"
                   >
-                    Get Basic Report
+                    Start Basic Check
                   </button>
                 </div>
 
-                {/* $79 — primary */}
-                <div className="flex flex-col bg-white/[0.06] border border-[var(--accent)] shadow-[0_0_24px_0_rgba(99,102,241,0.15)] rounded-xl px-6 py-8 lg:px-8 lg:py-10 w-full max-w-[460px] scale-105">
+                {/* $69 — primary */}
+                <div className="flex flex-col bg-white/[0.06] border border-[var(--accent)] shadow-[0_0_32px_0_rgba(99,102,241,0.22)] rounded-xl px-6 py-8 lg:px-8 lg:py-10 w-full max-w-[460px] scale-105 ring-1 ring-[var(--accent)]/40">
                   <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest">Professional Verification</p>
-                    <span className="text-[10px] font-medium uppercase tracking-widest text-[var(--accent)] bg-[var(--accent)]/10 px-2 py-0.5 rounded-full">Full Fraud Protection</span>
+                    <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest">Full Protection Verification</p>
+                    <span className="text-[10px] font-medium uppercase tracking-widest text-[var(--accent)] bg-[var(--accent)]/10 px-2 py-0.5 rounded-full">Most buyers choose this</span>
                   </div>
                   <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
-                    Verify ownership, identity, and fraud risk before you pay.
+                    Verify the seller, documents, and fraud risk before you send money.
                   </p>
 
                   <div className="flex items-end gap-1.5 mb-2">
-                    <span className="text-[3.5rem] lg:text-[4rem] font-semibold text-white leading-none tracking-tight">$79</span>
+                    <span className="text-[3.5rem] lg:text-[4rem] font-semibold text-white leading-none tracking-tight">$69</span>
                     <span className="text-sm text-[var(--foreground-muted)] mb-2">one-time</span>
                   </div>
-                  <p className="text-sm text-white/80 leading-relaxed mb-6">Prevents identity fraud and ownership scams.</p>
 
                   <div className="h-px bg-white/[0.08] mb-6" />
 
                   <ul className="flex flex-col gap-3 mb-6 lg:mb-8 flex-1">
                     {[
-                      "Everything in Guided Purchase",
-                      "Institutional-level verification (multi-source checks)",
-                      "Document inspection (factura, ID, consistency validation)",
-                      "Human expert review",
-                      "Fraud pattern detection",
-                      "Structured risk assessment with confidence level",
+                      "Everything in Basic",
+                      "Seller identity validation",
+                      "Document verification (factura, ID consistency)",
+                      "SAT, REPUVE, OCRA, and debt analysis",
+                      "Cross-checks across multiple sources",
+                      "Human expert review and validation",
+                      "Structured risk assessment with clear recommendation",
                     ].map((f) => (
                       <li key={f} className="flex items-start gap-3">
                         <span className="shrink-0 mt-0.5 text-[var(--foreground-muted)] opacity-70"><IconCheck /></span>
@@ -408,17 +407,21 @@ export default function Home() {
                     ))}
                   </ul>
 
-                  <p className="text-xs text-[var(--foreground-muted)] opacity-60 leading-relaxed mb-6">
-                    Not a guarantee. Highest level of verification available to a buyer.
+                  <p className="text-xs text-white/70 leading-relaxed mb-6">
+                    You don&apos;t just get data. You get a clear decision before paying.
                   </p>
 
-                  {/* 🔥 $79 BUTTON */}
+                  {/* 🔥 $69 BUTTON */}
                   <button
                     onClick={() => handleCheckout("pro")}
-                    className="block w-full bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-4 py-3 text-center hover:opacity-90 transition-opacity"
+                    className="block w-full bg-[var(--accent)] text-white text-sm font-semibold rounded-lg px-4 py-3 text-center hover:opacity-95 hover:scale-[1.02] transition-all"
                   >
-                    Get Full Protection
+                    Verify Before Paying
                   </button>
+
+                  <p className="text-[11px] text-white/40 text-center mt-3 leading-relaxed">
+                    This is the step most buyers skip before getting scammed.
+                  </p>
                 </div>
 
               </div>
