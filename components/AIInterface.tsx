@@ -247,7 +247,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     return (
       <>
         <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
-          Verifying this vehicle
+          Verifying this deal
         </h2>
         <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
           Checking REPUVE, outstanding liabilities, factura validity, and VIN
@@ -266,7 +266,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     return (
       <>
         <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
-          Running full protection checks
+          Running full verification checks
         </h2>
         <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
           Verifying identity, documents, ownership, and running advanced fraud pattern checks.

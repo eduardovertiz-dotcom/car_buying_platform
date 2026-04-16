@@ -176,11 +176,11 @@ export default function Home() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
               {[
-                { step: "01", label: "Prepare", description: "Clarify what you need, set your budget, and know what to avoid before you start." },
-                { step: "02", label: "Review", description: "Scan listings, identify red flags, and shortlist the right vehicles." },
-                { step: "03", label: "Analyze", description: "Assess condition, pricing, documentation, and seller behavior critically." },
-                { step: "04", label: "Verify", description: "Run official checks — registry, ownership, documents, and fraud patterns." },
-                { step: "05", label: "Complete", description: "Finalize with confidence. Generate and sign a secure purchase agreement." },
+                { step: "01", label: "Prepare", description: "Upload your documents and basic details to start the verification." },
+                { step: "02", label: "Review", description: "We check the vehicle and ownership data across official records." },
+                { step: "03", label: "Analyze", description: "We detect inconsistencies, risks, and potential fraud signals." },
+                { step: "04", label: "Verify", description: "We validate identity, documents, and key risk factors — with expert review." },
+                { step: "05", label: "Complete", description: "Finalize your purchase securely with a signed agreement." },
               ].map(({ step, label, description }) => (
                 <div key={step} className="bg-white/[0.04] border border-white/[0.15] rounded-xl px-5 py-5 lg:px-6 lg:py-6">
                   <p className="text-xs font-mono text-[var(--foreground-muted)] mb-3">{step}</p>
