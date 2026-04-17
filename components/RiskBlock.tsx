@@ -1,36 +1,22 @@
 "use client";
 
-export type RiskLevel = "LOW" | "MODERATE" | "HIGH";
+import type { RiskOutput } from "@/lib/risk";
 
-export function confidenceLabel(n: number): string {
-  if (n >= 90) return "High confidence — all key sources verified";
-  if (n >= 70) return "Moderate confidence — most sources verified";
-  if (n >= 50) return "Partial confidence — limited data available";
-  if (n > 0)   return "Low confidence — significant data gaps";
-  return "No data — analysis could not run";
-}
+// Re-export helpers so existing imports from "@/components/RiskBlock" keep working
+export type { RiskLevel } from "@/lib/risk";
+export { confidenceLabel, statusToRiskLevel } from "@/lib/risk";
 
-export function statusToRiskLevel(status: "safe" | "review" | "high_risk"): RiskLevel {
-  if (status === "high_risk") return "HIGH";
-  if (status === "review")    return "MODERATE";
-  return "LOW";
-}
-
-function riskStyles(level: RiskLevel): string {
+function riskStyles(level: string): string {
   if (level === "HIGH")     return "text-red-400 border-red-400/30 bg-red-400/[0.08]";
   if (level === "MODERATE") return "text-amber-400 border-amber-400/30 bg-amber-400/[0.08]";
   return "text-green-400 border-green-400/30 bg-green-400/[0.08]";
 }
 
 export default function RiskBlock({
-  level,
-  confidence,
-  contextLine,
+  data,
   headerLabel,
 }: {
-  level: RiskLevel;
-  confidence: number;
-  contextLine?: string;
+  data: RiskOutput;
   headerLabel?: string;
 }) {
   return (
@@ -45,19 +31,21 @@ export default function RiskBlock({
           <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-2">
             Risk Level
           </p>
-          <span className={`inline-block text-xs font-semibold tracking-widest uppercase px-2.5 py-1 rounded border ${riskStyles(level)}`}>
-            {level}
+          <span
+            className={`inline-block text-xs font-semibold tracking-widest uppercase px-2.5 py-1 rounded border ${riskStyles(data.riskLevel)}`}
+          >
+            {data.riskLevel}
           </span>
         </div>
         <div className="text-right">
           <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-2">
             Confidence
           </p>
-          <p className="text-lg font-semibold text-white leading-none">{confidence}%</p>
+          <p className="text-lg font-semibold text-white leading-none">{data.confidence}%</p>
         </div>
       </div>
       <p className="text-xs text-[var(--foreground-muted)] mt-3 pt-3 border-t border-[var(--border)] leading-relaxed">
-        {contextLine ?? confidenceLabel(confidence)}
+        {data.confidenceLabel}
       </p>
     </div>
   );

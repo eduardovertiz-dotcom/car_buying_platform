@@ -3,35 +3,7 @@
 import { useState } from "react";
 import { useTransaction } from "@/context/TransactionContext";
 import RiskBlock from "@/components/RiskBlock";
-
-type RiskItem = {
-  title: string;
-  explanation: string;
-  level: "warning" | "neutral";
-};
-
-const RISK_ITEMS: RiskItem[] = [
-  {
-    title: "Ownership inconsistency",
-    explanation: "Seller information does not fully match official records.",
-    level: "warning",
-  },
-  {
-    title: "Pending fines",
-    explanation: "Outstanding fines may transfer with the vehicle.",
-    level: "warning",
-  },
-  {
-    title: "Record gaps",
-    explanation: "Some registry data is incomplete or delayed.",
-    level: "neutral",
-  },
-];
-
-const RESOLVED_ITEMS: string[] = [
-  "No theft record found in public registry",
-  "Registration is current",
-];
+import { computeRisk } from "@/lib/risk";
 
 function IconWarning() {
   return (
@@ -66,13 +38,8 @@ export default function AnalyzePanel({ plan }: { plan: "49" | "79" | null }) {
   const [upsellLoading, setUpsellLoading] = useState(false);
   const showUpgrade = plan === "49";
 
-  const uploadedCount = Object.values(transaction.documents).filter(
-    (d) => d.status === "uploaded"
-  ).length;
-
-  // Confidence derived from document completeness + mock analysis
-  // 2 warnings → MODERATE; confidence scales with doc completeness
-  const confidence = uploadedCount === 3 ? 62 : uploadedCount === 2 ? 45 : uploadedCount === 1 ? 28 : 15;
+  // Single source of truth — all risk data computed here
+  const risk = computeRisk(transaction);
 
   async function handleUpgrade() {
     setUpsellLoading(true);
@@ -93,12 +60,8 @@ export default function AnalyzePanel({ plan }: { plan: "49" | "79" | null }) {
 
   return (
     <>
-      {/* Risk block */}
-      <RiskBlock
-        level="MODERATE"
-        confidence={confidence}
-        contextLine={`Based on ${uploadedCount} of 3 documents.`}
-      />
+      {/* Risk block — single source of truth */}
+      <RiskBlock data={risk} />
 
       {/* Section header */}
       <div className="mb-4">
@@ -110,40 +73,65 @@ export default function AnalyzePanel({ plan }: { plan: "49" | "79" | null }) {
         </p>
       </div>
 
-      {/* Issues detected */}
-      <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-2">
-        Issues detected
-      </p>
-      <div className="flex flex-col gap-2.5 mb-6">
-        {RISK_ITEMS.map((item) => (
-          <div
-            key={item.title}
-            className="flex items-start gap-3 bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-3"
-          >
-            <span className="shrink-0 mt-0.5">
-              {item.level === "warning" ? <IconWarning /> : <IconInfo />}
-            </span>
-            <div>
-              <p className="text-sm font-medium text-white">{item.title}</p>
-              <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-0.5">
-                {item.explanation}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Resolved */}
-      <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-2">
-        Resolved
-      </p>
-      <div className="flex flex-col gap-1.5 mb-6">
-        {RESOLVED_ITEMS.map((item) => (
-          <p key={item} className="text-xs text-green-400 leading-relaxed">
-            ✓ {item}
+      {/* Issues — dynamic, only when present */}
+      {risk.issues.length > 0 && (
+        <>
+          <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-2">
+            Issues detected
           </p>
-        ))}
-      </div>
+          <div className="flex flex-col gap-2.5 mb-6">
+            {risk.issues.map((issue) => (
+              <div
+                key={issue}
+                className="flex items-start gap-3 bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-3"
+              >
+                <span className="shrink-0 mt-0.5">
+                  <IconWarning />
+                </span>
+                <p className="text-sm text-white">{issue}</p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Unknowns — dynamic, only when present */}
+      {risk.unknowns.length > 0 && (
+        <>
+          <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-2">
+            Unknowns
+          </p>
+          <div className="flex flex-col gap-2.5 mb-6">
+            {risk.unknowns.map((unknown) => (
+              <div
+                key={unknown}
+                className="flex items-start gap-3 bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-3"
+              >
+                <span className="shrink-0 mt-0.5">
+                  <IconInfo />
+                </span>
+                <p className="text-sm text-[var(--foreground-muted)]">{unknown}</p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Resolved — dynamic, only when present */}
+      {risk.resolved.length > 0 && (
+        <>
+          <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-2">
+            Resolved
+          </p>
+          <div className="flex flex-col gap-1.5 mb-6">
+            {risk.resolved.map((item) => (
+              <p key={item} className="text-xs text-green-400 leading-relaxed">
+                ✓ {item}
+              </p>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Summary block */}
       <div className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-4 mb-6">
@@ -151,8 +139,11 @@ export default function AnalyzePanel({ plan }: { plan: "49" | "79" | null }) {
           What this means
         </p>
         <p className="text-sm text-white/75 leading-relaxed">
-          These issues should be resolved before proceeding.
-          Some risks may not be fully verifiable with automated checks alone.
+          {risk.issues.length > 0
+            ? "These issues should be resolved before proceeding. Some risks may not be fully verifiable with automated checks alone."
+            : risk.unknowns.length > 0
+            ? "No critical issues found at this stage. Unknowns will be resolved once verification runs with your submitted data."
+            : "No issues detected and all sources are accounted for. You can proceed with confidence."}
         </p>
       </div>
 

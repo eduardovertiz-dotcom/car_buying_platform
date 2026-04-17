@@ -7,7 +7,8 @@ import { STEPS, Step, MaintenanceRecordType, getSteps } from "@/lib/types";
 import type { VerificationResult } from "@/lib/types";
 import AnalyzePanel from "@/components/panels/AnalyzePanel";
 import { generateAgreementHTML } from "@/lib/agreement";
-import RiskBlock, { statusToRiskLevel, confidenceLabel } from "@/components/RiskBlock";
+import RiskBlock from "@/components/RiskBlock";
+import { computeRisk } from "@/lib/risk";
 
 type StepContent = {
   heading: string;
@@ -115,7 +116,6 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
 
   const { verification_status, documents, vehicle } = transaction;
   const plate = vehicle.plate || vehicle.vin;
-  const uploadedCount = Object.values(documents).filter((d) => d.status === "uploaded").length;
   const [showDocWarning, setShowDocWarning] = useState(false);
   const [upsellLoading, setUpsellLoading] = useState(false);
   const [verifyChecks, setVerifyChecks] = useState<VerifyChecks | null>(null);
@@ -126,6 +126,9 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     documents.ine.status === "uploaded" &&
     documents.registration.status === "uploaded" &&
     documents.invoice.status === "uploaded";
+
+  // Single source of truth for risk — same output used in all result states
+  const risk = computeRisk(transaction);
 
   // Auto-trigger verification on mount based on plan.
   // Handles both first arrival and post-upgrade ($49 → $79).
@@ -333,20 +336,19 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
       (!repuveResult || repuveResult.status === "unavailable") &&
       (!facturaResult || facturaResult.status === "unavailable");
 
-    // Derive risk level + confidence from results
-    const results = transaction.verification_results;
-    const riskLevel = results ? statusToRiskLevel(results.status) : "MODERATE";
-    const confidence = results?.confidence ?? 0;
-
     return (
       <>
-        {/* Risk position block */}
-        <RiskBlock
-          level={riskLevel}
-          confidence={confidence}
-          headerLabel="Current risk position"
-          contextLine={`Based on ${uploadedCount} of 3 documents and registry data. ${confidenceLabel(confidence)}.`}
-        />
+        {/* Decision heading */}
+        <h2 className="text-lg font-semibold text-white mb-2 leading-snug">
+          Make your decision.
+        </h2>
+        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
+          You&apos;ve reviewed the risk data. Decide how you want to proceed before
+          completing this transaction.
+        </p>
+
+        {/* Risk position — single source of truth */}
+        <RiskBlock data={risk} headerLabel="Current risk position" />
 
         {/* Results section — manual message or real check results */}
         {verifyMode === "manual" ? (
@@ -456,19 +458,19 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
       (!repuveResult || repuveResult.status === "unavailable") &&
       (!facturaResult || facturaResult.status === "unavailable");
 
-    const results = transaction.verification_results;
-    const riskLevel = results ? statusToRiskLevel(results.status) : "LOW";
-    const confidence = results?.confidence ?? 0;
-
     return (
       <>
-        {/* Risk position block */}
-        <RiskBlock
-          level={riskLevel}
-          confidence={confidence}
-          headerLabel="Full verification results"
-          contextLine={`Based on ${uploadedCount} of 3 documents and registry data. ${confidenceLabel(confidence)}.`}
-        />
+        {/* Decision heading */}
+        <h2 className="text-lg font-semibold text-white mb-2 leading-snug">
+          Make your decision.
+        </h2>
+        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
+          Full verification is complete. Review the results below and proceed when
+          you are ready.
+        </p>
+
+        {/* Risk position — single source of truth */}
+        <RiskBlock data={risk} headerLabel="Full verification results" />
 
         {/* Results section */}
         {verifyMode === "manual" ? (
@@ -676,6 +678,9 @@ function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
     printWindow.document.close();
   }
 
+  // Single source of truth for risk in complete step
+  const risk = computeRisk(transaction);
+
   const [recordType, setRecordType] = useState<MaintenanceRecordType>("service");
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
@@ -709,15 +714,13 @@ function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
           : "Full verification is complete. Generate a purchase agreement to finalize the transaction."}
       </p>
 
-      {/* Risk block — shown when we have results */}
-      {transaction.verification_results && (
-        <RiskBlock
-          level={statusToRiskLevel(transaction.verification_results.status)}
-          confidence={transaction.verification_results.confidence}
-          headerLabel="You are proceeding with"
-          contextLine={confidenceLabel(transaction.verification_results.confidence)}
-        />
-      )}
+      {/* Risk block — always shown, single source of truth */}
+      <RiskBlock data={risk} headerLabel="You are proceeding with" />
+
+      <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
+        You are proceeding based on the results above.
+        Make sure both parties understand and accept the terms before signing.
+      </p>
 
       {isBasic && (
         <div className="border border-amber-400/20 bg-amber-400/[0.06] rounded-lg px-4 py-4 mb-6">
