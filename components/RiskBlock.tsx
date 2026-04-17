@@ -20,7 +20,7 @@ export default function RiskBlock({
   headerLabel?: string;
 }) {
   return (
-    <div className="border border-[var(--border)] rounded-lg px-4 py-4 mb-6">
+    <div className="border border-[var(--border)] rounded-lg px-4 py-4 mb-6 transform transition-all duration-300 ease-out">
       {headerLabel && (
         <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
           {headerLabel}
@@ -32,7 +32,7 @@ export default function RiskBlock({
             Risk Level
           </p>
           <span
-            className={`inline-block text-xs font-semibold tracking-widest uppercase px-2.5 py-1 rounded border ${riskStyles(data.riskLevel)}`}
+            className={`inline-block text-xs font-semibold tracking-widest uppercase px-2.5 py-1 rounded border transition-colors duration-300 ${riskStyles(data.riskLevel)}`}
           >
             {data.riskLevel}
           </span>
@@ -41,10 +41,12 @@ export default function RiskBlock({
           <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-2">
             Confidence
           </p>
-          <p className="text-lg font-semibold text-white leading-none">{data.confidence}%</p>
+          <p className="text-lg font-semibold text-white leading-none transition-opacity duration-300">
+            {data.confidence}%
+          </p>
         </div>
       </div>
-      <p className="text-xs text-[var(--foreground-muted)] mt-3 pt-3 border-t border-[var(--border)] leading-relaxed">
+      <p className="text-xs text-[var(--foreground-muted)] mt-3 pt-3 border-t border-[var(--border)] leading-relaxed transition-opacity duration-300">
         {data.confidenceLabel}
       </p>
     </div>

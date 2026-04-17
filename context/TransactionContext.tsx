@@ -37,7 +37,8 @@ type Action =
   | { type: "ADD_MAINTENANCE_RECORD"; payload: { type: MaintenanceRecordType; title: string; date: string } }
   | { type: "ENABLE_SHARE"; payload: { token: string } }
   | { type: "REVOKE_SHARE" }
-  | { type: "UPDATE_AGREEMENT_FIELDS"; payload: { buyer_name?: string; buyer_email?: string; seller_name?: string; seller_email?: string; price?: string; location?: string } };
+  | { type: "UPDATE_AGREEMENT_FIELDS"; payload: { buyer_name?: string; buyer_email?: string; seller_name?: string; seller_email?: string; price?: string; location?: string } }
+  | { type: "ACCEPT_RISK"; payload: { riskLevel: "LOW" | "MODERATE" | "HIGH"; confidence: number } };
 
 // ─── Reducer ────────────────────────────────────────────────────────────────
 
@@ -242,6 +243,15 @@ function reducer(state: Transaction, action: Action): Transaction {
       return { ...state, ...action.payload };
     }
 
+    case "ACCEPT_RISK": {
+      return {
+        ...state,
+        accepted_risk_level: action.payload.riskLevel,
+        accepted_confidence: action.payload.confidence,
+        accepted_at: new Date().toISOString(),
+      };
+    }
+
     case "ADVANCE_TO_STEP": {
       // Forward jump to a specific step — used by Basic plan to skip "verify"
       const targetKey = action.payload;
@@ -311,6 +321,7 @@ type TransactionContextValue = {
   enableShare: (token: string) => void;
   revokeShare: () => void;
   updateAgreementFields: (fields: { buyer_name?: string; buyer_email?: string; seller_name?: string; seller_email?: string; price?: string; location?: string }) => void;
+  acceptRisk: (risk: { riskLevel: "LOW" | "MODERATE" | "HIGH"; confidence: number }) => void;
 };
 
 const TransactionContext = createContext<TransactionContextValue | null>(null);
@@ -431,6 +442,9 @@ export function TransactionProvider({ transactionId, children }: Props) {
     },
     updateAgreementFields(fields) {
       dispatch({ type: "UPDATE_AGREEMENT_FIELDS", payload: fields });
+    },
+    acceptRisk(risk) {
+      dispatch({ type: "ACCEPT_RISK", payload: risk });
     },
   };
 

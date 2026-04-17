@@ -8,7 +8,7 @@ import type { VerificationResult } from "@/lib/types";
 import AnalyzePanel from "@/components/panels/AnalyzePanel";
 import { generateAgreementHTML } from "@/lib/agreement";
 import RiskBlock from "@/components/RiskBlock";
-import { computeRisk } from "@/lib/risk";
+import { computeRisk, confidenceLabel, type RiskOutput } from "@/lib/risk";
 
 type StepContent = {
   heading: string;
@@ -108,6 +108,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     transaction,
     advanceStep,
     goToStep,
+    acceptRisk,
     requestBasicVerification,
     completeBasicVerification,
     requestProfessionalVerification,
@@ -121,6 +122,8 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
   const [verifyChecks, setVerifyChecks] = useState<VerifyChecks | null>(null);
   const [verifyError, setVerifyError] = useState(false);
   const [verifyMode, setVerifyMode] = useState<"manual" | "automated" | null>(null);
+  // Upgrade delta: snapshot of risk at the moment the user clicks upgrade
+  const [previousRisk, setPreviousRisk] = useState<RiskOutput | null>(null);
 
   const allDocumentsUploaded =
     documents.ine.status === "uploaded" &&
@@ -204,6 +207,8 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
       return;
     }
     setShowDocWarning(false);
+    // Snapshot the current risk before upgrade so we can show what changed afterward
+    setPreviousRisk(risk);
     setUpsellLoading(true);
     try {
       const res = await fetch("/api/checkout", {
@@ -438,7 +443,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
         </div>
 
         <button
-          onClick={advanceStep}
+          onClick={() => { acceptRisk(risk); advanceStep(); }}
           className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors underline underline-offset-2"
         >
           Proceed with this risk level
@@ -531,6 +536,33 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
           </>
         )}
 
+        {/* Upgrade delta — only when user came from basic and we have a before snapshot */}
+        {previousRisk && (() => {
+          const newResolved = risk.resolved.filter(
+            (item) => !previousRisk.resolved.includes(item)
+          );
+          const issuesCleared = previousRisk.issues.length > 0 && risk.issues.length === 0;
+          const hasDelta = newResolved.length > 0 || issuesCleared;
+          if (!hasDelta) return null;
+          return (
+            <div className="border border-green-400/20 bg-green-400/[0.06] rounded-lg px-4 py-4 mb-6">
+              <p className="text-[10px] uppercase tracking-widest text-green-400 mb-3">
+                What changed after full verification
+              </p>
+              {issuesCleared && (
+                <p className="text-sm text-green-400 leading-relaxed mb-2">
+                  ✓ No remaining issues after full verification
+                </p>
+              )}
+              {newResolved.map((item) => (
+                <p key={item} className="text-sm text-green-400 leading-relaxed">
+                  ✓ {item}
+                </p>
+              ))}
+            </div>
+          );
+        })()}
+
         <button
           onClick={advanceStep}
           className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
@@ -546,6 +578,16 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
 }
 
 // ─── Complete ────────────────────────────────────────────────────────────────
+
+function timeAgo(isoString: string): string {
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const diffMin = Math.floor(diffMs / 60_000);
+  if (diffMin < 1)  return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24)  return `${diffHr}h ago`;
+  return `${Math.floor(diffHr / 24)}d ago`;
+}
 
 function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
   const { transaction, generateContract, updateAgreementFields, addMaintenanceRecord, enableShare, revokeShare } = useTransaction();
@@ -714,8 +756,32 @@ function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
           : "Full verification is complete. Generate a purchase agreement to finalize the transaction."}
       </p>
 
-      {/* Risk block — always shown, single source of truth */}
-      <RiskBlock data={risk} headerLabel="You are proceeding with" />
+      {/* Risk block — uses accepted values if user made an explicit decision */}
+      {(() => {
+        const { accepted_risk_level, accepted_confidence, accepted_at } = transaction;
+        const hasDecision = !!accepted_risk_level && accepted_confidence !== undefined;
+        const displayRisk: RiskOutput = hasDecision
+          ? {
+              ...risk,
+              riskLevel: accepted_risk_level!,
+              confidence: accepted_confidence!,
+              confidenceLabel: confidenceLabel(accepted_confidence!),
+            }
+          : risk;
+        return (
+          <>
+            <RiskBlock
+              data={displayRisk}
+              headerLabel={hasDecision ? "You chose to proceed with" : "You are proceeding with"}
+            />
+            {hasDecision && accepted_at && (
+              <p className="text-xs text-[var(--foreground-muted)] -mt-4 mb-6">
+                Decision recorded {timeAgo(accepted_at)}
+              </p>
+            )}
+          </>
+        );
+      })()}
 
       <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
         You are proceeding based on the results above.

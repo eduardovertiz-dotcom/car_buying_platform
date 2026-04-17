@@ -92,6 +92,10 @@ export type Transaction = {
   seller_email?: string;
   price?: string;
   location?: string;
+  // Decision memory — recorded when user explicitly accepts a risk level
+  accepted_risk_level?: "LOW" | "MODERATE" | "HIGH";
+  accepted_confidence?: number;
+  accepted_at?: string;
   created_at: string;
 };
 
