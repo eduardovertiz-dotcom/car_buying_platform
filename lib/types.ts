@@ -96,6 +96,9 @@ export type Transaction = {
   accepted_risk_level?: "LOW" | "MODERATE" | "HIGH";
   accepted_confidence?: number;
   accepted_at?: string;
+  // Documenso e-signature
+  documenso_document_id?: string;
+  signing_status?: "not_sent" | "pending" | "signed";
   created_at: string;
 };
 

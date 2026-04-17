@@ -596,7 +596,7 @@ function timeAgo(isoString: string): string {
 }
 
 function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
-  const { transaction, generateContract, updateAgreementFields, addMaintenanceRecord, enableShare, revokeShare } = useTransaction();
+  const { transaction, generateContract, updateAgreementFields, addMaintenanceRecord, enableShare, revokeShare, sendForSignature } = useTransaction();
   const { contract, share } = transaction;
 
   const isBasic = plan === "49";
@@ -631,6 +631,48 @@ function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
   const [showMaintenanceSaved, setShowMaintenanceSaved] = useState(false);
   const [showShared, setShowShared] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
+  const [signingLoading, setSigningLoading] = useState(false);
+  const [signingError, setSigningError] = useState<string | null>(null);
+
+  async function handleSendForSignature() {
+    setSigningLoading(true);
+    setSigningError(null);
+    const date = new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" });
+    const agreement_html = generateAgreementHTML({
+      id:           transaction.id,
+      date,
+      vehicle:      transaction.vehicle,
+      buyer_name:   transaction.buyer_name,
+      buyer_email:  transaction.buyer_email,
+      seller_name:  transaction.seller_name,
+      seller_email: transaction.seller_email,
+      price:        transaction.price,
+      location:     transaction.location,
+    });
+    try {
+      const res = await fetch("/api/documenso/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          buyer_name:    transaction.buyer_name  ?? "",
+          buyer_email:   transaction.buyer_email ?? "",
+          seller_name:   transaction.seller_name ?? "",
+          seller_email:  transaction.seller_email ?? "",
+          agreement_html,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.document_id) {
+        throw new Error(data.error ?? "Failed to send for signature");
+      }
+      sendForSignature(data.document_id);
+    } catch (err) {
+      console.error("[send-for-signature]", err);
+      setSigningError("Could not send for signature. Please try again.");
+    } finally {
+      setSigningLoading(false);
+    }
+  }
 
   function handleShare() {
     const token =
@@ -815,6 +857,39 @@ function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
           <button onClick={handleDownload} className="text-sm text-white underline mb-4">
             Download purchase agreement
           </button>
+
+          {/* E-signature — Documenso */}
+          <div className="mb-6">
+            {(!transaction.signing_status || transaction.signing_status === "not_sent") && (
+              <>
+                <button
+                  onClick={handleSendForSignature}
+                  disabled={signingLoading}
+                  className={`w-full text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left ${
+                    signingLoading
+                      ? "bg-[var(--border)] text-[var(--foreground-muted)] cursor-default"
+                      : "bg-[var(--background)] border border-[var(--border)] hover:border-white/30 text-white"
+                  }`}
+                >
+                  {signingLoading ? "Sending…" : "Send for signature"}
+                </button>
+                {signingError && (
+                  <p className="text-xs text-red-400 leading-relaxed mt-2">{signingError}</p>
+                )}
+              </>
+            )}
+            {transaction.signing_status === "pending" && (
+              <p className="text-sm text-[var(--foreground-muted)]">
+                Waiting for signatures
+              </p>
+            )}
+            {transaction.signing_status === "signed" && (
+              <p className="text-sm text-green-400">
+                ✓ Agreement signed
+              </p>
+            )}
+          </div>
+
           <div className="mb-8">
             <button
               onClick={handleShare}

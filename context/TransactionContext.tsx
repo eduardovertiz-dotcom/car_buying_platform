@@ -39,7 +39,8 @@ type Action =
   | { type: "REVOKE_SHARE" }
   | { type: "UPDATE_AGREEMENT_FIELDS"; payload: { buyer_name?: string; buyer_email?: string; seller_name?: string; seller_email?: string; price?: string; location?: string } }
   | { type: "ACCEPT_RISK"; payload: { riskLevel: "LOW" | "MODERATE" | "HIGH"; confidence: number } }
-  | { type: "UPDATE_VEHICLE"; payload: { make?: string; model?: string; year?: number; vin?: string; plate?: string } };
+  | { type: "UPDATE_VEHICLE"; payload: { make?: string; model?: string; year?: number; vin?: string; plate?: string } }
+  | { type: "SEND_FOR_SIGNATURE"; payload: { documenso_document_id: string } };
 
 // ─── Reducer ────────────────────────────────────────────────────────────────
 
@@ -253,6 +254,14 @@ function reducer(state: Transaction, action: Action): Transaction {
       };
     }
 
+    case "SEND_FOR_SIGNATURE": {
+      return {
+        ...state,
+        documenso_document_id: action.payload.documenso_document_id,
+        signing_status: "pending" as const,
+      };
+    }
+
     case "UPDATE_VEHICLE": {
       const v = action.payload;
       return {
@@ -339,6 +348,7 @@ type TransactionContextValue = {
   updateAgreementFields: (fields: { buyer_name?: string; buyer_email?: string; seller_name?: string; seller_email?: string; price?: string; location?: string }) => void;
   acceptRisk: (risk: { riskLevel: "LOW" | "MODERATE" | "HIGH"; confidence: number }) => void;
   updateVehicle: (fields: { make?: string; model?: string; year?: number; vin?: string; plate?: string }) => void;
+  sendForSignature: (documenso_document_id: string) => void;
 };
 
 const TransactionContext = createContext<TransactionContextValue | null>(null);
@@ -465,6 +475,9 @@ export function TransactionProvider({ transactionId, children }: Props) {
     },
     updateVehicle(fields) {
       dispatch({ type: "UPDATE_VEHICLE", payload: fields });
+    },
+    sendForSignature(documenso_document_id) {
+      dispatch({ type: "SEND_FOR_SIGNATURE", payload: { documenso_document_id } });
     },
   };
 
