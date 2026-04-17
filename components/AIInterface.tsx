@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import JSZip from "jszip";
 import { useTransaction } from "@/context/TransactionContext";
-import { STEPS, Step, MaintenanceRecordType } from "@/lib/types";
+import { STEPS, Step, MaintenanceRecordType, getSteps } from "@/lib/types";
 import type { VerificationResult } from "@/lib/types";
 import AnalyzePanel from "@/components/panels/AnalyzePanel";
 import { generateAgreementHTML } from "@/lib/agreement";
+import RiskBlock, { statusToRiskLevel, confidenceLabel } from "@/components/RiskBlock";
 
 type StepContent = {
   heading: string;
@@ -105,6 +106,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
   const {
     transaction,
     advanceStep,
+    goToStep,
     requestBasicVerification,
     completeBasicVerification,
     requestProfessionalVerification,
@@ -112,6 +114,8 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
   } = useTransaction();
 
   const { verification_status, documents, vehicle } = transaction;
+  const plate = vehicle.plate || vehicle.vin;
+  const uploadedCount = Object.values(documents).filter((d) => d.status === "uploaded").length;
   const [showDocWarning, setShowDocWarning] = useState(false);
   const [upsellLoading, setUpsellLoading] = useState(false);
   const [verifyChecks, setVerifyChecks] = useState<VerifyChecks | null>(null);
@@ -137,7 +141,6 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     if (!shouldRunProfessional && !shouldRunBasic) return;
 
     // Require at least one vehicle identifier before calling API
-    const plate = vehicle.plate || vehicle.vin;
     if (!plate) return;
 
     if (shouldRunProfessional) requestProfessionalVerification();
@@ -234,6 +237,56 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     );
   }
 
+  // ── No VIN / plate — surface error instead of silently aborting ─────────
+  if (!plate && verification_status === "not_started") {
+    return (
+      <>
+        <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
+          Vehicle identifier required.
+        </h2>
+        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
+          Verification requires a VIN or plate number to run registry checks.
+          Without this, theft status, registration validity, and ownership history
+          cannot be confirmed.
+        </p>
+        <button
+          onClick={() => goToStep("upload")}
+          className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left mb-3"
+        >
+          ← Back to Upload
+        </button>
+        <button
+          onClick={advanceStep}
+          className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors underline underline-offset-2"
+        >
+          Proceed without registry check
+        </button>
+        <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-3">
+          Proceeding without a VIN or plate means theft and registry checks will not be run.
+        </p>
+      </>
+    );
+  }
+
+  // ── not_started with VIN present — useEffect fires immediately after mount ─
+  if (verification_status === "not_started") {
+    return (
+      <>
+        <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
+          Running verification checks.
+        </h2>
+        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
+          Checking registry sources and document data.
+        </p>
+        <div className="border border-[var(--border)] rounded-lg px-5 py-4">
+          <p className="text-sm text-[var(--foreground-muted)]">
+            Initializing — do not close this page.
+          </p>
+        </div>
+      </>
+    );
+  }
+
   // ── Processing states ────────────────────────────────────────────────────
   if (verification_status === "basic_processing") {
     return (
@@ -280,19 +333,32 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
       (!repuveResult || repuveResult.status === "unavailable") &&
       (!facturaResult || facturaResult.status === "unavailable");
 
+    // Derive risk level + confidence from results
+    const results = transaction.verification_results;
+    const riskLevel = results ? statusToRiskLevel(results.status) : "MODERATE";
+    const confidence = results?.confidence ?? 0;
+
     return (
       <>
+        {/* Risk position block */}
+        <RiskBlock
+          level={riskLevel}
+          confidence={confidence}
+          headerLabel="Current risk position"
+          contextLine={`Based on ${uploadedCount} of 3 documents and registry data. ${confidenceLabel(confidence)}.`}
+        />
+
         {/* Results section — manual message or real check results */}
         {verifyMode === "manual" ? (
           <div className="mb-6">
             <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
-              Verification Results
+              Verification results
             </p>
             <p className="text-sm font-medium leading-relaxed text-[var(--foreground-muted)]">
-              Your verification is in progress.
+              Expert review in progress.
             </p>
             <p className="text-sm leading-relaxed text-[var(--foreground-muted)] mt-1">
-              Our team will review your vehicle and documents. You&apos;ll receive results within 24 hours.
+              Our team will review your documents. You&apos;ll receive results within 24 hours.
             </p>
           </div>
         ) : (
@@ -306,13 +372,13 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
             {(repuveResult || facturaResult) && (
               <div className="mb-6">
                 <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
-                  Verification Results
+                  Verification results
                 </p>
 
                 {allUnavailable ? (
                   <div className="mb-2">
                     <p className="text-sm font-medium leading-relaxed text-[var(--foreground-muted)]">
-                      Verification could not be completed at this time.
+                      Checks could not be completed at this time.
                     </p>
                   </div>
                 ) : (
@@ -328,7 +394,6 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
                         </p>
                       </div>
                     )}
-
                     {facturaResult && (
                       <div className="mb-2">
                         <p className={`text-sm font-medium leading-relaxed ${
@@ -342,53 +407,43 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
                     )}
                   </>
                 )}
-
-                <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-3">
-                  If any issues appear, we recommend verifying directly with the seller before proceeding.
-                </p>
               </div>
             )}
           </>
         )}
 
-        <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
-          Public records checked. Some risks won&apos;t appear here.
-        </h2>
-        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-8">
-          Basic verification queries official databases — it cannot detect
-          document alterations, confirm the seller&apos;s true identity, or flag
-          risks that exist outside the public record.
-        </p>
-
-        <button
-          onClick={handleUpsell}
-          disabled={upsellLoading}
-          className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left mb-4 disabled:opacity-60"
-        >
-          {upsellLoading ? "Redirecting…" : "Upgrade to full verification — $30"}
-        </button>
-
-        {showDocWarning && (
-          <p className="text-xs text-amber-400 leading-relaxed mb-3">
-            Upload the required documents to continue with full verification.
+        {/* Upsell */}
+        <div className="border border-white/[0.12] rounded-lg px-4 py-5 mb-4">
+          <p className="text-sm font-medium text-white mb-2">
+            Expert review available
           </p>
-        )}
-        {allDocumentsUploaded && !showDocWarning && (
-          <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mb-3">
-            Documents ready. You can proceed with full verification.
+          <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-4">
+            Automated checks cover public records only. They cannot detect document
+            alterations, confirm seller identity, or flag risks outside registry data.
           </p>
-        )}
+          <button
+            onClick={handleUpsell}
+            disabled={upsellLoading}
+            className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left disabled:opacity-60"
+          >
+            {upsellLoading ? "Redirecting…" : "Upgrade to full verification — $30"}
+          </button>
+          {showDocWarning && (
+            <p className="text-xs text-amber-400 leading-relaxed mt-3">
+              Upload all required documents before upgrading.
+            </p>
+          )}
+        </div>
 
-        <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mb-2">
-          A human reviewer checks the physical documents, confirms seller
-          identity, and flags patterns that don&apos;t appear in automated checks.
-        </p>
         <button
           onClick={advanceStep}
           className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors underline underline-offset-2"
         >
-          Continue with basic results
+          Proceed with this risk level
         </button>
+        <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-2">
+          You are proceeding based on automated checks only.
+        </p>
       </>
     );
   }
@@ -401,23 +456,28 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
       (!repuveResult || repuveResult.status === "unavailable") &&
       (!facturaResult || facturaResult.status === "unavailable");
 
+    const results = transaction.verification_results;
+    const riskLevel = results ? statusToRiskLevel(results.status) : "LOW";
+    const confidence = results?.confidence ?? 0;
+
     return (
       <>
-        <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
-          Full verification complete
-        </h2>
+        {/* Risk position block */}
+        <RiskBlock
+          level={riskLevel}
+          confidence={confidence}
+          headerLabel="Full verification results"
+          contextLine={`Based on ${uploadedCount} of 3 documents and registry data. ${confidenceLabel(confidence)}.`}
+        />
 
-        {/* Results section — manual message or real check results */}
+        {/* Results section */}
         {verifyMode === "manual" ? (
           <div className="mb-6">
             <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
-              Verification Results
+              Expert review in progress
             </p>
             <p className="text-sm font-medium leading-relaxed text-[var(--foreground-muted)]">
-              Your verification is in progress.
-            </p>
-            <p className="text-sm leading-relaxed text-[var(--foreground-muted)] mt-1">
-              Our team will review your vehicle and documents. You&apos;ll receive results within 24 hours.
+              Our team will review your documents. You&apos;ll receive results within 24 hours.
             </p>
           </div>
         ) : (
@@ -431,15 +491,13 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
             {(repuveResult || facturaResult) && (
               <div className="mb-6">
                 <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
-                  Verification Results
+                  Verification results
                 </p>
 
                 {allUnavailable ? (
-                  <div className="mb-2">
-                    <p className="text-sm font-medium leading-relaxed text-[var(--foreground-muted)]">
-                      Verification could not be completed at this time.
-                    </p>
-                  </div>
+                  <p className="text-sm font-medium leading-relaxed text-[var(--foreground-muted)]">
+                    Checks could not be completed at this time.
+                  </p>
                 ) : (
                   <>
                     {repuveResult && (
@@ -453,7 +511,6 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
                         </p>
                       </div>
                     )}
-
                     {facturaResult && (
                       <div className="mb-2">
                         <p className={`text-sm font-medium leading-relaxed ${
@@ -467,10 +524,6 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
                     )}
                   </>
                 )}
-
-                <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-3">
-                  If any issues appear, we recommend verifying directly with the seller before proceeding.
-                </p>
               </div>
             )}
           </>
@@ -480,12 +533,13 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
           onClick={advanceStep}
           className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
         >
-          Proceed to complete
+          Proceed to agreement
         </button>
       </>
     );
   }
 
+  // Unreachable — all verification_status values are handled above.
   return null;
 }
 
@@ -646,14 +700,24 @@ function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
       </div>
 
       <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
-        {isBasic ? "Your risk summary" : "Final verification results"}
+        {isBasic ? "Your risk summary" : "Verification complete."}
       </h2>
 
-      <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-8">
+      <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
         {isBasic
-          ? "Basic checks are complete. Some risks — document alterations, seller identity, off-record fraud — cannot be verified automatically."
-          : "Full verification is complete. Documents, ownership, and risk signals have been reviewed."}
+          ? "Automated checks are complete. Generate a purchase agreement to proceed with the transaction."
+          : "Full verification is complete. Generate a purchase agreement to finalize the transaction."}
       </p>
+
+      {/* Risk block — shown when we have results */}
+      {transaction.verification_results && (
+        <RiskBlock
+          level={statusToRiskLevel(transaction.verification_results.status)}
+          confidence={transaction.verification_results.confidence}
+          headerLabel="You are proceeding with"
+          contextLine={confidenceLabel(transaction.verification_results.confidence)}
+        />
+      )}
 
       {isBasic && (
         <div className="border border-amber-400/20 bg-amber-400/[0.06] rounded-lg px-4 py-4 mb-6">
@@ -662,6 +726,10 @@ function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
           </p>
         </div>
       )}
+
+      <p className="text-sm text-white mb-6">
+        You are ready to proceed with this transaction.
+      </p>
 
       {contract.status === "generated" ? (
         <>
@@ -771,6 +839,9 @@ function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
               />
             </div>
           </div>
+          <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mb-3">
+            Both parties should review and confirm all details before signing.
+          </p>
           <button
             onClick={handleGenerate}
             disabled={!canGenerate}
@@ -868,9 +939,11 @@ function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
 export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
   const { transaction, advanceStep, goToStep, returnedToStep } = useTransaction();
   const { current_step } = transaction;
-  const currentIndex = STEPS.findIndex((s) => s.key === current_step);
+  // Use plan-aware step list so Basic users at "complete" go back to "analyze" not "verify"
+  const planSteps = getSteps(plan);
+  const currentIndex = planSteps.findIndex((s) => s.key === current_step);
 
-  const prevStep = currentIndex > 0 ? STEPS[currentIndex - 1] : null;
+  const prevStep = currentIndex > 0 ? planSteps[currentIndex - 1] : null;
 
   const backLink = prevStep ? (
     <div className="pt-6 pb-1">
@@ -891,6 +964,68 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
     </div>
   ) : null;
 
+  // ── Upload — dynamic CTA based on document state ─────────────────────────
+  if (current_step === "upload") {
+    const uploadedDocs = Object.values(transaction.documents).filter(
+      (d) => d.status === "uploaded"
+    ).length;
+    const allUploaded = uploadedDocs === 3;
+    const noneUploaded = uploadedDocs === 0;
+
+    return (
+      <>
+        {backLink}
+        {changesBanner}
+        <section className="py-8">
+          <div className="mb-2">
+            <span className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">
+              Upload
+            </span>
+          </div>
+
+          <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
+            Upload your documents to begin verification.
+          </h2>
+
+          <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
+            We need the seller&apos;s ID, vehicle registration, and ownership invoice.
+            The more complete your upload, the more accurate your risk report.
+          </p>
+
+          {uploadedDocs > 0 && !allUploaded && (
+            <div className="border border-[var(--border)] rounded-lg px-4 py-3 mb-6">
+              <p className="text-xs text-[var(--foreground-muted)]">
+                {uploadedDocs} of 3 documents uploaded — missing documents will appear as unknowns in your report.
+              </p>
+            </div>
+          )}
+
+          <button
+            onClick={advanceStep}
+            disabled={noneUploaded}
+            className={`w-full text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left mb-3 ${
+              noneUploaded
+                ? "bg-[var(--border)] text-[var(--foreground-muted)] cursor-default"
+                : "bg-[var(--accent)] hover:bg-blue-600 text-white"
+            }`}
+          >
+            {noneUploaded
+              ? "Upload documents to begin"
+              : allUploaded
+              ? "Continue"
+              : "Continue with limited data"}
+          </button>
+
+          {!allUploaded && uploadedDocs > 0 && (
+            <p className="text-xs text-[var(--foreground-muted)] leading-relaxed">
+              You can add more documents later to improve your results.
+            </p>
+          )}
+        </section>
+      </>
+    );
+  }
+
   if (current_step === "analyze") {
     return (
       <>
@@ -899,7 +1034,7 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
         <section className="py-8">
           <div className="mb-2">
             <span className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">
-              {STEPS[currentIndex].label}
+              {planSteps[currentIndex]?.label}
             </span>
           </div>
           <AnalyzePanel plan={plan} />
@@ -944,7 +1079,7 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
     <section className="py-8">
       <div className="mb-2">
         <span className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">
-          {STEPS[currentIndex].label}
+          {planSteps[currentIndex]?.label}
         </span>
       </div>
 

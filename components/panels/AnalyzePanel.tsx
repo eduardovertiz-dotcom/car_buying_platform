@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTransaction } from "@/context/TransactionContext";
+import RiskBlock from "@/components/RiskBlock";
 
 type RiskItem = {
   title: string;
@@ -25,6 +26,11 @@ const RISK_ITEMS: RiskItem[] = [
     explanation: "Some registry data is incomplete or delayed.",
     level: "neutral",
   },
+];
+
+const RESOLVED_ITEMS: string[] = [
+  "No theft record found in public registry",
+  "Registration is current",
 ];
 
 function IconWarning() {
@@ -56,9 +62,17 @@ function IconInfo() {
 }
 
 export default function AnalyzePanel({ plan }: { plan: "49" | "79" | null }) {
-  const { advanceStep, advanceToStep } = useTransaction();
+  const { transaction, advanceStep, advanceToStep } = useTransaction();
   const [upsellLoading, setUpsellLoading] = useState(false);
   const showUpgrade = plan === "49";
+
+  const uploadedCount = Object.values(transaction.documents).filter(
+    (d) => d.status === "uploaded"
+  ).length;
+
+  // Confidence derived from document completeness + mock analysis
+  // 2 warnings → MODERATE; confidence scales with doc completeness
+  const confidence = uploadedCount === 3 ? 62 : uploadedCount === 2 ? 45 : uploadedCount === 1 ? 28 : 15;
 
   async function handleUpgrade() {
     setUpsellLoading(true);
@@ -79,8 +93,15 @@ export default function AnalyzePanel({ plan }: { plan: "49" | "79" | null }) {
 
   return (
     <>
+      {/* Risk block */}
+      <RiskBlock
+        level="MODERATE"
+        confidence={confidence}
+        contextLine={`Based on ${uploadedCount} of 3 documents.`}
+      />
+
       {/* Section header */}
-      <div className="mb-6">
+      <div className="mb-4">
         <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-2">
           Risk analysis
         </p>
@@ -89,7 +110,10 @@ export default function AnalyzePanel({ plan }: { plan: "49" | "79" | null }) {
         </p>
       </div>
 
-      {/* Risk signals */}
+      {/* Issues detected */}
+      <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-2">
+        Issues detected
+      </p>
       <div className="flex flex-col gap-2.5 mb-6">
         {RISK_ITEMS.map((item) => (
           <div
@@ -109,17 +133,30 @@ export default function AnalyzePanel({ plan }: { plan: "49" | "79" | null }) {
         ))}
       </div>
 
+      {/* Resolved */}
+      <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-2">
+        Resolved
+      </p>
+      <div className="flex flex-col gap-1.5 mb-6">
+        {RESOLVED_ITEMS.map((item) => (
+          <p key={item} className="text-xs text-green-400 leading-relaxed">
+            ✓ {item}
+          </p>
+        ))}
+      </div>
+
       {/* Summary block */}
       <div className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-4 mb-6">
         <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-2">
           What this means
         </p>
         <p className="text-sm text-white/75 leading-relaxed">
-          Some issues may not be fully verifiable with automated checks alone.
+          These issues should be resolved before proceeding.
+          Some risks may not be fully verifiable with automated checks alone.
         </p>
       </div>
 
-      {/* Upgrade trigger — Basic plan users only */}
+      {/* Upgrade trigger — Basic plan only */}
       {showUpgrade && (
         <div className="border border-white/[0.12] rounded-lg px-4 py-5 mb-6">
           <p className="text-sm font-medium text-white mb-2">
@@ -142,12 +179,12 @@ export default function AnalyzePanel({ plan }: { plan: "49" | "79" | null }) {
         </div>
       )}
 
-      {/* Continue — Basic skips Verify and goes directly to Complete */}
+      {/* Primary CTA */}
       <button
         onClick={() => plan === "49" ? advanceToStep("complete") : advanceStep()}
-        className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors underline underline-offset-2"
+        className="w-full bg-[var(--background)] border border-[var(--border)] hover:border-white/30 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
       >
-        Continue with basic results
+        {plan === "49" ? "Proceed to agreement" : "Review verification options"}
       </button>
     </>
   );

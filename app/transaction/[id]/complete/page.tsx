@@ -59,7 +59,7 @@ export default async function TransactionCompletePage({
 
   return (
     <>
-      <Header />
+      <Header plan={null} />
       <main className="px-6 pb-16">
         <div className="max-w-[680px] mx-auto">
           <TransactionComplete transactionId={id} email={email} />
