@@ -39,7 +39,8 @@ export async function POST(req: Request) {
           quantity: 1,
         },
       ],
-      success_url: `${baseUrl}/api/post-checkout?plan=${plan}`,
+      metadata: { plan },
+      success_url: `${baseUrl}/api/post-checkout?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}`,
     });
 

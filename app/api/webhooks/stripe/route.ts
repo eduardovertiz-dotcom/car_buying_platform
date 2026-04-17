@@ -16,6 +16,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(req: Request) {
+  console.log("WEBHOOK RECEIVED");
+
   // ── Signature verification ────────────────────────────────────────────────
   const sig = req.headers.get("stripe-signature");
   if (!sig) {
@@ -43,6 +45,7 @@ export async function POST(req: Request) {
 
   // ── Handle checkout.session.completed ────────────────────────────────────
   if (event.type === "checkout.session.completed") {
+    console.log("CHECKOUT COMPLETED");
     const session = event.data.object as Stripe.Checkout.Session;
 
     const stripe_session_id = session.id;
@@ -52,9 +55,9 @@ export async function POST(req: Request) {
 
     console.log("[webhook] checkout.session.completed", {
       stripe_session_id,
+      plan,
       email,
       amount,
-      plan,
     });
 
     if (!plan) {
