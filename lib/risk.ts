@@ -55,8 +55,8 @@ export function computeRisk(transaction: Transaction): RiskOutput {
     unknowns.push("Seller identity could not be verified");
 
   // ── Issues + Resolved ──────────────────────────────────────────────────────
-  let issues: string[] = [];
-  let resolved: string[] = [];
+  const issues: string[] = [];
+  const resolved: string[] = [];
   let riskLevel: RiskLevel;
 
   if (verification_results) {

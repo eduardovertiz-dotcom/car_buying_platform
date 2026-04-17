@@ -69,13 +69,19 @@ export default async function TransactionPage({
     return renderError("Transaction not found. The link may be invalid or the transaction may not exist yet.");
   }
 
-  if (data.status !== "paid") {
+  const isDev = process.env.NODE_ENV === "development";
+
+  if (isDev) {
+    console.log("TX LOAD", { id: data.id, plan: data.plan, status: data.status });
+  }
+
+  if (!isDev && data.status !== "paid") {
     console.error("[TX_LOAD] NOT PAID", { id, status: data.status });
     return renderError("This transaction has not been completed.");
   }
 
   // Require authentication — unauthenticated users are sent to login with return URL
-  if (!isAuthenticated) {
+  if (!isDev && !isAuthenticated) {
     redirect(`/login?redirect=/transaction/${id}`);
   }
 
@@ -103,7 +109,8 @@ export default async function TransactionPage({
     }
   }
 
-  const plan = (data.plan as "49" | "79" | null) ?? null;
+  const plan = (data.plan as "39" | "69" | null) ?? null;
+  const dbStatus = (data.status as string) ?? null;
   const hasOwner = !!data.user_id;
   const adminStatus = ((data as Record<string, unknown>).admin_verification_status as AdminStatus) ?? "pending";
   const adminNotes = ((data as Record<string, unknown>).admin_verification_notes as string | null) ?? null;
@@ -120,7 +127,10 @@ export default async function TransactionPage({
       <main className="px-6 pb-16">
         <div className="max-w-[680px] mx-auto">
           <BindBanner transactionId={id} hasOwner={hasOwner} />
-          <AIInterface plan={plan} />
+          <div className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-4">
+            {plan === "69" ? "Full Protection" : "Basic Report"}
+          </div>
+          <AIInterface plan={plan} dbStatus={dbStatus} />
           <DocumentsPanel />
           <VerificationPanel />
           {showReport && (

@@ -37,7 +37,7 @@ const CFDI_OPTIONS = [
 ];
 
 function planLabel(plan?: string) {
-  return plan === "79" ? "MexGuardian Report + Verification" : "MexGuardian Report";
+  return plan === "69" ? "MexGuardian Report + Verification" : "MexGuardian Report";
 }
 
 function FacturaForm() {

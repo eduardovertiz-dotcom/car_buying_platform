@@ -92,7 +92,9 @@ export type Transaction = {
   seller_email?: string;
   price?: string;
   location?: string;
-  // Decision memory — recorded when user explicitly accepts a risk level
+  // Transaction lifecycle status — DB-backed, absolute source of truth
+  status?: string;
+  // Decision audit fields — kept for analytics only, never used for control flow
   accepted_risk_level?: "LOW" | "MODERATE" | "HIGH";
   accepted_confidence?: number;
   accepted_at?: string;
@@ -114,8 +116,8 @@ export const STEPS: { key: Step; label: string; index: number }[] = [
 // Returns plan-appropriate step list:
 // Basic ($39): Upload → Check → Analyze → Complete
 // Pro   ($69): Upload → Check → Analyze → Verify → Complete
-export function getSteps(plan: "49" | "79" | null): typeof STEPS {
-  return plan === "79" ? STEPS : STEPS.filter((s) => s.key !== "verify");
+export function getSteps(plan: "39" | "69" | null): typeof STEPS {
+  return plan === "69" ? STEPS : STEPS.filter((s) => s.key !== "verify");
 }
 
 export const DOCUMENT_LABELS: Record<DocumentType, string> = {

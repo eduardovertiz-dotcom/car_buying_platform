@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { PRICING } from "@/lib/pricing";
 
 function IconCheck() {
   return (
@@ -44,28 +45,30 @@ function usePaidGuard() {
   }, [router]);
 }
 
-const handleCheckout = async (plan: "basic" | "pro") => {
-  try {
-    const res = await fetch("/api/checkout", {
+function StartPageContent() {
+  usePaidGuard();
+  const router = useRouter();
+
+  const handleCheckout = async (plan: "39" | "69") => {
+    console.log("CHECKOUT CLICK", plan);
+
+    const res = await fetch("/api/transactions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan }),
     });
 
-    const data = await res.json();
-
-    if (!res.ok || !data.url) {
-      throw new Error(`Checkout failed: ${JSON.stringify(data)}`);
+    if (!res.ok) {
+      console.error("CHECKOUT FAILED");
+      return;
     }
 
-    window.location.href = data.url;
-  } catch (err) {
-    console.error("[checkout]", err);
-  }
-};
+    const data = await res.json();
 
-export default function StartPage() {
-  usePaidGuard();
+    console.log("TRANSACTION RESPONSE", data);
+
+    router.push(`/transaction/${data.id}`);
+  };
 
   return (
     <main className="min-h-screen px-6 py-12">
@@ -104,7 +107,7 @@ export default function StartPage() {
             </p>
 
             <div className="flex items-end gap-1.5 mb-3">
-              <span className="text-[3rem] font-semibold text-white leading-none tracking-tight">$49</span>
+              <span className="text-[3rem] font-semibold text-white leading-none tracking-tight">${PRICING.basic}</span>
               <span className="text-sm text-[var(--foreground-muted)] mb-1.5">one-time</span>
             </div>
 
@@ -130,7 +133,7 @@ export default function StartPage() {
             </ul>
 
             <button
-              onClick={() => handleCheckout("basic")}
+              onClick={() => handleCheckout("39")}
               className="w-full bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-4 py-3 hover:opacity-90 transition-opacity"
             >
               Get Basic Report
@@ -152,7 +155,7 @@ export default function StartPage() {
             </p>
 
             <div className="flex items-end gap-1.5 mb-2">
-              <span className="text-[3rem] font-semibold text-white leading-none tracking-tight">$79</span>
+              <span className="text-[3rem] font-semibold text-white leading-none tracking-tight">${PRICING.pro}</span>
               <span className="text-sm text-[var(--foreground-muted)] mb-1.5">one-time</span>
             </div>
             <p className="text-sm text-white/80 leading-relaxed mb-6">
@@ -182,7 +185,7 @@ export default function StartPage() {
             </p>
 
             <button
-              onClick={() => handleCheckout("pro")}
+              onClick={() => handleCheckout("69")}
               className="w-full bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-4 py-3 hover:opacity-90 transition-opacity"
             >
               Get Full Protection
@@ -193,5 +196,13 @@ export default function StartPage() {
 
       </div>
     </main>
+  );
+}
+
+export default function StartPage() {
+  return (
+    <Suspense>
+      <StartPageContent />
+    </Suspense>
   );
 }

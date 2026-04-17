@@ -41,7 +41,8 @@ type Action =
   | { type: "ACCEPT_RISK"; payload: { riskLevel: "LOW" | "MODERATE" | "HIGH"; confidence: number } }
   | { type: "UPDATE_VEHICLE"; payload: { make?: string; model?: string; year?: number; vin?: string; plate?: string } }
   | { type: "SEND_FOR_SIGNATURE"; payload: { documenso_document_id: string } }
-  | { type: "RESET_VERIFICATION" };
+  | { type: "RESET_VERIFICATION" }
+  | { type: "SET_STATUS"; payload: string };
 
 // ─── Reducer ────────────────────────────────────────────────────────────────
 
@@ -182,6 +183,10 @@ function reducer(state: Transaction, action: Action): Transaction {
       };
     }
 
+    case "SET_STATUS": {
+      return { ...state, status: action.payload };
+    }
+
     case "UPLOAD_DOCUMENT": {
       const { document_type, file_name, file_url } = action.payload;
       const newEntry: ActivityEntry = {
@@ -317,6 +322,9 @@ function reducer(state: Transaction, action: Action): Transaction {
       // Guard: only allow going backward
       if (targetIndex >= currentIndex) return state;
 
+      // Guard: lock flow after decision — status is the single source of truth
+      if (state.status === "decision_made") return state;
+
       // Guard: block navigation while verification is actively processing
       if (
         state.verification_status === "basic_processing" ||
@@ -371,6 +379,8 @@ type TransactionContextValue = {
   updateVehicle: (fields: { make?: string; model?: string; year?: number; vin?: string; plate?: string }) => void;
   sendForSignature: (documenso_document_id: string) => void;
   resetVerification: () => void;
+  setStatus: (status: string) => void;
+  isDecisionMade: boolean;
 };
 
 const TransactionContext = createContext<TransactionContextValue | null>(null);
@@ -504,6 +514,10 @@ export function TransactionProvider({ transactionId, children }: Props) {
     resetVerification() {
       dispatch({ type: "RESET_VERIFICATION" });
     },
+    setStatus(status) {
+      dispatch({ type: "SET_STATUS", payload: status });
+    },
+    isDecisionMade: transaction.status === "decision_made",
   };
 
   return (

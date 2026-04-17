@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import JSZip from "jszip";
 import { useTransaction } from "@/context/TransactionContext";
-import { STEPS, Step, MaintenanceRecordType, getSteps } from "@/lib/types";
+import { Step, MaintenanceRecordType, getSteps } from "@/lib/types";
 import type { VerificationResult } from "@/lib/types";
 import AnalyzePanel from "@/components/panels/AnalyzePanel";
 import { generateAgreementHTML } from "@/lib/agreement";
@@ -43,6 +43,8 @@ const stepContent: Record<Step, StepContent> = {
 };
 
 // ─── Verify ──────────────────────────────────────────────────────────────────
+
+type VerifyState = "idle" | "processing" | "error" | "complete";
 
 // ── Verification result types (local, mirrors backend shape) ─────────────────
 
@@ -105,10 +107,10 @@ function checksToVerificationResult(checks: VerifyChecks): VerificationResult {
   };
 }
 
-function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
+function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
   const {
     transaction,
-    advanceStep,
+    advanceToStep,
     goToStep,
     acceptRisk,
     requestBasicVerification,
@@ -116,6 +118,8 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     requestProfessionalVerification,
     completeProfessionalVerification,
     resetVerification,
+    setStatus,
+    isDecisionMade,
   } = useTransaction();
 
   const { verification_status, documents, vehicle } = transaction;
@@ -123,12 +127,16 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
   const [showDocWarning, setShowDocWarning] = useState(false);
   const [upsellLoading, setUpsellLoading] = useState(false);
   const [verifyChecks, setVerifyChecks] = useState<VerifyChecks | null>(null);
-  const [verifyError, setVerifyError] = useState(false);
   const [verifyMode, setVerifyMode] = useState<"manual" | "automated" | null>(null);
+  const [verifyState, setVerifyState] = useState<VerifyState>(() => {
+    if (verification_status === "basic_complete" || verification_status === "professional_complete") return "complete";
+    if (verification_status === "basic_processing" || verification_status === "professional_processing") return "processing";
+    return "idle";
+  });
   // Upgrade delta: snapshot of risk at the moment the user clicks upgrade
   const [previousRisk, setPreviousRisk] = useState<RiskOutput | null>(null);
-  // Brief confirmation flash after the user commits to a risk level
-  const [decisionRecorded, setDecisionRecorded] = useState(false);
+
+  // isDecisionMade comes from context — driven by transaction.status === "decision_made"
 
   // Global input gate — single source of truth from lib/guards
   const uploadedDocsCount = Object.values(documents).filter(d => d.status === "uploaded").length;
@@ -144,28 +152,34 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
   // Single source of truth for risk — same output used in all result states
   const risk = computeRisk(transaction);
 
-  // Auto-trigger verification on mount based on plan.
-  // Handles both first arrival and post-upgrade ($49 → $79).
+  // Dev: log every state transition
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      console.log("VERIFY STATE:", verifyState, { verification_status });
+    }
+  }, [verifyState]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-trigger: fires only when idle + identifier present.
+  // Docs-only path uses startDocVerification (manual CTA) instead.
+  // Error state does NOT auto-retrigger — user must click Retry.
+  // Decision lock: once accepted, never re-trigger.
   useEffect(() => {
     if (!plan) return;
-    // Guard: do not auto-retrigger while in error state — user must click Retry
-    if (verifyError) return;
+    if (verifyState !== "idle") return;
+    if (!identifier) return;
+    if (isDecisionMade) return;
 
     const shouldRunProfessional =
-      plan === "79" &&
+      plan === "69" &&
       (verification_status === "not_started" || verification_status === "basic_complete");
-    const shouldRunBasic =
-      plan === "49" && verification_status === "not_started";
+    const shouldRunBasic = plan === "39" && verification_status === "not_started";
 
     if (!shouldRunProfessional && !shouldRunBasic) return;
 
-    // Hard guard: no identifier → no API call, no state transition
-    if (!identifier) return;
-
     if (shouldRunProfessional) requestProfessionalVerification();
     else requestBasicVerification();
+    setVerifyState("processing");
 
-    // Call real verification API
     fetch("/api/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -178,10 +192,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
       .then((data: { success: boolean; mode?: string; checks: VerifyChecks }) => {
         const mode = data.mode === "manual" ? "manual" : "automated";
         setVerifyMode(mode);
-
         if (mode === "manual") {
-          // Manual mode: result is under review — status "review" maps to MODERATE,
-          // preventing a false LOW/green badge while confidence is 0.
           const manualResult: VerificationResult = {
             status: "review",
             summary: "Manual verification in progress.",
@@ -190,20 +201,19 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
           };
           if (shouldRunProfessional) completeProfessionalVerification(manualResult);
           else completeBasicVerification(manualResult);
-          return;
+        } else {
+          const checks = data.checks;
+          setVerifyChecks(checks);
+          const result = checksToVerificationResult(checks);
+          if (shouldRunProfessional) completeProfessionalVerification(result);
+          else completeBasicVerification(result);
         }
-
-        const checks = data.checks;
-        setVerifyChecks(checks);
-        const result = checksToVerificationResult(checks);
-        if (shouldRunProfessional) completeProfessionalVerification(result);
-        else completeBasicVerification(result);
+        setVerifyState("complete");
       })
       .catch(() => {
-        resetVerification();
-        setVerifyError(true);
+        setVerifyState("error");
       });
-  }, [identifier, verification_status, verifyError]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [verifyState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll to top once when verification reaches a decision state.
   useEffect(() => {
@@ -215,7 +225,30 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     }
   }, [verification_status]);
 
+  async function handleDecision() {
+    if (isDecisionMade) return;
+    if (process.env.NODE_ENV === "development") {
+      console.log("ACTION: DECISION_PROCEED", transaction.id);
+    }
+
+    if (process.env.NODE_ENV !== "development") {
+      const res = await fetch(`/api/transactions/${transaction.id}/decision`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        console.error("DECISION API FAILED", res.status);
+        return;
+      }
+    }
+
+    track("risk_accepted", { risk_level: risk.riskLevel, confidence: risk.confidence });
+    setStatus("decision_made");
+    acceptRisk(risk);
+    advanceToStep("complete");
+  }
+
   async function handleUpsell() {
+    if (isDecisionMade) return;
     if (!allDocumentsUploaded) {
       setShowDocWarning(true);
       return;
@@ -243,14 +276,16 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
   // Docs-only verification — called manually via CTA when hasDocs && !hasIdentifier
   async function startDocVerification() {
     if (!plan) return;
+    if (isDecisionMade) return;
     const shouldRunProfessional =
-      plan === "79" &&
+      plan === "69" &&
       (verification_status === "not_started" || verification_status === "basic_complete");
-    const shouldRunBasic = plan === "49" && verification_status === "not_started";
+    const shouldRunBasic = plan === "39" && verification_status === "not_started";
     if (!shouldRunProfessional && !shouldRunBasic) return;
 
     if (shouldRunProfessional) requestProfessionalVerification();
     else requestBasicVerification();
+    setVerifyState("processing");
 
     fetch("/api/verify", {
       method: "POST",
@@ -273,17 +308,17 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
           };
           if (shouldRunProfessional) completeProfessionalVerification(manualResult);
           else completeBasicVerification(manualResult);
-          return;
+        } else {
+          const checks = data.checks;
+          setVerifyChecks(checks);
+          const result = checksToVerificationResult(checks);
+          if (shouldRunProfessional) completeProfessionalVerification(result);
+          else completeBasicVerification(result);
         }
-        const checks = data.checks;
-        setVerifyChecks(checks);
-        const result = checksToVerificationResult(checks);
-        if (shouldRunProfessional) completeProfessionalVerification(result);
-        else completeBasicVerification(result);
+        setVerifyState("complete");
       })
       .catch(() => {
-        resetVerification();
-        setVerifyError(true);
+        setVerifyState("error");
       });
   }
 
@@ -328,8 +363,32 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     );
   }
 
-  // ── Verification error — show retry, do NOT auto-advance ────────────────
-  if (verifyError) {
+  async function handleRetry() {
+    if (process.env.NODE_ENV === "development") {
+      console.log("ACTION: RETRY_VERIFICATION", transaction.id);
+    }
+    if (process.env.NODE_ENV === "development") {
+      const mockResult = {
+        status: "review" as const,
+        summary: "Manual verification in progress. Expert review will be completed within 24 hours.",
+        findings: [],
+        confidence: 50,
+      };
+      setVerifyState("processing");
+      if (plan === "69") requestProfessionalVerification();
+      else requestBasicVerification();
+      await new Promise((r) => setTimeout(r, 800));
+      if (plan === "69") completeProfessionalVerification(mockResult);
+      else completeBasicVerification(mockResult);
+      setVerifyState("complete");
+      return;
+    }
+    // Prod: reset context + go idle → auto-trigger effect re-runs
+    resetVerification();
+    setVerifyState("idle");
+  }
+
+  if (verifyState === "error") {
     return (
       <>
         <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
@@ -339,7 +398,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
           Something went wrong. Check your connection and try again.
         </p>
         <button
-          onClick={() => setVerifyError(false)}
+          onClick={handleRetry}
           className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left mb-3"
         >
           Retry verification
@@ -381,8 +440,8 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     );
   }
 
-  // ── not_started with identifier — useEffect auto-triggers ────────────────
-  if (verification_status === "not_started") {
+  // ── Idle with identifier — auto-trigger effect fires immediately after mount ─
+  if (verifyState === "idle" && hasIdentifier) {
     return (
       <>
         <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
@@ -400,34 +459,18 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     );
   }
 
-  // ── Processing states ────────────────────────────────────────────────────
-  if (verification_status === "basic_processing") {
+  // ── Processing ────────────────────────────────────────────────────────────
+  if (verifyState === "processing") {
+    const isPro = plan === "69";
     return (
       <>
         <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
-          Verifying this deal
+          {isPro ? "Running full verification checks" : "Verifying this deal"}
         </h2>
         <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
-          Checking REPUVE, outstanding liabilities, factura validity, and VIN
-          registry. This will take a moment.
-        </p>
-        <div className="border border-[var(--border)] rounded-lg px-5 py-4">
-          <p className="text-sm text-[var(--foreground-muted)]">
-            Running official vehicle checks — do not close this page.
-          </p>
-        </div>
-      </>
-    );
-  }
-
-  if (verification_status === "professional_processing") {
-    return (
-      <>
-        <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
-          Running full verification checks
-        </h2>
-        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
-          Verifying identity, documents, ownership, and running advanced fraud pattern checks.
+          {isPro
+            ? "Verifying identity, documents, ownership, and running advanced fraud pattern checks."
+            : "Checking REPUVE, outstanding liabilities, factura validity, and VIN registry. This will take a moment."}
         </p>
         <div className="border border-[var(--border)] rounded-lg px-5 py-4">
           <p className="text-sm text-[var(--foreground-muted)]">
@@ -541,19 +584,14 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
           )}
         </div>
 
-        {decisionRecorded ? (
+        {isDecisionMade ? (
           <p className="text-sm text-green-400 leading-relaxed">
             ✓ Decision recorded.
           </p>
         ) : (
           <>
             <button
-              onClick={() => {
-                track("risk_accepted", { risk_level: risk.riskLevel, confidence: risk.confidence });
-                acceptRisk(risk);
-                setDecisionRecorded(true);
-                setTimeout(advanceStep, 800);
-              }}
+              onClick={handleDecision}
               className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors underline underline-offset-2"
             >
               Proceed with this risk level
@@ -669,18 +707,13 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
           );
         })()}
 
-        {decisionRecorded ? (
+        {isDecisionMade ? (
           <p className="text-sm text-green-400 leading-relaxed">
             ✓ Decision recorded.
           </p>
         ) : (
           <button
-            onClick={() => {
-              track("risk_accepted", { risk_level: risk.riskLevel, confidence: risk.confidence });
-              acceptRisk(risk);
-              setDecisionRecorded(true);
-              setTimeout(advanceStep, 800);
-            }}
+            onClick={handleDecision}
             className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
           >
             Proceed with this risk level
@@ -721,11 +754,11 @@ function timeAgo(isoString: string): string {
   return `${Math.floor(diffHr / 24)}d ago`;
 }
 
-function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
+function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
   const { transaction, generateContract, updateAgreementFields, addMaintenanceRecord, enableShare, revokeShare, sendForSignature } = useTransaction();
   const { contract, share } = transaction;
 
-  const isBasic = plan === "49";
+  const isBasic = plan === "39";
 
   // Agreement form state — pre-filled from persisted transaction
   const [buyerName,     setBuyerName]     = useState(transaction.buyer_name  ?? "");
@@ -1223,16 +1256,26 @@ function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
 
 // ─── Main export ─────────────────────────────────────────────────────────────
 
-export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
-  const { transaction, advanceStep, goToStep, returnedToStep, updateVehicle } = useTransaction();
+export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | null; dbStatus?: string }) {
+  const { transaction, advanceStep, advanceToStep, goToStep, returnedToStep, updateVehicle, setStatus, isDecisionMade } = useTransaction();
   const { current_step } = transaction;
+
+  // Sync DB status into context on mount — makes status the authoritative source of truth
+  // also restores step when localStorage was cleared but DB has the decision
+  useEffect(() => {
+    if (dbStatus) setStatus(dbStatus);
+    if (dbStatus === "decision_made" && current_step !== "complete") {
+      advanceToStep("complete");
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Use plan-aware step list so Basic users at "complete" go back to "analyze" not "verify"
   const planSteps = getSteps(plan);
   const currentIndex = planSteps.findIndex((s) => s.key === current_step);
 
   const prevStep = currentIndex > 0 ? planSteps[currentIndex - 1] : null;
 
-  const backLink = prevStep ? (
+  const backLink = prevStep && !isDecisionMade ? (
     <div className="pt-6 pb-1">
       <button
         onClick={() => goToStep(prevStep.key)}
@@ -1396,7 +1439,12 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
           )}
 
           <button
-            onClick={advanceStep}
+            onClick={() => {
+              if (process.env.NODE_ENV === "development") {
+                console.log("ACTION: CONTINUE", { step: current_step, transactionId: transaction.id });
+              }
+              advanceStep();
+            }}
             disabled={!canContinue}
             className={`w-full text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left mb-3 ${
               !canContinue
@@ -1424,10 +1472,6 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
   }
 
   if (current_step === "check") {
-    const { vehicle: cv, documents: cd } = transaction;
-    const checkUploadedDocs = Object.values(cd).filter(d => d.status === "uploaded").length;
-    const checkHasIdentifier = !!(cv.vin || cv.plate);
-    const checkHasDocs = checkUploadedDocs > 0;
     const checkHasMinimumInput = computeHasMinimumInput(transaction);
     const checkContent = stepContent["check"];
 
@@ -1454,7 +1498,14 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
             </p>
           )}
           <button
-            onClick={() => { if (checkHasMinimumInput) advanceStep(); }}
+            onClick={() => {
+              if (checkHasMinimumInput) {
+                if (process.env.NODE_ENV === "development") {
+                  console.log("ACTION: CONTINUE", { step: current_step, transactionId: transaction.id });
+                }
+                advanceStep();
+              }
+            }}
             disabled={!checkHasMinimumInput}
             className={`w-full text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left ${
               !checkHasMinimumInput

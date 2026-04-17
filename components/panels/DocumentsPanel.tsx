@@ -11,13 +11,16 @@ export default function DocumentsPanel() {
   const { transaction, uploadDocument } = useTransaction();
   const { documents } = transaction;
 
-  // Verify and Complete steps own their own full UI — panels must not bleed in.
-  if (transaction.current_step === "verify" || transaction.current_step === "complete") return null;
-
   const allUploaded =
     documents.ine.status === "uploaded" &&
     documents.registration.status === "uploaded" &&
     documents.invoice.status === "uploaded";
+
+  const inputRefs = useRef<Record<DocumentType, HTMLInputElement | null>>({
+    ine: null,
+    registration: null,
+    invoice: null,
+  });
 
   // Notify admin when all documents transition to complete for the first time.
   // Guard: localStorage key prevents duplicate alerts across page reloads.
@@ -45,11 +48,8 @@ export default function DocumentsPanel() {
       });
   }, [allUploaded, transaction.id, documents, transaction.vehicle]);
 
-  const inputRefs = useRef<Record<DocumentType, HTMLInputElement | null>>({
-    ine: null,
-    registration: null,
-    invoice: null,
-  });
+  // Verify and Complete steps own their own full UI — panels must not bleed in.
+  if (transaction.current_step === "verify" || transaction.current_step === "complete") return null;
 
   function handleFileChange(docType: DocumentType, e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];

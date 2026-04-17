@@ -35,18 +35,16 @@ function IconInfo() {
   );
 }
 
-export default function AnalyzePanel({ plan }: { plan: "49" | "79" | null }) {
-  const { transaction, advanceStep, advanceToStep, goToStep } = useTransaction();
+export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
+  const { transaction, advanceStep, advanceToStep, goToStep, isDecisionMade } = useTransaction();
   const [upsellLoading, setUpsellLoading] = useState(false);
-  const showUpgrade = plan === "49";
+  const showUpgrade = plan === "39";
 
   const uploadedCount = Object.values(transaction.documents).filter(
     (d) => d.status === "uploaded"
   ).length;
 
   // Global input gate — single source of truth from lib/guards
-  const hasIdentifier = Boolean(transaction.vehicle?.vin || transaction.vehicle?.plate);
-  const hasDocs = uploadedCount > 0;
   const hasMinimumInput = computeHasMinimumInput(transaction);
 
   // Single source of truth — only meaningful when real input exists
@@ -65,9 +63,24 @@ export default function AnalyzePanel({ plan }: { plan: "49" | "79" | null }) {
   }, []);
 
   async function handleUpgrade() {
+    if (isDecisionMade) return;
+    if (process.env.NODE_ENV === "development") {
+      console.log("ACTION: UPGRADE_CLICK", transaction.id);
+    }
     track("upgrade_clicked");
     setUpsellLoading(true);
     try {
+      if (process.env.NODE_ENV === "development") {
+        console.log("UPGRADE START");
+        const res = await fetch(`/api/transactions/${transaction.id}/upgrade`, {
+          method: "POST",
+        });
+        const data = await res.json();
+        console.log("UPGRADE RESPONSE:", data);
+        window.location.reload();
+        return;
+      }
+
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -226,10 +239,15 @@ export default function AnalyzePanel({ plan }: { plan: "49" | "79" | null }) {
 
       {/* Primary CTA */}
       <button
-        onClick={() => plan === "49" ? advanceToStep("complete") : advanceStep()}
+        onClick={() => {
+          if (process.env.NODE_ENV === "development") {
+            console.log("ACTION: CONTINUE", { step: "analyze", transactionId: transaction.id });
+          }
+          if (plan === "39") advanceToStep("complete"); else advanceStep();
+        }}
         className="w-full bg-[var(--background)] border border-[var(--border)] hover:border-white/30 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
       >
-        {plan === "49" ? "Proceed to agreement" : "Review verification options"}
+        {plan === "39" ? "Proceed to agreement" : "Review verification options"}
       </button>
     </>
   );

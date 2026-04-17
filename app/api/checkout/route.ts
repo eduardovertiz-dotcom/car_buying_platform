@@ -1,86 +1,56 @@
-import { NextResponse } from "next/server"
-import Stripe from "stripe"
+import { NextResponse } from "next/server";
+import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-03-25.dahlia",
-})
-
-type Plan = "basic" | "pro"
-
-// Price IDs live server-side only — the frontend never sees them.
-// Set STRIPE_PRICE_BASIC and STRIPE_PRICE_PRO in your environment.
-const PRICE_MAP: Record<Plan, { priceId: string; dbPlan: "49" | "79" }> = {
-  basic: {
-    priceId: process.env.STRIPE_PRICE_BASIC ?? "",
-    dbPlan:  "49",
-  },
-  pro: {
-    priceId: process.env.STRIPE_PRICE_PRO ?? "",
-    dbPlan:  "79",
-  },
-}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json()
-    const { plan, transactionId }: { plan: string; transactionId?: string } = body
+    const { plan } = await req.json();
 
-    console.log("[API] body:", JSON.stringify(body))
-    console.log("[API] env STRIPE_PRICE_BASIC:", process.env.STRIPE_PRICE_BASIC ?? "(not set)")
-    console.log("[API] env STRIPE_PRICE_PRO:  ", process.env.STRIPE_PRICE_PRO   ?? "(not set)")
-    console.log("[API] env STRIPE_SECRET_KEY present:", !!process.env.STRIPE_SECRET_KEY)
+    console.log("[checkout] plan:", plan);
 
-    // Validate plan
-    if (!plan || !(plan in PRICE_MAP)) {
-      throw new Error(`CHECKOUT FAILED: unknown plan "${plan}"`)
+    const PRICE_MAP: Record<string, number> = {
+      "39": 3900,
+      "69": 6900,
+    };
+
+    if (!PRICE_MAP[plan]) {
+      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 
-    const { priceId, dbPlan } = PRICE_MAP[plan as Plan]
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
-    if (!priceId) {
-      throw new Error(`CHECKOUT FAILED: env var not set for plan "${plan}" — set STRIPE_PRICE_BASIC / STRIPE_PRICE_PRO in Vercel`)
+    if (!baseUrl) {
+      throw new Error("[checkout] NEXT_PUBLIC_BASE_URL is not set");
     }
-
-    console.log("[API] resolved priceId:", priceId)
-
-    const baseUrl =
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      (process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`)
-
-    if (!baseUrl || !baseUrl.startsWith("http")) {
-      throw new Error("[checkout] Invalid base URL configuration")
-    }
-
-    console.log("[checkout] baseUrl:", baseUrl)
-    console.log("[checkout] success_url:", `${baseUrl}/transaction/success`)
-
-    const metadata: Record<string, string> = { plan: dbPlan }
-    if (transactionId) metadata.transaction_id = transactionId
-
-    console.log("[STRIPE] creating session with priceId:", priceId)
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      line_items: [{ price: priceId, quantity: 1 }],
-      metadata,
-      success_url: `${baseUrl}/transaction/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url:  `${baseUrl}/start`,
-    })
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: plan === "69" ? "Full Protection" : "Basic Report",
+            },
+            unit_amount: PRICE_MAP[plan],
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: `${baseUrl}/api/post-checkout?plan=${plan}`,
+      cancel_url: `${baseUrl}`,
+    });
 
-    console.log("[STRIPE] session id:", session.id)
-    console.log("[STRIPE] session.url:", session.url ?? "(null)")
-    console.log("[STRIPE] payment_status:", session.payment_status)
+    console.log("[checkout] session created:", session.id);
 
-    if (!session.url) {
-      throw new Error("CHECKOUT FAILED: Stripe returned a session but session.url is null")
-    }
-
-    return NextResponse.json({ url: session.url })
+    return NextResponse.json({ url: session.url });
   } catch (err) {
-    console.error("[checkout] EXCEPTION:", err instanceof Error ? err.message : err)
+    console.error("[checkout] EXCEPTION:", err instanceof Error ? err.message : err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Error creating checkout" },
       { status: 500 }
-    )
+    );
   }
 }

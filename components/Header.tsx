@@ -5,7 +5,7 @@ import { useTransaction } from "@/context/TransactionContext";
 import { getSteps } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 
-export default function Header({ plan }: { plan: "49" | "79" | null }) {
+export default function Header({ plan }: { plan: "39" | "69" | null }) {
   const { transaction, goToStep } = useTransaction();
   const router = useRouter();
 
@@ -14,6 +14,7 @@ export default function Header({ plan }: { plan: "49" | "79" | null }) {
     await supabase.auth.signOut();
     router.push("/login");
   }
+  const { isDecisionMade } = useTransaction();
   const steps = getSteps(plan);
   const currentStepIndex = steps.findIndex(
     (s) => s.key === transaction.current_step
@@ -64,11 +65,11 @@ export default function Header({ plan }: { plan: "49" | "79" | null }) {
           ))}
         </div>
 
-        <div className="flex justify-between mt-1.5">
+        <div className={`flex justify-between mt-1.5 transition-opacity ${isDecisionMade ? "pointer-events-none opacity-50" : ""}`}>
           {steps.map((step, i) => {
             const isCompleted = i < currentStepIndex;
             const isCurrent = i === currentStepIndex;
-            return isCompleted ? (
+            return isCompleted && !isDecisionMade ? (
               <button
                 key={step.key}
                 onClick={() => goToStep(step.key)}

@@ -5,10 +5,14 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Hero from "@/components/Hero";
 import { createClient } from "@/lib/supabase/client";
+import { PRICING } from "@/lib/pricing";
 
-const handleCheckout = async (plan: "basic" | "pro") => {
-  try {
-    const res = await fetch("/api/checkout", {
+
+const handleCheckout = async (plan: "39" | "69") => {
+  console.log("CHECKOUT CLICK", plan);
+
+  if (process.env.NODE_ENV === "development") {
+    const res = await fetch("/api/transactions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan }),
@@ -16,15 +20,24 @@ const handleCheckout = async (plan: "basic" | "pro") => {
 
     const data = await res.json();
 
-    if (!res.ok || !data.url) {
-      console.error("[checkout] failed:", data);
-      return;
-    }
-
-    window.location.href = data.url;
-  } catch (err) {
-    console.error("[checkout] fetch failed:", err);
+    window.location.href = `/transaction/${data.id}`;
+    return;
   }
+
+  const res = await fetch("/api/checkout", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ plan }),
+  });
+
+  const data = await res.json();
+
+  if (!data.url) {
+    console.error("CHECKOUT FAILED");
+    return;
+  }
+
+  window.location.href = data.url;
 };
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -349,7 +362,7 @@ export default function Home() {
                   </p>
 
                   <div className="flex items-end gap-1.5 mb-3">
-                    <span className="text-[3.5rem] lg:text-[4rem] font-semibold text-white leading-none tracking-tight">$39</span>
+                    <span className="text-[3.5rem] lg:text-[4rem] font-semibold text-white leading-none tracking-tight">${PRICING.basic}</span>
                     <span className="text-sm text-[var(--foreground-muted)] mb-2">one-time</span>
                   </div>
 
@@ -372,7 +385,7 @@ export default function Home() {
 
                   {/* 🔥 $39 BUTTON */}
                   <button
-                    onClick={() => handleCheckout("basic")}
+                    onClick={() => handleCheckout("39")}
                     className="block w-full bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-4 py-3 text-center hover:opacity-90 transition-opacity"
                   >
                     Start Basic Check
@@ -390,7 +403,7 @@ export default function Home() {
                   </p>
 
                   <div className="flex items-end gap-1.5 mb-2">
-                    <span className="text-[3.5rem] lg:text-[4rem] font-semibold text-white leading-none tracking-tight">$69</span>
+                    <span className="text-[3.5rem] lg:text-[4rem] font-semibold text-white leading-none tracking-tight">${PRICING.pro}</span>
                     <span className="text-sm text-[var(--foreground-muted)] mb-2">one-time</span>
                   </div>
 
@@ -419,7 +432,7 @@ export default function Home() {
 
                   {/* 🔥 $69 BUTTON */}
                   <button
-                    onClick={() => handleCheckout("pro")}
+                    onClick={() => handleCheckout("69")}
                     className="block w-full bg-[var(--accent)] text-white text-sm font-semibold rounded-lg px-4 py-3 text-center hover:opacity-95 hover:scale-[1.02] transition-all"
                   >
                     Verify Before Paying
