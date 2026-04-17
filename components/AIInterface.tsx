@@ -199,8 +199,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
         if (shouldRunProfessional) completeProfessionalVerification(fallbackResult);
         else completeBasicVerification(fallbackResult);
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [identifier, verification_status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleUpsell() {
     if (!allDocumentsUploaded) {
@@ -247,8 +246,8 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     );
   }
 
-  // ── No VIN / plate — surface error instead of silently aborting ─────────
-  if (!identifier && verification_status === "not_started") {
+  // ── No VIN / plate — block ALL verification states, always show recovery UI ─
+  if (!identifier) {
     return (
       <>
         <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
@@ -579,8 +578,23 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     );
   }
 
-  // Unreachable — all verification_status values are handled above.
-  return null;
+  // Safety net — should never reach here, but guarantees no blank screen.
+  return (
+    <>
+      <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
+        Something went wrong.
+      </h2>
+      <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
+        An unexpected state was reached. Reload the page or go back to continue.
+      </p>
+      <button
+        onClick={() => goToStep("upload")}
+        className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
+      >
+        ← Back to Upload
+      </button>
+    </>
+  );
 }
 
 // ─── Complete ────────────────────────────────────────────────────────────────
