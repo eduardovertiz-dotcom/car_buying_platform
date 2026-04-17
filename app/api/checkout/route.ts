@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   try {
     const { plan } = await req.json();
 
-    console.log("[checkout] plan:", plan);
+    console.log("CHECKOUT API HIT", { plan });
 
     const PRICE_MAP: Record<string, number> = {
       "39": 3900,
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       cancel_url: `${baseUrl}/start`,
     });
 
-    console.log("[checkout] session created:", session.id);
+    console.log("STRIPE SESSION CREATED", session.id);
 
     return NextResponse.json({ url: session.url });
   } catch (err) {

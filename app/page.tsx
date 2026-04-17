@@ -24,20 +24,23 @@ const handleCheckout = async (plan: "39" | "69") => {
     return;
   }
 
-  const res = await fetch("/api/checkout", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ plan }),
-  });
-
-  const data = await res.json();
-
-  if (!data.url) {
-    console.error("CHECKOUT FAILED");
-    return;
+  try {
+    console.log("CALLING /api/checkout");
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan }),
+    });
+    console.log("RESPONSE STATUS", res.status);
+    const data = await res.json();
+    console.log("CHECKOUT DATA", data);
+    if (!res.ok) {
+      throw new Error(data.error || "Checkout failed");
+    }
+    window.location.href = data.url;
+  } catch (err) {
+    console.error("CHECKOUT ERROR", err);
   }
-
-  window.location.href = data.url;
 };
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
