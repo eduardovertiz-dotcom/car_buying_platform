@@ -7,15 +7,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get("session_id");
-  const rawBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
-  if (!rawBaseUrl) {
-    console.error("[post-checkout] NEXT_PUBLIC_BASE_URL not set");
-    return NextResponse.json({ error: "NEXT_PUBLIC_BASE_URL not set" }, { status: 500 });
+  if (!baseUrl) {
+    throw new Error("NEXT_PUBLIC_BASE_URL is not set");
   }
-
-  // Normalize: env var may be stored without scheme (e.g. "mexguardian.com")
-  const baseUrl = rawBaseUrl.startsWith("http") ? rawBaseUrl : `https://${rawBaseUrl}`;
 
   if (!sessionId) {
     console.error("[post-checkout] missing session_id");

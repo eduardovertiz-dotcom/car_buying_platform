@@ -31,7 +31,11 @@ type AlertInput = {
 export async function sendAdminAlert(input: AlertInput): Promise<void> {
   const { transactionId, userEmail, plate, hasINE, hasFactura, hasCirculation } = input;
 
-  const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://mexguardian.com";
+  const appUrl = process.env.NEXT_PUBLIC_BASE_URL;
+
+  if (!appUrl) {
+    throw new Error("NEXT_PUBLIC_BASE_URL is not set");
+  }
   const txUrl = `${appUrl}/transaction/${transactionId}`;
   const adminEmail = process.env.ADMIN_EMAIL;
   const fromEmail = process.env.RESEND_FROM_EMAIL ?? "noreply@mexguardian.com";

@@ -102,7 +102,11 @@ export async function POST(req: Request) {
   const userEmail = txData.email;
   if (userEmail) {
     const apiKey = process.env.RESEND_API_KEY;
-    const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://mexguardian.com";
+    const appUrl = process.env.NEXT_PUBLIC_BASE_URL;
+
+    if (!appUrl) {
+      throw new Error("NEXT_PUBLIC_BASE_URL is not set");
+    }
     const fromEmail = process.env.RESEND_FROM_EMAIL ?? "noreply@mexguardian.com";
 
     if (apiKey) {
