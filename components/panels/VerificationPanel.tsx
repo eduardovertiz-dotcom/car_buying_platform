@@ -24,6 +24,10 @@ export default function VerificationPanel() {
   const { transaction } = useTransaction();
   const { verification_status, verification_results, current_step } = transaction;
 
+  // Verify step owns verification display entirely. Complete uses RiskBlock.
+  // Neither should show this panel alongside their dedicated UI.
+  if (current_step === "verify" || current_step === "complete") return null;
+
   return (
     <section className="border-t border-[var(--border)] py-6">
       <h3 className="text-xs uppercase tracking-widest text-[var(--foreground-muted)] mb-4">

@@ -34,6 +34,9 @@ export default function ActivityPanel() {
   const { transaction } = useTransaction();
   const { activity_log } = transaction;
 
+  // Verify is a self-contained decision engine — no auxiliary panels.
+  if (transaction.current_step === "verify") return null;
+
   return (
     <section className="border-t border-[var(--border)] py-6">
       <h3 className="text-xs uppercase tracking-widest text-[var(--foreground-muted)] mb-4">

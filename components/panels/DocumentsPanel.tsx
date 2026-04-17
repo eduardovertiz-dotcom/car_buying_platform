@@ -11,6 +11,9 @@ export default function DocumentsPanel() {
   const { transaction, uploadDocument } = useTransaction();
   const { documents } = transaction;
 
+  // Verify and Complete steps own their own full UI — panels must not bleed in.
+  if (transaction.current_step === "verify" || transaction.current_step === "complete") return null;
+
   const allUploaded =
     documents.ine.status === "uploaded" &&
     documents.registration.status === "uploaded" &&
@@ -119,27 +122,6 @@ export default function DocumentsPanel() {
         </p>
       )}
 
-      {transaction.current_step === "complete" && (
-        <div className="mt-6">
-          <p className="text-xs text-[var(--foreground-muted)] mb-2">
-            AGREEMENT
-          </p>
-          {transaction.contract.status === "generated" ? (
-            <div className="space-y-1">
-              <p className="text-sm text-white">
-                {transaction.contract.file_name}
-              </p>
-              <p className="text-xs text-[var(--foreground-muted)]">
-                Generated
-              </p>
-            </div>
-          ) : (
-            <p className="text-xs text-[var(--foreground-muted)]">
-              No agreement generated yet.
-            </p>
-          )}
-        </div>
-      )}
     </section>
   );
 }
