@@ -1006,7 +1006,7 @@ function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
 // ─── Main export ─────────────────────────────────────────────────────────────
 
 export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
-  const { transaction, advanceStep, goToStep, returnedToStep } = useTransaction();
+  const { transaction, advanceStep, goToStep, returnedToStep, updateVehicle } = useTransaction();
   const { current_step } = transaction;
   // Use plan-aware step list so Basic users at "complete" go back to "analyze" not "verify"
   const planSteps = getSteps(plan);
@@ -1033,13 +1033,20 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
     </div>
   ) : null;
 
-  // ── Upload — dynamic CTA based on document state ─────────────────────────
+  // ── Upload — vehicle info form + document state CTA ─────────────────────
   if (current_step === "upload") {
     const uploadedDocs = Object.values(transaction.documents).filter(
       (d) => d.status === "uploaded"
     ).length;
     const allUploaded = uploadedDocs === 3;
     const noneUploaded = uploadedDocs === 0;
+
+    const { vehicle } = transaction;
+    const vehicleComplete =
+      vehicle.make.trim() !== "" &&
+      vehicle.model.trim() !== "" &&
+      vehicle.year > 0;
+    const canContinue = vehicleComplete && !noneUploaded;
 
     return (
       <>
@@ -1053,39 +1060,120 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
           </div>
 
           <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
-            Upload your documents to begin verification.
+            Tell us about the vehicle and upload the required documents.
           </h2>
 
           <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
-            We need the seller&apos;s ID, vehicle registration, and ownership invoice.
-            The more complete your upload, the more accurate your risk report.
+            We need basic vehicle details and the seller&apos;s documents to run
+            verification. The more complete your upload, the more accurate your
+            risk report.
           </p>
 
+          {/* Vehicle info */}
+          <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
+            Vehicle details
+          </p>
+          <div className="flex flex-col gap-3 mb-3">
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <p className="text-xs text-[var(--foreground-muted)] mb-1">Make</p>
+                <input
+                  type="text"
+                  defaultValue={vehicle.make}
+                  onBlur={(e) => updateVehicle({ make: e.target.value.trim() })}
+                  placeholder="e.g. Nissan"
+                  className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)] focus:outline-none focus:border-white/30"
+                />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-[var(--foreground-muted)] mb-1">Model</p>
+                <input
+                  type="text"
+                  defaultValue={vehicle.model}
+                  onBlur={(e) => updateVehicle({ model: e.target.value.trim() })}
+                  placeholder="e.g. Sentra"
+                  className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)] focus:outline-none focus:border-white/30"
+                />
+              </div>
+              <div className="w-24">
+                <p className="text-xs text-[var(--foreground-muted)] mb-1">Year</p>
+                <input
+                  type="number"
+                  defaultValue={vehicle.year || ""}
+                  onBlur={(e) => {
+                    const y = parseInt(e.target.value, 10);
+                    if (y > 1900 && y <= new Date().getFullYear() + 1) {
+                      updateVehicle({ year: y });
+                    }
+                  }}
+                  placeholder="2020"
+                  min={1900}
+                  max={new Date().getFullYear() + 1}
+                  className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)] focus:outline-none focus:border-white/30"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <p className="text-xs text-[var(--foreground-muted)] mb-1">
+                  VIN <span className="normal-case opacity-60">(recommended)</span>
+                </p>
+                <input
+                  type="text"
+                  defaultValue={vehicle.vin ?? ""}
+                  onBlur={(e) => updateVehicle({ vin: e.target.value.trim() || undefined })}
+                  placeholder="17-character VIN"
+                  className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)] font-mono focus:outline-none focus:border-white/30"
+                />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-[var(--foreground-muted)] mb-1">
+                  Plate <span className="normal-case opacity-60">(recommended)</span>
+                </p>
+                <input
+                  type="text"
+                  defaultValue={vehicle.plate ?? ""}
+                  onBlur={(e) => updateVehicle({ plate: e.target.value.trim() || undefined })}
+                  placeholder="e.g. ABC-123-D"
+                  className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)] font-mono focus:outline-none focus:border-white/30"
+                />
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mb-8">
+            VIN or plate is required for registry checks (REPUVE, theft, fines).
+            Without one, registry verification cannot run.
+          </p>
+
+          {/* Document upload progress */}
           {uploadedDocs > 0 && !allUploaded && (
             <div className="border border-[var(--border)] rounded-lg px-4 py-3 mb-6">
               <p className="text-xs text-[var(--foreground-muted)]">
-                {uploadedDocs} of 3 documents uploaded — missing documents will appear as unknowns in your report.
+                {uploadedDocs} of 3 documents uploaded — missing documents will
+                appear as unknowns in your report.
               </p>
             </div>
           )}
 
           <button
             onClick={advanceStep}
-            disabled={noneUploaded}
+            disabled={!canContinue}
             className={`w-full text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left mb-3 ${
-              noneUploaded
+              !canContinue
                 ? "bg-[var(--border)] text-[var(--foreground-muted)] cursor-default"
                 : "bg-[var(--accent)] hover:bg-blue-600 text-white"
             }`}
           >
-            {noneUploaded
-              ? "Upload documents to begin"
+            {!vehicleComplete
+              ? "Enter vehicle details to continue"
+              : noneUploaded
+              ? "Upload documents to continue"
               : allUploaded
               ? "Continue"
               : "Continue with limited data"}
           </button>
 
-          {!allUploaded && uploadedDocs > 0 && (
+          {vehicleComplete && !allUploaded && uploadedDocs > 0 && (
             <p className="text-xs text-[var(--foreground-muted)] leading-relaxed">
               You can add more documents later to improve your results.
             </p>

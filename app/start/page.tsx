@@ -128,7 +128,7 @@ export default function StartPage() {
 
             <ul className="flex flex-col gap-3 mb-8 flex-1">
               {[
-                "Full AI-guided process (Find → Evaluate → Verify → Complete)",
+                "Full AI-guided process (Upload → Analyze → Verify → Complete)",
                 "AI-assisted deal evaluation (red flags, missing information)",
                 "Basic verification (registry, ownership, fines)",
                 "Risk interpretation layer",

@@ -57,25 +57,6 @@ export default async function TransactionPage({
   const sessionUser = authResult.data.user;
   const isAuthenticated = !!sessionUser;
 
-  // ── Diagnostic logging — remove after root cause confirmed ───────────────
-  console.log("[TX_LOAD] id:", id);
-  console.log("[TX_LOAD] auth:", {
-    isAuthenticated,
-    userId: sessionUser?.id ?? null,
-    userEmail: sessionUser?.email ?? null,
-  });
-  console.log("[TX_LOAD] query result:", {
-    hasData: !!data,
-    dataId: data?.id ?? null,
-    dataEmail: data?.email ?? null,
-    dataUserId: data?.user_id ?? null,
-    dataStatus: data?.status ?? null,
-    errorCode: error?.code ?? null,
-    errorMessage: error?.message ?? null,
-    errorDetails: error?.details ?? null,
-  });
-  // ─────────────────────────────────────────────────────────────────────────
-
   // ── Query error — show actual Postgres error, not generic message ─────────
   if (error) {
     console.error("[TX_LOAD] QUERY ERROR", { id, code: error.code, message: error.message });
@@ -111,14 +92,6 @@ export default async function TransactionPage({
   // Admins bypass so they can review transactions from the queue.
   if (isAuthenticated && !isAdmin) {
     const owned = ownsTransaction(data, sessionUser!);
-
-    console.log("[TX_LOAD] ownership check:", {
-      owned,
-      dataUserId:    data.user_id,
-      sessionUserId: sessionUser!.id,
-      txEmail:       (data.email ?? "").toLowerCase().trim(),
-      authEmail:     (sessionUser!.email ?? "").toLowerCase().trim(),
-    });
 
     if (!owned) {
       const txEmail   = (data.email   ?? "").toLowerCase().trim();

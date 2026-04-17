@@ -38,7 +38,8 @@ type Action =
   | { type: "ENABLE_SHARE"; payload: { token: string } }
   | { type: "REVOKE_SHARE" }
   | { type: "UPDATE_AGREEMENT_FIELDS"; payload: { buyer_name?: string; buyer_email?: string; seller_name?: string; seller_email?: string; price?: string; location?: string } }
-  | { type: "ACCEPT_RISK"; payload: { riskLevel: "LOW" | "MODERATE" | "HIGH"; confidence: number } };
+  | { type: "ACCEPT_RISK"; payload: { riskLevel: "LOW" | "MODERATE" | "HIGH"; confidence: number } }
+  | { type: "UPDATE_VEHICLE"; payload: { make?: string; model?: string; year?: number; vin?: string; plate?: string } };
 
 // ─── Reducer ────────────────────────────────────────────────────────────────
 
@@ -252,6 +253,13 @@ function reducer(state: Transaction, action: Action): Transaction {
       };
     }
 
+    case "UPDATE_VEHICLE": {
+      return {
+        ...state,
+        vehicle: { ...state.vehicle, ...action.payload },
+      };
+    }
+
     case "ADVANCE_TO_STEP": {
       // Forward jump to a specific step — used by Basic plan to skip "verify"
       const targetKey = action.payload;
@@ -322,6 +330,7 @@ type TransactionContextValue = {
   revokeShare: () => void;
   updateAgreementFields: (fields: { buyer_name?: string; buyer_email?: string; seller_name?: string; seller_email?: string; price?: string; location?: string }) => void;
   acceptRisk: (risk: { riskLevel: "LOW" | "MODERATE" | "HIGH"; confidence: number }) => void;
+  updateVehicle: (fields: { make?: string; model?: string; year?: number; vin?: string; plate?: string }) => void;
 };
 
 const TransactionContext = createContext<TransactionContextValue | null>(null);
@@ -445,6 +454,9 @@ export function TransactionProvider({ transactionId, children }: Props) {
     },
     acceptRisk(risk) {
       dispatch({ type: "ACCEPT_RISK", payload: risk });
+    },
+    updateVehicle(fields) {
+      dispatch({ type: "UPDATE_VEHICLE", payload: fields });
     },
   };
 
