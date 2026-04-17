@@ -125,6 +125,8 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
   const [verifyMode, setVerifyMode] = useState<"manual" | "automated" | null>(null);
   // Upgrade delta: snapshot of risk at the moment the user clicks upgrade
   const [previousRisk, setPreviousRisk] = useState<RiskOutput | null>(null);
+  // Brief confirmation flash after the user commits to a risk level
+  const [decisionRecorded, setDecisionRecorded] = useState(false);
 
   const allDocumentsUploaded =
     documents.ine.status === "uploaded" &&
@@ -349,12 +351,12 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
           Make your decision.
         </h2>
         <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
-          You&apos;ve reviewed the risk data. Decide how you want to proceed before
-          completing this transaction.
+          These results reflect registry data and document checks.
+          Review carefully before proceeding.
         </p>
 
         {/* Risk position — single source of truth */}
-        <RiskBlock data={risk} headerLabel="Current risk position" />
+        <RiskBlock data={risk} headerLabel="You are about to proceed with" />
 
         {/* Results section — manual message or real check results */}
         {verifyMode === "manual" ? (
@@ -443,19 +445,28 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
           )}
         </div>
 
-        <button
-          onClick={() => {
-            track("risk_accepted", { risk_level: risk.riskLevel, confidence: risk.confidence });
-            acceptRisk(risk);
-            advanceStep();
-          }}
-          className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors underline underline-offset-2"
-        >
-          Proceed with this risk level
-        </button>
-        <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-2">
-          You are proceeding based on automated checks only.
-        </p>
+        {decisionRecorded ? (
+          <p className="text-sm text-green-400 leading-relaxed">
+            Decision recorded. Advancing…
+          </p>
+        ) : (
+          <>
+            <button
+              onClick={() => {
+                track("risk_accepted", { risk_level: risk.riskLevel, confidence: risk.confidence });
+                acceptRisk(risk);
+                setDecisionRecorded(true);
+                setTimeout(advanceStep, 800);
+              }}
+              className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors underline underline-offset-2"
+            >
+              Proceed with this risk level
+            </button>
+            <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-2">
+              You are proceeding based on automated checks only.
+            </p>
+          </>
+        )}
       </>
     );
   }
@@ -475,12 +486,12 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
           Make your decision.
         </h2>
         <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
-          Full verification is complete. Review the results below and proceed when
-          you are ready.
+          These results reflect registry data and document checks.
+          Review carefully before proceeding.
         </p>
 
         {/* Risk position — single source of truth */}
-        <RiskBlock data={risk} headerLabel="Full verification results" />
+        <RiskBlock data={risk} headerLabel="You are about to proceed with" />
 
         {/* Results section */}
         {verifyMode === "manual" ? (
@@ -568,12 +579,23 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
           );
         })()}
 
-        <button
-          onClick={advanceStep}
-          className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
-        >
-          Proceed to agreement
-        </button>
+        {decisionRecorded ? (
+          <p className="text-sm text-green-400 leading-relaxed">
+            Decision recorded. Advancing…
+          </p>
+        ) : (
+          <button
+            onClick={() => {
+              track("risk_accepted", { risk_level: risk.riskLevel, confidence: risk.confidence });
+              acceptRisk(risk);
+              setDecisionRecorded(true);
+              setTimeout(advanceStep, 800);
+            }}
+            className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
+          >
+            Proceed with this risk level
+          </button>
+        )}
       </>
     );
   }
