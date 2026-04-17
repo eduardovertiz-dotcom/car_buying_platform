@@ -45,34 +45,22 @@ function usePaidGuard() {
 }
 
 const handleCheckout = async (plan: "basic" | "pro") => {
-  console.log("[CLICK] fired — plan:", plan);
-
-  const payload = { plan };
-  console.log("[CLICK] sending payload:", JSON.stringify(payload));
-
   try {
     const res = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ plan }),
     });
 
-    console.log("[CLICK] response status:", res.status);
-
     const data = await res.json();
-    console.log("[CLICK] response body:", data);
 
-    if (!res.ok) {
-      throw new Error(`CHECKOUT FAILED: API returned ${res.status} — ${JSON.stringify(data)}`);
-    }
-    if (!data.url) {
-      throw new Error(`CHECKOUT FAILED: response ok but no url — ${JSON.stringify(data)}`);
+    if (!res.ok || !data.url) {
+      throw new Error(`Checkout failed: ${JSON.stringify(data)}`);
     }
 
-    console.log("[CLICK] redirecting to:", data.url);
     window.location.href = data.url;
   } catch (err) {
-    console.error("[CLICK] EXCEPTION:", err);
+    console.error("[checkout]", err);
   }
 };
 

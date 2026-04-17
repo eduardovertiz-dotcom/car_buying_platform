@@ -12,7 +12,6 @@ export function CheckoutButton({ plan, className, children }: CheckoutButtonProp
   const [loading, setLoading] = useState(false);
 
   async function handleClick() {
-    console.log("[CLICK] plan:", plan);
     setLoading(true);
     try {
       const res = await fetch("/api/checkout", {

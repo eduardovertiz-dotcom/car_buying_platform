@@ -82,14 +82,6 @@ export default function TransactionsPage() {
         .limit(1)
         .maybeSingle();
 
-      console.log("[TX_STATE]", {
-        userId:          user.id,
-        email:           userEmail,
-        foundTransaction: !!data,
-        transactionId:   data?.id ?? null,
-        error:           error ? { code: error.code, message: error.message } : null,
-      });
-
       if (error) {
         console.error("[TX_STATE] query error:", error);
         setLoaded(true);

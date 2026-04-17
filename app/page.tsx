@@ -6,9 +6,7 @@ import Link from "next/link";
 import Hero from "@/components/Hero";
 import { createClient } from "@/lib/supabase/client";
 
-// 🔥 STRIPE HANDLER
 const handleCheckout = async (plan: "basic" | "pro") => {
-  console.log("[CLICK] plan:", plan);
   try {
     const res = await fetch("/api/checkout", {
       method: "POST",
