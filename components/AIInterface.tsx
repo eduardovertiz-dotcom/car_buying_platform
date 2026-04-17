@@ -203,6 +203,16 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
       });
   }, [identifier, verification_status]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Scroll to top once when verification reaches a decision state.
+  useEffect(() => {
+    if (
+      verification_status === "basic_complete" ||
+      verification_status === "professional_complete"
+    ) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [verification_status]);
+
   async function handleUpsell() {
     if (!allDocumentsUploaded) {
       setShowDocWarning(true);
@@ -447,7 +457,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
 
         {decisionRecorded ? (
           <p className="text-sm text-green-400 leading-relaxed">
-            Decision recorded. Advancing…
+            ✓ Decision recorded.
           </p>
         ) : (
           <>
@@ -581,7 +591,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
 
         {decisionRecorded ? (
           <p className="text-sm text-green-400 leading-relaxed">
-            Decision recorded. Advancing…
+            ✓ Decision recorded.
           </p>
         ) : (
           <button
