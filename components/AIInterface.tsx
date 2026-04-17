@@ -127,7 +127,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
   const [showDocWarning, setShowDocWarning] = useState(false);
   const [upsellLoading, setUpsellLoading] = useState(false);
   const [verifyChecks, setVerifyChecks] = useState<VerifyChecks | null>(null);
-  const [verifyMode, setVerifyMode] = useState<"manual" | "automated" | null>(null);
+  const [verifyMode, setVerifyMode] = useState<"manual" | "automated" | "mock" | null>(null);
   const [verifyState, setVerifyState] = useState<VerifyState>(() => {
     if (verification_status === "basic_complete" || verification_status === "professional_complete") return "complete";
     if (verification_status === "basic_processing" || verification_status === "professional_processing") return "processing";
@@ -189,7 +189,20 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
-      .then((data: { success: boolean; mode?: string; checks: VerifyChecks }) => {
+      .then((data: { success?: boolean; status?: string; mode?: string; checks?: VerifyChecks }) => {
+        if (data.status === "mock_complete") {
+          setVerifyMode("mock");
+          const mockResult: VerificationResult = {
+            status: "review",
+            summary: "Verification not yet available. Using preliminary analysis.",
+            findings: [],
+            confidence: 40,
+          };
+          if (shouldRunProfessional) completeProfessionalVerification(mockResult);
+          else completeBasicVerification(mockResult);
+          setVerifyState("complete");
+          return;
+        }
         const mode = data.mode === "manual" ? "manual" : "automated";
         setVerifyMode(mode);
         if (mode === "manual") {
@@ -202,7 +215,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
           if (shouldRunProfessional) completeProfessionalVerification(manualResult);
           else completeBasicVerification(manualResult);
         } else {
-          const checks = data.checks;
+          const checks = data.checks!;
           setVerifyChecks(checks);
           const result = checksToVerificationResult(checks);
           if (shouldRunProfessional) completeProfessionalVerification(result);
@@ -296,7 +309,20 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
-      .then((data: { success: boolean; mode?: string; checks: VerifyChecks }) => {
+      .then((data: { success?: boolean; status?: string; mode?: string; checks?: VerifyChecks }) => {
+        if (data.status === "mock_complete") {
+          setVerifyMode("mock");
+          const mockResult: VerificationResult = {
+            status: "review",
+            summary: "Verification not yet available. Using preliminary analysis.",
+            findings: [],
+            confidence: 40,
+          };
+          if (shouldRunProfessional) completeProfessionalVerification(mockResult);
+          else completeBasicVerification(mockResult);
+          setVerifyState("complete");
+          return;
+        }
         const mode = data.mode === "manual" ? "manual" : "automated";
         setVerifyMode(mode);
         if (mode === "manual") {
@@ -309,7 +335,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
           if (shouldRunProfessional) completeProfessionalVerification(manualResult);
           else completeBasicVerification(manualResult);
         } else {
-          const checks = data.checks;
+          const checks = data.checks!;
           setVerifyChecks(checks);
           const result = checksToVerificationResult(checks);
           if (shouldRunProfessional) completeProfessionalVerification(result);
@@ -561,6 +587,14 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
           </>
         )}
 
+        {verifyMode === "mock" && (
+          <div className="border border-white/[0.08] rounded-lg px-4 py-3 mb-4">
+            <p className="text-xs text-[var(--foreground-muted)] leading-relaxed">
+              Full verification is not yet available. Results are based on available data.
+            </p>
+          </div>
+        )}
+
         {/* Upsell */}
         <div className="border border-white/[0.12] rounded-lg px-4 py-5 mb-4">
           <p className="text-sm font-medium text-white mb-2">
@@ -706,6 +740,14 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
             </div>
           );
         })()}
+
+        {verifyMode === "mock" && (
+          <div className="border border-white/[0.08] rounded-lg px-4 py-3 mb-4">
+            <p className="text-xs text-[var(--foreground-muted)] leading-relaxed">
+              Full verification is not yet available. Results are based on available data.
+            </p>
+          </div>
+        )}
 
         {isDecisionMade ? (
           <p className="text-sm text-green-400 leading-relaxed">
