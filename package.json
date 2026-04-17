@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/predev.js && next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "apply-worktree": "node scripts/apply-worktree.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",

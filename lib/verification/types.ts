@@ -32,8 +32,9 @@ export type FacturaResult = {
 
 // ── Verify route input ───────────────────────────────────────────────────────
 export type VerifyInput = {
-  plate: string;
+  plate?: string;
   vin?: string;
+  hasDocuments?: boolean;
   factura?: {
     uuid: string;
     rfc_emisor: string;

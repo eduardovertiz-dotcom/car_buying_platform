@@ -64,9 +64,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  // Defensive plate validation — must be a non-empty string
-  if (typeof body.plate !== "string" || !body.plate.trim()) {
-    return NextResponse.json({ error: "plate is required" }, { status: 400 });
+  const hasPlate = typeof body.plate === "string" && !!body.plate.trim();
+  const hasDocuments = body.hasDocuments === true;
+
+  // Docs-only path: no plate but documents present → return manual-mode response
+  if (!hasPlate && hasDocuments) {
+    return NextResponse.json({
+      success: true,
+      mode: "manual" as const,
+      message: "Verification in progress",
+      checks: {
+        repuve: { ok: false, error: "no_identifier", source: "manual" },
+        factura: { ok: false, error: "no_identifier", source: "manual" },
+      },
+    });
+  }
+
+  // Neither plate nor documents — reject
+  if (!hasPlate) {
+    return NextResponse.json({ error: "plate or hasDocuments is required" }, { status: 400 });
   }
 
   // ── Manual mode: return immediately, no external calls ───────────────────
@@ -76,7 +92,8 @@ export async function POST(req: Request) {
 
   // ── Automated mode: run providers in parallel ────────────────────────────
   // Normalize once, centrally, before any provider call.
-  const plate = body.plate.trim().toUpperCase();
+  // body.plate is guaranteed non-empty here — hasPlate guard above ensures it.
+  const plate = body.plate!.trim().toUpperCase();
 
   // Each call is guarded with .catch() so an unexpected throw
   // never crashes the route — checks object is always complete.

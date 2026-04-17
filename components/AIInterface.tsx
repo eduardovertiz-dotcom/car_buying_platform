@@ -10,6 +10,7 @@ import { generateAgreementHTML } from "@/lib/agreement";
 import RiskBlock from "@/components/RiskBlock";
 import { computeRisk, confidenceLabel, type RiskOutput } from "@/lib/risk";
 import { track } from "@/lib/track";
+import { hasMinimumInput as computeHasMinimumInput } from "@/lib/guards";
 
 type StepContent = {
   heading: string;
@@ -114,6 +115,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     completeBasicVerification,
     requestProfessionalVerification,
     completeProfessionalVerification,
+    resetVerification,
   } = useTransaction();
 
   const { verification_status, documents, vehicle } = transaction;
@@ -128,11 +130,11 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
   // Brief confirmation flash after the user commits to a risk level
   const [decisionRecorded, setDecisionRecorded] = useState(false);
 
-  // Global input gate — consistent with Upload and Analyze
+  // Global input gate — single source of truth from lib/guards
   const uploadedDocsCount = Object.values(documents).filter(d => d.status === "uploaded").length;
   const hasIdentifier = Boolean(identifier);
   const hasDocs = uploadedDocsCount > 0;
-  const hasMinimumInput = hasIdentifier || hasDocs;
+  const hasMinimumInput = computeHasMinimumInput(transaction);
 
   const allDocumentsUploaded =
     documents.ine.status === "uploaded" &&
@@ -146,6 +148,8 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
   // Handles both first arrival and post-upgrade ($49 → $79).
   useEffect(() => {
     if (!plan) return;
+    // Guard: do not auto-retrigger while in error state — user must click Retry
+    if (verifyError) return;
 
     const shouldRunProfessional =
       plan === "79" &&
@@ -176,10 +180,10 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
         setVerifyMode(mode);
 
         if (mode === "manual") {
-          // Manual mode: advance the step with a neutral result.
-          // The UI will show the "in progress" message instead of check results.
+          // Manual mode: result is under review — status "review" maps to MODERATE,
+          // preventing a false LOW/green badge while confidence is 0.
           const manualResult: VerificationResult = {
-            status: "safe",
+            status: "review",
             summary: "Manual verification in progress.",
             findings: [],
             confidence: 0,
@@ -196,18 +200,10 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
         else completeBasicVerification(result);
       })
       .catch(() => {
+        resetVerification();
         setVerifyError(true);
-        // Proceed to complete state so UX isn't blocked
-        const fallbackResult: VerificationResult = {
-          status: "review",
-          summary: "Verification could not be completed. Review manually.",
-          findings: ["Automated verification unavailable"],
-          confidence: 0,
-        };
-        if (shouldRunProfessional) completeProfessionalVerification(fallbackResult);
-        else completeBasicVerification(fallbackResult);
       });
-  }, [identifier, verification_status]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [identifier, verification_status, verifyError]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll to top once when verification reaches a decision state.
   useEffect(() => {
@@ -270,7 +266,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
         setVerifyMode(mode);
         if (mode === "manual") {
           const manualResult: VerificationResult = {
-            status: "safe",
+            status: "review",
             summary: "Manual verification in progress.",
             findings: [],
             confidence: 0,
@@ -286,15 +282,8 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
         else completeBasicVerification(result);
       })
       .catch(() => {
+        resetVerification();
         setVerifyError(true);
-        const fallbackResult: VerificationResult = {
-          status: "review",
-          summary: "Verification could not be completed. Review manually.",
-          findings: ["Automated verification unavailable"],
-          confidence: 0,
-        };
-        if (shouldRunProfessional) completeProfessionalVerification(fallbackResult);
-        else completeBasicVerification(fallbackResult);
       });
   }
 
@@ -332,6 +321,32 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
         <button
           onClick={() => goToStep("upload")}
           className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
+        >
+          ← Back to Upload
+        </button>
+      </>
+    );
+  }
+
+  // ── Verification error — show retry, do NOT auto-advance ────────────────
+  if (verifyError) {
+    return (
+      <>
+        <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
+          Verification could not complete.
+        </h2>
+        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
+          Something went wrong. Check your connection and try again.
+        </p>
+        <button
+          onClick={() => setVerifyError(false)}
+          className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left mb-3"
+        >
+          Retry verification
+        </button>
+        <button
+          onClick={() => goToStep("upload")}
+          className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors underline underline-offset-2"
         >
           ← Back to Upload
         </button>
@@ -460,12 +475,6 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
           </div>
         ) : (
           <>
-            {verifyError && (
-              <p className="text-sm text-amber-400 leading-relaxed mb-4">
-                Some checks could not be completed. You can still proceed.
-              </p>
-            )}
-
             {(repuveResult || facturaResult) && (
               <div className="mb-6">
                 <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
@@ -592,12 +601,6 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
           </div>
         ) : (
           <>
-            {verifyError && (
-              <p className="text-sm text-amber-400 leading-relaxed mb-4">
-                Some checks could not be completed. You can still proceed.
-              </p>
-            )}
-
             {(repuveResult || facturaResult) && (
               <div className="mb-6">
                 <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
@@ -930,25 +933,22 @@ function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
           : "Full verification is complete. Generate a purchase agreement to finalize the transaction."}
       </p>
 
-      {/* Risk block — uses accepted values if user made an explicit decision */}
-      {(() => {
+      {/* Risk block — only rendered after a real verified decision has been recorded */}
+      {transaction.accepted_risk_level != null && (() => {
         const { accepted_risk_level, accepted_confidence, accepted_at } = transaction;
-        const hasDecision = !!accepted_risk_level && accepted_confidence !== undefined;
-        const displayRisk: RiskOutput = hasDecision
-          ? {
-              ...risk,
-              riskLevel: accepted_risk_level!,
-              confidence: accepted_confidence!,
-              confidenceLabel: confidenceLabel(accepted_confidence!),
-            }
-          : risk;
+        const displayRisk: RiskOutput = {
+          ...risk,
+          riskLevel: accepted_risk_level!,
+          confidence: accepted_confidence ?? risk.confidence,
+          confidenceLabel: confidenceLabel(accepted_confidence ?? risk.confidence),
+        };
         return (
           <>
             <RiskBlock
               data={displayRisk}
-              headerLabel={hasDecision ? "You chose to proceed with" : "You are proceeding with"}
+              headerLabel="You chose to proceed with"
             />
-            {hasDecision && accepted_at && (
+            {accepted_at && (
               <p className="text-xs text-[var(--foreground-muted)] -mt-4 mb-6">
                 Decision recorded {timeAgo(accepted_at)}
               </p>
@@ -1020,11 +1020,6 @@ function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
                 {transaction.signing_status === "pending" && (
                   <p className="text-sm text-[var(--foreground-muted)]">
                     Waiting for signatures
-                  </p>
-                )}
-                {transaction.signing_status === "signed" && (
-                  <p className="text-sm text-green-400">
-                    ✓ Agreement signed
                   </p>
                 )}
               </>
@@ -1271,7 +1266,7 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
       vehicle.year > 0;
     const hasIdentifier = !!(vehicle.vin || vehicle.plate);
     const hasDocs = !noneUploaded;
-    const hasMinimumInput = hasIdentifier || hasDocs;
+    const hasMinimumInput = computeHasMinimumInput(transaction);
     const canContinue = hasMinimumInput;
 
     return (
@@ -1433,7 +1428,7 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
     const checkUploadedDocs = Object.values(cd).filter(d => d.status === "uploaded").length;
     const checkHasIdentifier = !!(cv.vin || cv.plate);
     const checkHasDocs = checkUploadedDocs > 0;
-    const checkHasMinimumInput = checkHasIdentifier || checkHasDocs;
+    const checkHasMinimumInput = computeHasMinimumInput(transaction);
     const checkContent = stepContent["check"];
 
     return (

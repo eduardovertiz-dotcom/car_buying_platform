@@ -5,6 +5,7 @@ import { useTransaction } from "@/context/TransactionContext";
 import RiskBlock from "@/components/RiskBlock";
 import { computeRisk } from "@/lib/risk";
 import { track } from "@/lib/track";
+import { hasMinimumInput as computeHasMinimumInput } from "@/lib/guards";
 
 function IconWarning() {
   return (
@@ -43,10 +44,10 @@ export default function AnalyzePanel({ plan }: { plan: "49" | "79" | null }) {
     (d) => d.status === "uploaded"
   ).length;
 
-  // Global input gate — must match Upload and Verify logic
+  // Global input gate — single source of truth from lib/guards
   const hasIdentifier = Boolean(transaction.vehicle?.vin || transaction.vehicle?.plate);
   const hasDocs = uploadedCount > 0;
-  const hasMinimumInput = hasIdentifier || hasDocs;
+  const hasMinimumInput = computeHasMinimumInput(transaction);
 
   // Single source of truth — only meaningful when real input exists
   const risk = computeRisk(transaction);

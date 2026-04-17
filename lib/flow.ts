@@ -1,4 +1,4 @@
-import { Step, STEPS } from "./types";
+import { Step, getSteps } from "./types";
 
 export type FlowStep = { key: Step; label: string; index: number };
 
@@ -13,9 +13,8 @@ export type FlowStep = { key: Step; label: string; index: number };
  * To add plan-specific steps in future, extend this function.
  * Do NOT branch routing based on plan outside this file.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function getFlowSteps(plan: "49" | "79" | null): FlowStep[] {
-  return STEPS;
+  return getSteps(plan);
 }
 
 /**

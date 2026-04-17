@@ -40,7 +40,8 @@ type Action =
   | { type: "UPDATE_AGREEMENT_FIELDS"; payload: { buyer_name?: string; buyer_email?: string; seller_name?: string; seller_email?: string; price?: string; location?: string } }
   | { type: "ACCEPT_RISK"; payload: { riskLevel: "LOW" | "MODERATE" | "HIGH"; confidence: number } }
   | { type: "UPDATE_VEHICLE"; payload: { make?: string; model?: string; year?: number; vin?: string; plate?: string } }
-  | { type: "SEND_FOR_SIGNATURE"; payload: { documenso_document_id: string } };
+  | { type: "SEND_FOR_SIGNATURE"; payload: { documenso_document_id: string } }
+  | { type: "RESET_VERIFICATION" };
 
 // ─── Reducer ────────────────────────────────────────────────────────────────
 
@@ -71,13 +72,22 @@ function reducer(state: Transaction, action: Action): Transaction {
       const contract = payload.contract ?? { status: "not_started" as const };
       const maintenance = payload.maintenance ?? { records: [] };
       const share = payload.share ?? { enabled: false };
-      // Never downgrade from a completed verification state — persisted truth wins
+      // Completed states are preserved; processing states reset to prevent refresh dead-end
       const finalVerificationStatus =
         payload.verification_status === "basic_complete" ||
         payload.verification_status === "professional_complete"
           ? payload.verification_status
+          : payload.verification_status === "basic_processing" ||
+            payload.verification_status === "professional_processing"
+          ? "not_started"
           : verification_status;
-      return { ...payload, verification_status: finalVerificationStatus, documents, contract, maintenance, share };
+      // Invariant: verification_results are only valid when verification is complete
+      const finalVerificationResults =
+        finalVerificationStatus === "basic_complete" ||
+        finalVerificationStatus === "professional_complete"
+          ? payload.verification_results
+          : null;
+      return { ...payload, verification_status: finalVerificationStatus, verification_results: finalVerificationResults, documents, contract, maintenance, share };
     }
 
     case "ADVANCE_STEP": {
@@ -161,6 +171,14 @@ function reducer(state: Transaction, action: Action): Transaction {
         ...state,
         verification_status: "professional_complete",
         verification_results: action.payload,
+      };
+    }
+
+    case "RESET_VERIFICATION": {
+      return {
+        ...state,
+        verification_status: "not_started" as const,
+        verification_results: null,
       };
     }
 
@@ -318,6 +336,9 @@ function reducer(state: Transaction, action: Action): Transaction {
         ...(shouldResetVerification && {
           verification_status: "not_started" as const,
           verification_results: null,
+          accepted_risk_level: undefined,
+          accepted_confidence: undefined,
+          accepted_at: undefined,
         }),
       };
     }
@@ -349,6 +370,7 @@ type TransactionContextValue = {
   acceptRisk: (risk: { riskLevel: "LOW" | "MODERATE" | "HIGH"; confidence: number }) => void;
   updateVehicle: (fields: { make?: string; model?: string; year?: number; vin?: string; plate?: string }) => void;
   sendForSignature: (documenso_document_id: string) => void;
+  resetVerification: () => void;
 };
 
 const TransactionContext = createContext<TransactionContextValue | null>(null);
@@ -478,6 +500,9 @@ export function TransactionProvider({ transactionId, children }: Props) {
     },
     sendForSignature(documenso_document_id) {
       dispatch({ type: "SEND_FOR_SIGNATURE", payload: { documenso_document_id } });
+    },
+    resetVerification() {
+      dispatch({ type: "RESET_VERIFICATION" });
     },
   };
 

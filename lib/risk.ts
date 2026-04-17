@@ -76,12 +76,19 @@ export function computeRisk(transaction: Transaction): RiskOutput {
         issues.push(finding);
       } else if (resolvedPatterns.some((p) => lower.includes(p))) {
         resolved.push(finding);
+      } else {
+        // Unrecognized findings are surfaced as issues — conservative, nothing hidden
+        issues.push(finding);
       }
-      // Neutral findings (e.g. informational) are omitted
     }
 
     // Risk level is authoritative from verification status
     riskLevel = statusToRiskLevel(verification_results.status);
+
+    // Integrity guard: LOW is only valid with real confidence — prevents false green badge
+    if (riskLevel === "LOW" && confidence === 0) {
+      riskLevel = "MODERATE";
+    }
   } else {
     // Pre-verification — derive risk from document presence alone
     if (documents.ine.status === "uploaded")
