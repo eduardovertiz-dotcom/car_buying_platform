@@ -3,54 +3,60 @@ import { NextRequest, NextResponse } from "next/server";
 const BASE_URL = process.env.DOCUMENSO_BASE_URL ?? "https://api.documenso.com";
 const API_KEY  = process.env.DOCUMENSO_API_KEY  ?? "";
 
+const FALLBACK = NextResponse.json({ success: false, fallback: true });
+
 type CreateBody = {
-  buyer_name:    string;
-  buyer_email:   string;
-  seller_name:   string;
-  seller_email:  string;
+  buyer_name:     string;
+  buyer_email:    string;
+  seller_name:    string;
+  seller_email:   string;
   agreement_html: string;
 };
 
 export async function POST(req: NextRequest) {
-  if (!API_KEY) {
-    return NextResponse.json({ error: "Documenso not configured" }, { status: 500 });
-  }
-
+  // Parse body — fall back on any parse error
   let body: CreateBody;
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    console.error("[documenso] invalid request body");
+    return FALLBACK;
   }
 
   const { buyer_name, buyer_email, seller_name, seller_email, agreement_html } = body;
 
   if (!buyer_email || !seller_email || !agreement_html) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    console.error("[documenso] missing required fields");
+    return FALLBACK;
   }
 
-  const headers = {
-    Authorization: `Bearer ${API_KEY}`,
-    "Content-Type": "application/json",
-  };
+  // No API key configured — surface fallback immediately, no network call
+  if (!API_KEY) {
+    console.error("[documenso] DOCUMENSO_API_KEY not set");
+    return FALLBACK;
+  }
 
   try {
-    // ── Step 1: Upload document ──────────────────────────────────────────────
-    // Documenso accepts base64-encoded file content via JSON (v1 API)
-    const fileBase64 = Buffer.from(agreement_html, "utf-8").toString("base64");
+    const authHeaders = {
+      Authorization: `Bearer ${API_KEY}`,
+      "Content-Type": "application/json",
+    };
 
-    const uploadRes = await fetch(`${BASE_URL}/api/v1/documents`, {
+    // ── Step 1: Upload document ────────────────────────────────────────────
+    // Try JSON first; if rejected as unsupported media, retry as multipart.
+    let document_id: string | null = null;
+
+    const jsonUploadRes = await fetch(`${BASE_URL}/api/v1/documents`, {
       method: "POST",
-      headers,
-      body: JSON.stringify({
-        title: "Vehicle Purchase Agreement",
-        documentDataId: null,
-        formValues: {},
-      }),
+      headers: authHeaders,
+      body: JSON.stringify({ title: "Vehicle Purchase Agreement" }),
     });
 
-    // Documenso's document upload uses multipart — fall back to multipart if JSON rejected
-    if (!uploadRes.ok && uploadRes.status === 415) {
+    if (jsonUploadRes.ok) {
+      const json = await jsonUploadRes.json();
+      document_id = json.id ?? null;
+    } else if (jsonUploadRes.status === 415) {
+      // Multipart fallback
       const form = new FormData();
       form.append(
         "file",
@@ -65,82 +71,66 @@ export async function POST(req: NextRequest) {
         body: form,
       });
 
-      if (!mpRes.ok) {
-        const text = await mpRes.text();
-        console.error("[documenso] upload failed:", text);
-        return NextResponse.json({ error: "Documenso upload failed" }, { status: 500 });
+      if (mpRes.ok) {
+        const json = await mpRes.json();
+        document_id = json.id ?? null;
+      } else {
+        console.error("[documenso] multipart upload failed:", await mpRes.text());
+        return FALLBACK;
       }
-
-      const { id: document_id } = await mpRes.json();
-      return await addRecipientsAndSend(document_id, { buyer_name, buyer_email, seller_name, seller_email, fileBase64, headers, BASE_URL });
+    } else {
+      console.error("[documenso] upload failed:", jsonUploadRes.status, await jsonUploadRes.text());
+      return FALLBACK;
     }
 
-    if (!uploadRes.ok) {
-      const text = await uploadRes.text();
-      console.error("[documenso] create failed:", text);
-      return NextResponse.json({ error: "Documenso create failed" }, { status: 500 });
+    if (!document_id) {
+      console.error("[documenso] upload succeeded but no document id returned");
+      return FALLBACK;
     }
 
-    const { id: document_id } = await uploadRes.json();
-    return await addRecipientsAndSend(document_id, { buyer_name, buyer_email, seller_name, seller_email, fileBase64, headers, BASE_URL });
+    // ── Step 2: Add recipients ─────────────────────────────────────────────
+    const recipientsRes = await fetch(
+      `${BASE_URL}/api/v1/documents/${document_id}/recipients`,
+      {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({
+          recipients: [
+            { name: buyer_name,  email: buyer_email,  role: "SIGNER" },
+            { name: seller_name, email: seller_email, role: "SIGNER" },
+          ],
+        }),
+      }
+    );
+
+    if (!recipientsRes.ok) {
+      // Document created but recipients failed — still return success with the id
+      // so the UI can show "pending" and we don't lose the document reference.
+      console.error("[documenso] recipients failed:", await recipientsRes.text());
+      return NextResponse.json({ success: true, document_id });
+    }
+
+    // ── Step 3: Send for signing ───────────────────────────────────────────
+    const sendRes = await fetch(
+      `${BASE_URL}/api/v1/documents/${document_id}/send`,
+      {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({ sendEmail: true }),
+      }
+    );
+
+    if (!sendRes.ok) {
+      console.error("[documenso] send failed:", await sendRes.text());
+      // Document and recipients exist — return success so UI reflects pending state
+      return NextResponse.json({ success: true, document_id });
+    }
+
+    return NextResponse.json({ success: true, document_id });
 
   } catch (err) {
+    // Network error, timeout, or unexpected exception — always fall back
     console.error("[documenso] unexpected error:", err);
-    return NextResponse.json({ error: "Documenso integration error" }, { status: 500 });
+    return FALLBACK;
   }
-}
-
-type SigningData = {
-  buyer_name: string;
-  buyer_email: string;
-  seller_name: string;
-  seller_email: string;
-  fileBase64: string;
-  headers: Record<string, string>;
-  BASE_URL: string;
-};
-
-async function addRecipientsAndSend(
-  document_id: string,
-  { buyer_name, buyer_email, seller_name, seller_email, headers, BASE_URL }: SigningData
-): Promise<NextResponse> {
-  // ── Step 2: Add recipients ─────────────────────────────────────────────────
-  const recipientsRes = await fetch(
-    `${BASE_URL}/api/v1/documents/${document_id}/recipients`,
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        recipients: [
-          { name: buyer_name,  email: buyer_email,  role: "SIGNER" },
-          { name: seller_name, email: seller_email, role: "SIGNER" },
-        ],
-      }),
-    }
-  );
-
-  if (!recipientsRes.ok) {
-    const text = await recipientsRes.text();
-    console.error("[documenso] recipients failed:", text);
-    // Non-fatal — document was created; return id so UI doesn't block
-    return NextResponse.json({ document_id, warning: "Recipients could not be added" });
-  }
-
-  // ── Step 3: Send for signing ───────────────────────────────────────────────
-  const sendRes = await fetch(
-    `${BASE_URL}/api/v1/documents/${document_id}/send`,
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ sendEmail: true }),
-    }
-  );
-
-  if (!sendRes.ok) {
-    const text = await sendRes.text();
-    console.error("[documenso] send failed:", text);
-    return NextResponse.json({ document_id, warning: "Document could not be sent" });
-  }
-
-  return NextResponse.json({ document_id });
 }

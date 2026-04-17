@@ -632,11 +632,11 @@ function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
   const [showShared, setShowShared] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [signingLoading, setSigningLoading] = useState(false);
-  const [signingError, setSigningError] = useState<string | null>(null);
+  const [signingFallback, setSigningFallback] = useState(false);
 
   async function handleSendForSignature() {
     setSigningLoading(true);
-    setSigningError(null);
+    setSigningFallback(false);
     const date = new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" });
     const agreement_html = generateAgreementHTML({
       id:           transaction.id,
@@ -662,13 +662,15 @@ function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
         }),
       });
       const data = await res.json();
-      if (!res.ok || !data.document_id) {
-        throw new Error(data.error ?? "Failed to send for signature");
+      if (data.success && data.document_id) {
+        sendForSignature(data.document_id);
+      } else {
+        // fallback: true or any unexpected shape — go to manual path
+        setSigningFallback(true);
       }
-      sendForSignature(data.document_id);
-    } catch (err) {
-      console.error("[send-for-signature]", err);
-      setSigningError("Could not send for signature. Please try again.");
+    } catch {
+      // Network failure — always fall back, never block
+      setSigningFallback(true);
     } finally {
       setSigningLoading(false);
     }
@@ -860,33 +862,49 @@ function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
 
           {/* E-signature — Documenso */}
           <div className="mb-6">
-            {(!transaction.signing_status || transaction.signing_status === "not_sent") && (
-              <>
+            {/* Fallback: signature service unavailable — manual path */}
+            {signingFallback ? (
+              <div className="border border-[var(--border)] rounded-lg px-4 py-4">
+                <p className="text-sm text-white mb-1">
+                  Signature service unavailable right now.
+                </p>
+                <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-3">
+                  Download the agreement and sign it manually to proceed.
+                  You can still complete this transaction without delay.
+                </p>
                 <button
-                  onClick={handleSendForSignature}
-                  disabled={signingLoading}
-                  className={`w-full text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left ${
-                    signingLoading
-                      ? "bg-[var(--border)] text-[var(--foreground-muted)] cursor-default"
-                      : "bg-[var(--background)] border border-[var(--border)] hover:border-white/30 text-white"
-                  }`}
+                  onClick={handleDownload}
+                  className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
                 >
-                  {signingLoading ? "Sending…" : "Send for signature"}
+                  Download agreement to sign manually
                 </button>
-                {signingError && (
-                  <p className="text-xs text-red-400 leading-relaxed mt-2">{signingError}</p>
+              </div>
+            ) : (
+              <>
+                {(!transaction.signing_status || transaction.signing_status === "not_sent") && (
+                  <button
+                    onClick={handleSendForSignature}
+                    disabled={signingLoading}
+                    className={`w-full text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left ${
+                      signingLoading
+                        ? "bg-[var(--border)] text-[var(--foreground-muted)] cursor-default"
+                        : "bg-[var(--background)] border border-[var(--border)] hover:border-white/30 text-white"
+                    }`}
+                  >
+                    {signingLoading ? "Sending…" : "Send for signature"}
+                  </button>
+                )}
+                {transaction.signing_status === "pending" && (
+                  <p className="text-sm text-[var(--foreground-muted)]">
+                    Waiting for signatures
+                  </p>
+                )}
+                {transaction.signing_status === "signed" && (
+                  <p className="text-sm text-green-400">
+                    ✓ Agreement signed
+                  </p>
                 )}
               </>
-            )}
-            {transaction.signing_status === "pending" && (
-              <p className="text-sm text-[var(--foreground-muted)]">
-                Waiting for signatures
-              </p>
-            )}
-            {transaction.signing_status === "signed" && (
-              <p className="text-sm text-green-400">
-                ✓ Agreement signed
-              </p>
             )}
           </div>
 
