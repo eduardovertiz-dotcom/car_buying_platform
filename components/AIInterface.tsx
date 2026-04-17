@@ -128,6 +128,12 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
   // Brief confirmation flash after the user commits to a risk level
   const [decisionRecorded, setDecisionRecorded] = useState(false);
 
+  // Global input gate — consistent with Upload and Analyze
+  const uploadedDocsCount = Object.values(documents).filter(d => d.status === "uploaded").length;
+  const hasIdentifier = Boolean(identifier);
+  const hasDocs = uploadedDocsCount > 0;
+  const hasMinimumInput = hasIdentifier || hasDocs;
+
   const allDocumentsUploaded =
     documents.ine.status === "uploaded" &&
     documents.registration.status === "uploaded" &&
@@ -238,6 +244,60 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     }
   }
 
+  // Docs-only verification — called manually via CTA when hasDocs && !hasIdentifier
+  async function startDocVerification() {
+    if (!plan) return;
+    const shouldRunProfessional =
+      plan === "79" &&
+      (verification_status === "not_started" || verification_status === "basic_complete");
+    const shouldRunBasic = plan === "49" && verification_status === "not_started";
+    if (!shouldRunProfessional && !shouldRunBasic) return;
+
+    if (shouldRunProfessional) requestProfessionalVerification();
+    else requestBasicVerification();
+
+    fetch("/api/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hasDocuments: true }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: { success: boolean; mode?: string; checks: VerifyChecks }) => {
+        const mode = data.mode === "manual" ? "manual" : "automated";
+        setVerifyMode(mode);
+        if (mode === "manual") {
+          const manualResult: VerificationResult = {
+            status: "safe",
+            summary: "Manual verification in progress.",
+            findings: [],
+            confidence: 0,
+          };
+          if (shouldRunProfessional) completeProfessionalVerification(manualResult);
+          else completeBasicVerification(manualResult);
+          return;
+        }
+        const checks = data.checks;
+        setVerifyChecks(checks);
+        const result = checksToVerificationResult(checks);
+        if (shouldRunProfessional) completeProfessionalVerification(result);
+        else completeBasicVerification(result);
+      })
+      .catch(() => {
+        setVerifyError(true);
+        const fallbackResult: VerificationResult = {
+          status: "review",
+          summary: "Verification could not be completed. Review manually.",
+          findings: ["Automated verification unavailable"],
+          confidence: 0,
+        };
+        if (shouldRunProfessional) completeProfessionalVerification(fallbackResult);
+        else completeBasicVerification(fallbackResult);
+      });
+  }
+
   // ── No plan — should not happen in normal flow ───────────────────────────
   if (!plan) {
     return (
@@ -258,38 +318,55 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     );
   }
 
-  // ── No VIN / plate — block ALL verification states, always show recovery UI ─
-  if (!identifier) {
+  // ── No input at all — hard stop, no escape hatch ───────────────────────
+  if (!hasMinimumInput) {
     return (
       <>
         <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
-          Vehicle identifier required.
+          Add vehicle information to continue.
         </h2>
         <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
-          Verification requires a VIN or plate number to run registry checks.
-          Without this, theft status, registration validity, and ownership history
-          cannot be confirmed.
+          Verification requires at least a VIN, plate number, or one uploaded
+          document. Without this, no checks can be performed.
         </p>
         <button
           onClick={() => goToStep("upload")}
-          className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left mb-3"
+          className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
         >
           ← Back to Upload
         </button>
-        <button
-          onClick={advanceStep}
-          className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors underline underline-offset-2"
-        >
-          Proceed without registry check
-        </button>
-        <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-3">
-          Proceeding without a VIN or plate means theft and registry checks will not be run.
-        </p>
       </>
     );
   }
 
-  // ── not_started with VIN present — useEffect fires immediately after mount ─
+  // ── Docs only, not started — manual CTA (no identifier for registry lookup) ─
+  if (!hasIdentifier && hasDocs && verification_status === "not_started") {
+    return (
+      <>
+        <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
+          Ready to verify your documents.
+        </h2>
+        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
+          We&apos;ll verify using your uploaded documents. Adding a VIN or plate
+          number improves accuracy and enables registry checks.
+        </p>
+        <button
+          onClick={startDocVerification}
+          className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left mb-3"
+        >
+          Start verification
+        </button>
+        <button
+          onClick={() => goToStep("upload")}
+          className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors underline underline-offset-2"
+        >
+          ← Back to Upload to add VIN/plate
+        </button>
+      </>
+    );
+  }
+
+  // ── not_started with identifier — useEffect auto-triggers ────────────────
   if (verification_status === "not_started") {
     return (
       <>
@@ -1193,7 +1270,9 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
       vehicle.model.trim() !== "" &&
       vehicle.year > 0;
     const hasIdentifier = !!(vehicle.vin || vehicle.plate);
-    const canContinue = vehicleComplete && !noneUploaded;
+    const hasDocs = !noneUploaded;
+    const hasMinimumInput = hasIdentifier || hasDocs;
+    const canContinue = hasMinimumInput;
 
     return (
       <>
@@ -1302,11 +1381,21 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
             </div>
           )}
 
-          {/* Non-blocking warning: vehicle complete + docs present but no identifier */}
-          {vehicleComplete && !noneUploaded && !hasIdentifier && (
+          {/* Warning: no identifier — non-blocking, shown once minimum input is met */}
+          {hasDocs && !hasIdentifier && (
             <div className="border border-amber-400/20 bg-amber-400/[0.06] rounded-lg px-4 py-3 mb-4">
               <p className="text-xs text-amber-400 leading-relaxed">
-                Proceeding without a VIN or plate will reduce verification accuracy.
+                Proceeding without a VIN or plate will reduce verification
+                accuracy. Registry and theft checks will not run.
+              </p>
+            </div>
+          )}
+
+          {/* Hard gate warning — shown only when nothing has been provided */}
+          {!hasMinimumInput && (
+            <div className="border border-[var(--border)] rounded-lg px-4 py-3 mb-4">
+              <p className="text-xs text-[var(--foreground-muted)] leading-relaxed">
+                Add a VIN/plate or upload at least one document to continue.
               </p>
             </div>
           )}
@@ -1320,13 +1409,13 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
                 : "bg-[var(--accent)] hover:bg-blue-600 text-white"
             }`}
           >
-            {!vehicleComplete
-              ? "Enter vehicle details to continue"
-              : noneUploaded
-              ? "Upload documents to continue"
+            {!hasMinimumInput
+              ? "Add a VIN/plate or document to continue"
+              : !hasIdentifier
+              ? "Continue — registry checks limited without VIN/plate"
               : allUploaded
               ? "Continue"
-              : "Continue with limited data"}
+              : "Continue"}
           </button>
 
           {vehicleComplete && !allUploaded && uploadedDocs > 0 && (
@@ -1334,6 +1423,52 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
               You can add more documents later to improve your results.
             </p>
           )}
+        </section>
+      </>
+    );
+  }
+
+  if (current_step === "check") {
+    const { vehicle: cv, documents: cd } = transaction;
+    const checkUploadedDocs = Object.values(cd).filter(d => d.status === "uploaded").length;
+    const checkHasIdentifier = !!(cv.vin || cv.plate);
+    const checkHasDocs = checkUploadedDocs > 0;
+    const checkHasMinimumInput = checkHasIdentifier || checkHasDocs;
+    const checkContent = stepContent["check"];
+
+    return (
+      <>
+        {backLink}
+        {changesBanner}
+        <section className="py-8">
+          <div className="mb-2">
+            <span className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">
+              {planSteps[currentIndex]?.label}
+            </span>
+          </div>
+          <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
+            {checkContent.heading}
+          </h2>
+          <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-8">
+            {checkContent.body}
+          </p>
+          {!checkHasMinimumInput && (
+            <p className="text-sm text-amber-400 leading-relaxed mb-4">
+              We need at least a VIN, plate, or one uploaded document to analyze
+              this vehicle.
+            </p>
+          )}
+          <button
+            onClick={() => { if (checkHasMinimumInput) advanceStep(); }}
+            disabled={!checkHasMinimumInput}
+            className={`w-full text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left ${
+              !checkHasMinimumInput
+                ? "bg-[var(--border)] text-[var(--foreground-muted)] cursor-default"
+                : "bg-[var(--accent)] hover:bg-blue-600 text-white"
+            }`}
+          >
+            {checkContent.action}
+          </button>
         </section>
       </>
     );
@@ -1383,40 +1518,21 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
     );
   }
 
-  const content = stepContent[current_step];
-
+  // Safety net — all Step values are handled above; this is unreachable in practice.
   return (
     <>
-    {backLink}
-    {changesBanner}
-    <section className="py-8">
-      <div className="mb-2">
-        <span className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">
-          {planSteps[currentIndex]?.label}
-        </span>
-      </div>
-
-      <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
-        {content.heading}
-      </h2>
-
-      <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-8">
-        {content.body}
-      </p>
-
-      <button
-        onClick={advanceStep}
-        className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
-      >
-        {content.action}
-      </button>
-
-      {content.contextLine && (
-        <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-3">
-          {content.contextLine}
+      {backLink}
+      <section className="py-8">
+        <p className="text-sm text-[var(--foreground-muted)]">
+          Something went wrong. Reload the page or go back.
         </p>
-      )}
-    </section>
+        <button
+          onClick={() => goToStep("upload")}
+          className="mt-4 w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
+        >
+          ← Back to Upload
+        </button>
+      </section>
     </>
   );
 }

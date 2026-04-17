@@ -35,19 +35,25 @@ function IconInfo() {
 }
 
 export default function AnalyzePanel({ plan }: { plan: "49" | "79" | null }) {
-  const { transaction, advanceStep, advanceToStep } = useTransaction();
+  const { transaction, advanceStep, advanceToStep, goToStep } = useTransaction();
   const [upsellLoading, setUpsellLoading] = useState(false);
   const showUpgrade = plan === "49";
-
-  // Single source of truth — all risk data computed here
-  const risk = computeRisk(transaction);
 
   const uploadedCount = Object.values(transaction.documents).filter(
     (d) => d.status === "uploaded"
   ).length;
 
-  // Fire once on mount — tracks what the user actually sees
+  // Global input gate — must match Upload and Verify logic
+  const hasIdentifier = Boolean(transaction.vehicle?.vin || transaction.vehicle?.plate);
+  const hasDocs = uploadedCount > 0;
+  const hasMinimumInput = hasIdentifier || hasDocs;
+
+  // Single source of truth — only meaningful when real input exists
+  const risk = computeRisk(transaction);
+
+  // Fire once on mount — only tracks when there is real data to report
   useEffect(() => {
+    if (!hasMinimumInput) return;
     track("risk_computed", {
       risk_level:     risk.riskLevel,
       confidence:     risk.confidence,
@@ -73,6 +79,27 @@ export default function AnalyzePanel({ plan }: { plan: "49" | "79" | null }) {
       console.error("[analyze-upgrade]", err);
       setUpsellLoading(false);
     }
+  }
+
+  // No real input — do not render any risk output
+  if (!hasMinimumInput) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold text-white mb-2 leading-snug">
+          We need more information.
+        </h2>
+        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed">
+          Add a VIN or plate number, or upload at least one document to analyze
+          this vehicle.
+        </p>
+        <button
+          onClick={() => goToStep("upload")}
+          className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
+        >
+          ← Back to Upload
+        </button>
+      </div>
+    );
   }
 
   return (
