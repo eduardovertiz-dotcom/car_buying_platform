@@ -18,11 +18,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+    const rawBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
-    if (!baseUrl) {
+    if (!rawBaseUrl) {
       throw new Error("[checkout] NEXT_PUBLIC_BASE_URL is not set");
     }
+
+    // Normalize: env var may be stored without scheme (e.g. "mexguardian.com")
+    const baseUrl = rawBaseUrl.startsWith("http") ? rawBaseUrl : `https://${rawBaseUrl}`;
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
