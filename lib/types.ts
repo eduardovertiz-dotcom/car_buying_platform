@@ -65,8 +65,8 @@ export type Transaction = {
     make: string;
     model: string;
     year: number;
-    vin?: string;
-    plate?: string;
+    vin?: string | null;
+    plate?: string | null;
   };
   current_step: Step;
   checklist_progress: number;

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTransaction } from "@/context/TransactionContext";
 import RiskBlock from "@/components/RiskBlock";
 import { computeRisk } from "@/lib/risk";
+import { track } from "@/lib/track";
 
 function IconWarning() {
   return (
@@ -41,7 +42,23 @@ export default function AnalyzePanel({ plan }: { plan: "49" | "79" | null }) {
   // Single source of truth — all risk data computed here
   const risk = computeRisk(transaction);
 
+  const uploadedCount = Object.values(transaction.documents).filter(
+    (d) => d.status === "uploaded"
+  ).length;
+
+  // Fire once on mount — tracks what the user actually sees
+  useEffect(() => {
+    track("risk_computed", {
+      risk_level:     risk.riskLevel,
+      confidence:     risk.confidence,
+      issues_count:   risk.issues.length,
+      unknowns_count: risk.unknowns.length,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function handleUpgrade() {
+    track("upgrade_clicked");
     setUpsellLoading(true);
     try {
       const res = await fetch("/api/checkout", {
@@ -72,6 +89,15 @@ export default function AnalyzePanel({ plan }: { plan: "49" | "79" | null }) {
           We analyzed the vehicle, ownership, and records for potential issues.
         </p>
       </div>
+
+      {/* No-documents notice */}
+      {uploadedCount === 0 && (
+        <div className="border border-[var(--border)] rounded-lg px-4 py-3 mb-6">
+          <p className="text-xs text-[var(--foreground-muted)] leading-relaxed">
+            No documents were provided. Results are based on vehicle data only.
+          </p>
+        </div>
+      )}
 
       {/* Issues — dynamic, only when present */}
       {risk.issues.length > 0 && (

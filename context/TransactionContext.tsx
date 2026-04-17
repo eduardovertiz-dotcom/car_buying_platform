@@ -254,9 +254,17 @@ function reducer(state: Transaction, action: Action): Transaction {
     }
 
     case "UPDATE_VEHICLE": {
+      const v = action.payload;
       return {
         ...state,
-        vehicle: { ...state.vehicle, ...action.payload },
+        vehicle: {
+          ...state.vehicle,
+          ...v,
+          // Normalize: empty string → null so downstream checks (vehicle.vin || vehicle.plate)
+          // are never fooled by a stale empty string.
+          vin:   v.vin   !== undefined ? (v.vin   ? v.vin   : null) : state.vehicle.vin,
+          plate: v.plate !== undefined ? (v.plate ? v.plate : null) : state.vehicle.plate,
+        },
       };
     }
 

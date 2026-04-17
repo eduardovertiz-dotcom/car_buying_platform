@@ -9,6 +9,7 @@ import AnalyzePanel from "@/components/panels/AnalyzePanel";
 import { generateAgreementHTML } from "@/lib/agreement";
 import RiskBlock from "@/components/RiskBlock";
 import { computeRisk, confidenceLabel, type RiskOutput } from "@/lib/risk";
+import { track } from "@/lib/track";
 
 type StepContent = {
   heading: string;
@@ -116,7 +117,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
   } = useTransaction();
 
   const { verification_status, documents, vehicle } = transaction;
-  const plate = vehicle.plate || vehicle.vin;
+  const identifier = vehicle.vin || vehicle.plate;
   const [showDocWarning, setShowDocWarning] = useState(false);
   const [upsellLoading, setUpsellLoading] = useState(false);
   const [verifyChecks, setVerifyChecks] = useState<VerifyChecks | null>(null);
@@ -146,8 +147,8 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
 
     if (!shouldRunProfessional && !shouldRunBasic) return;
 
-    // Require at least one vehicle identifier before calling API
-    if (!plate) return;
+    // Hard guard: no identifier → no API call, no state transition
+    if (!identifier) return;
 
     if (shouldRunProfessional) requestProfessionalVerification();
     else requestBasicVerification();
@@ -156,7 +157,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
     fetch("/api/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plate }),
+      body: JSON.stringify({ plate: identifier }),
     })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -207,6 +208,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
       return;
     }
     setShowDocWarning(false);
+    track("upgrade_clicked");
     // Snapshot the current risk before upgrade so we can show what changed afterward
     setPreviousRisk(risk);
     setUpsellLoading(true);
@@ -246,7 +248,7 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
   }
 
   // ── No VIN / plate — surface error instead of silently aborting ─────────
-  if (!plate && verification_status === "not_started") {
+  if (!identifier && verification_status === "not_started") {
     return (
       <>
         <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
@@ -443,7 +445,11 @@ function VerifyInterface({ plan }: { plan: "49" | "79" | null }) {
         </div>
 
         <button
-          onClick={() => { acceptRisk(risk); advanceStep(); }}
+          onClick={() => {
+            track("risk_accepted", { risk_level: risk.riskLevel, confidence: risk.confidence });
+            acceptRisk(risk);
+            advanceStep();
+          }}
           className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors underline underline-offset-2"
         >
           Proceed with this risk level
@@ -618,6 +624,7 @@ function CompleteInterface({ plan }: { plan: "49" | "79" | null }) {
       location:     saleLocation.trim(),
     });
     generateContract();
+    track("agreement_generated");
   }
 
   const [showForm, setShowForm] = useState(false);
@@ -1046,6 +1053,7 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
       vehicle.make.trim() !== "" &&
       vehicle.model.trim() !== "" &&
       vehicle.year > 0;
+    const hasIdentifier = !!(vehicle.vin || vehicle.plate);
     const canContinue = vehicleComplete && !noneUploaded;
 
     return (
@@ -1141,8 +1149,8 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
             </div>
           </div>
           <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mb-8">
-            VIN or plate is required for registry checks (REPUVE, theft, fines).
-            Without one, registry verification cannot run.
+            Adding a VIN or plate allows theft and registry checks. Without it,
+            your results will be limited.
           </p>
 
           {/* Document upload progress */}
@@ -1151,6 +1159,15 @@ export default function AIInterface({ plan }: { plan: "49" | "79" | null }) {
               <p className="text-xs text-[var(--foreground-muted)]">
                 {uploadedDocs} of 3 documents uploaded — missing documents will
                 appear as unknowns in your report.
+              </p>
+            </div>
+          )}
+
+          {/* Non-blocking warning: vehicle complete + docs present but no identifier */}
+          {vehicleComplete && !noneUploaded && !hasIdentifier && (
+            <div className="border border-amber-400/20 bg-amber-400/[0.06] rounded-lg px-4 py-3 mb-4">
+              <p className="text-xs text-amber-400 leading-relaxed">
+                Proceeding without a VIN or plate will reduce verification accuracy.
               </p>
             </div>
           )}
