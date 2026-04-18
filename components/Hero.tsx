@@ -91,14 +91,23 @@ export default function Hero() {
 
           </div>
 
-          {/* IMAGE */}
+          {/* IMAGE — desktop only */}
           <div className="hidden md:flex items-center pl-6 -mr-32">
             <img
-              src="/hero_image.png"
+              src="/hero_desktop_ok.png"
               alt="MexGuardian vehicle verification"
               className="w-full object-contain lg:scale-125 lg:translate-x-6 brightness-110 contrast-110"
+              fetchPriority="high"
             />
           </div>
+
+          {/* IMAGE — mobile only */}
+          <img
+            src="/hero_mobile.png"
+            alt="MexGuardian vehicle verification"
+            className="block md:hidden w-full h-auto object-cover"
+            fetchPriority="high"
+          />
 
         </div>
       </section>
