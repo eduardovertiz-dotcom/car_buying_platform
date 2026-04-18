@@ -337,18 +337,18 @@ export default function Home() {
               <div className="mb-8 lg:mb-14 text-center">
                 <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">Pricing</p>
                 <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-2">
-                  Verify before you pay. Not after.
+                  Know before you pay.<br className="sm:hidden" /> Not after.
                 </h2>
                 <p className="text-sm lg:text-base text-white/75">
-                  Verify the vehicle, the seller, and the risk before you pay.
+                  Vehicle, seller, and risk —<br className="sm:hidden" /> verified before you commit.
                 </p>
               </div>
 
               <p className="text-sm text-white/50 text-center mb-2">
-                Once you send the money, it&apos;s already too late.
+                Once the money is sent, it&apos;s gone.
               </p>
               <p className="text-sm text-white/40 text-center mb-8 lg:mb-10">
-                That&apos;s when most scams happen.
+                That&apos;s when scams complete.
               </p>
 
               {/* Mobile: $79 first (flex-col-reverse), Desktop: $49 left (flex-row) */}
