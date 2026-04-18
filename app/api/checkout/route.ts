@@ -9,19 +9,19 @@ export async function POST(req: Request) {
 
     console.log("CHECKOUT API HIT", { plan });
 
-    const PRICE_MAP: Record<string, number> = {
+    if (plan !== "39" && plan !== "69") {
+      throw new Error(`INVALID PLAN: ${plan}`);
+    }
+
+    const PRICE_MAP: Record<"39" | "69", number> = {
       "39": 3900,
       "69": 6900,
     };
 
-    if (!PRICE_MAP[plan]) {
-      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
-    }
-
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
-    if (!baseUrl) {
-      throw new Error("NEXT_PUBLIC_BASE_URL is not set");
+    if (!baseUrl || !baseUrl.startsWith("https://")) {
+      throw new Error("INVALID NEXT_PUBLIC_BASE_URL");
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
       ],
       metadata: { plan },
       success_url: `${baseUrl}/api/post-checkout?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/start`,
+      cancel_url: `${baseUrl}/#pricing`,
     });
 
     console.log("STRIPE SESSION CREATED", session.id);

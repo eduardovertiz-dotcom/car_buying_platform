@@ -39,7 +39,8 @@ const handleCheckout = async (plan: "39" | "69") => {
     }
     window.location.href = data.url;
   } catch (err) {
-    console.error("CHECKOUT ERROR", err);
+    console.error("CHECKOUT FAILURE", err);
+    alert("Something went wrong. Please try again.");
   }
 };
 

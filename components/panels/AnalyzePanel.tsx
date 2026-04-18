@@ -84,14 +84,16 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "pro" }),
+        body: JSON.stringify({ plan: "69" }),
       });
-      const { url, error } = await res.json();
-      if (error || !url) throw new Error(error ?? "No checkout URL");
+      if (!res.ok) throw new Error("UPGRADE CHECKOUT FAILED");
+      const { url } = await res.json();
+      if (!url) throw new Error("UPGRADE CHECKOUT FAILED");
       window.location.href = url;
     } catch (err) {
-      console.error("[analyze-upgrade]", err);
+      console.error("CHECKOUT FAILURE", err);
       setUpsellLoading(false);
+      alert("Something went wrong. Please try again.");
     }
   }
 

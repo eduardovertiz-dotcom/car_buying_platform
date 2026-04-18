@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isManualMode } from "@/lib/verification/mode";
-import { ownsTransaction } from "@/lib/owns-transaction";
 import AIInterface from "@/components/AIInterface";
 import BindBanner from "@/components/BindBanner";
 import Header from "@/components/Header";
@@ -96,19 +95,14 @@ export default async function TransactionPage({
 
   // Ownership check — authenticated non-admins must own this transaction.
   // Admins bypass so they can review transactions from the queue.
+  // Ownership is determined solely by user_id — email is never used.
   if (isAuthenticated && !isAdmin) {
-    const owned = ownsTransaction(data, sessionUser!);
-
-    if (!owned) {
-      const txEmail   = (data.email   ?? "").toLowerCase().trim();
-      const authEmail = (sessionUser!.email ?? "").toLowerCase().trim();
-      console.warn("[TX_LOAD] ACCESS DENIED", { id, txEmail, authEmail });
-      return renderError(
-        `Access denied. Transaction email (${txEmail || "none"}) does not match your account email (${authEmail}). Sign in with the email address used at checkout.`
-      );
+    if (data.user_id && data.user_id !== sessionUser!.id) {
+      console.warn("[TX_LOAD] ACCESS DENIED", { id, txUserId: data.user_id, userId: sessionUser!.id });
+      return renderError("Access denied. This transaction belongs to a different account.");
     }
 
-    // Auto-bind: ownership is confirmed — silently set user_id if not yet attached
+    // Auto-attach: no owner yet — claim it for the current user
     if (!data.user_id) {
       console.log("[TX_LOAD] AUTO-BIND", { id, userId: sessionUser!.id });
       await adminDb
