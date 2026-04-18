@@ -1,136 +1,153 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { logError } from "@/lib/logError";
 
-const BASE_URL = process.env.DOCUMENSO_BASE_URL ?? "https://api.documenso.com";
-const API_KEY  = process.env.DOCUMENSO_API_KEY  ?? "";
+const API_URL = process.env.DOCUMENSO_API_URL ?? "https://app.documenso.com/api/v2";
+const API_KEY = process.env.DOCUMENSO_API_KEY ?? "";
 
-const FALLBACK = NextResponse.json({ success: false, fallback: true });
-
-type CreateBody = {
-  buyer_name:     string;
-  buyer_email:    string;
-  seller_name:    string;
-  seller_email:   string;
-  agreement_html: string;
-};
+const FALLBACK = NextResponse.json({ success: false });
 
 export async function POST(req: NextRequest) {
-  // Parse body — fall back on any parse error
-  let body: CreateBody;
+  // ── Auth ────────────────────────────────────────────────────────────────────
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email) {
+    return FALLBACK;
+  }
+
+  // ── Parse body ──────────────────────────────────────────────────────────────
+  let transaction_id: string;
+  let agreement_html: string;
   try {
-    body = await req.json();
+    const body = await req.json();
+    transaction_id = body.transaction_id;
+    agreement_html = body.agreement_html;
   } catch {
-    console.error("[documenso] invalid request body");
+    await logError("documenso_upload", "invalid request body", {});
     return FALLBACK;
   }
 
-  const { buyer_name, buyer_email, seller_name, seller_email, agreement_html } = body;
-
-  if (!buyer_email || !seller_email || !agreement_html) {
-    console.error("[documenso] missing required fields");
+  if (!transaction_id || !agreement_html) {
+    await logError("documenso_upload", "missing transaction_id or agreement_html", { transaction_id });
     return FALLBACK;
   }
 
-  // No API key configured — surface fallback immediately, no network call
+  // ── Ownership check ─────────────────────────────────────────────────────────
+  const adminDb = createAdminClient();
+  const { data: tx } = await adminDb
+    .from("transactions")
+    .select("id, user_id")
+    .eq("id", transaction_id)
+    .single();
+
+  if (!tx || tx.user_id !== user.id) {
+    await logError("documenso_upload", "ownership check failed", { transaction_id, userId: user.id });
+    return FALLBACK;
+  }
+
   if (!API_KEY) {
-    console.error("[documenso] DOCUMENSO_API_KEY not set");
+    await logError("documenso_upload", "DOCUMENSO_API_KEY not configured", { transaction_id });
     return FALLBACK;
   }
+
+  const authHeader = { Authorization: `Bearer ${API_KEY}` };
 
   try {
-    const authHeaders = {
-      Authorization: `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    };
+    // ── Step 1: Upload document (multipart) ─────────────────────────────────
+    const form = new FormData();
+    form.append(
+      "file",
+      new Blob([agreement_html], { type: "text/html" }),
+      "Vehicle_Purchase_Agreement.html"
+    );
+    form.append("title", "Vehicle Purchase Agreement");
 
-    // ── Step 1: Upload document ────────────────────────────────────────────
-    // Try JSON first; if rejected as unsupported media, retry as multipart.
-    let document_id: string | null = null;
-
-    const jsonUploadRes = await fetch(`${BASE_URL}/api/v1/documents`, {
+    const uploadRes = await fetch(`${API_URL}/documents`, {
       method: "POST",
-      headers: authHeaders,
-      body: JSON.stringify({ title: "Vehicle Purchase Agreement" }),
+      headers: authHeader,
+      body: form,
     });
 
-    if (jsonUploadRes.ok) {
-      const json = await jsonUploadRes.json();
-      document_id = json.id ?? null;
-    } else if (jsonUploadRes.status === 415) {
-      // Multipart fallback
-      const form = new FormData();
-      form.append(
-        "file",
-        new Blob([Buffer.from(agreement_html, "utf-8")], { type: "text/html" }),
-        "purchase_agreement.html"
-      );
-      form.append("title", "Vehicle Purchase Agreement");
-
-      const mpRes = await fetch(`${BASE_URL}/api/v1/documents`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${API_KEY}` },
-        body: form,
-      });
-
-      if (mpRes.ok) {
-        const json = await mpRes.json();
-        document_id = json.id ?? null;
-      } else {
-        console.error("[documenso] multipart upload failed:", await mpRes.text());
-        return FALLBACK;
-      }
-    } else {
-      console.error("[documenso] upload failed:", jsonUploadRes.status, await jsonUploadRes.text());
+    if (!uploadRes.ok) {
+      const text = await uploadRes.text();
+      await logError("documenso_upload", `upload failed: ${uploadRes.status}`, { transaction_id, body: text });
       return FALLBACK;
     }
 
-    if (!document_id) {
-      console.error("[documenso] upload succeeded but no document id returned");
+    const uploadData = await uploadRes.json();
+    const documentId: string | null = uploadData.documentId ?? uploadData.id ?? null;
+
+    if (!documentId) {
+      await logError("documenso_upload", "documentId missing from upload response", { transaction_id, response: uploadData });
       return FALLBACK;
     }
 
-    // ── Step 2: Add recipients ─────────────────────────────────────────────
-    const recipientsRes = await fetch(
-      `${BASE_URL}/api/v1/documents/${document_id}/recipients`,
-      {
-        method: "POST",
-        headers: authHeaders,
-        body: JSON.stringify({
-          recipients: [
-            { name: buyer_name,  email: buyer_email,  role: "SIGNER" },
-            { name: seller_name, email: seller_email, role: "SIGNER" },
-          ],
-        }),
-      }
-    );
+    // ── Step 2: Add recipient — signer email from auth session ───────────────
+    const recipientsRes = await fetch(`${API_URL}/documents/${documentId}/recipients`, {
+      method: "POST",
+      headers: { ...authHeader, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipients: [{ name: user.email, email: user.email, role: "SIGNER" }],
+      }),
+    });
 
     if (!recipientsRes.ok) {
-      // Document created but recipients failed — still return success with the id
-      // so the UI can show "pending" and we don't lose the document reference.
-      console.error("[documenso] recipients failed:", await recipientsRes.text());
-      return NextResponse.json({ success: true, document_id });
+      const text = await recipientsRes.text();
+      await logError("documenso_recipient", `recipients failed: ${recipientsRes.status}`, { transaction_id, documentId, body: text });
+      return FALLBACK;
     }
 
-    // ── Step 3: Send for signing ───────────────────────────────────────────
-    const sendRes = await fetch(
-      `${BASE_URL}/api/v1/documents/${document_id}/send`,
-      {
-        method: "POST",
-        headers: authHeaders,
-        body: JSON.stringify({ sendEmail: true }),
-      }
-    );
+    const recipientsData = await recipientsRes.json();
+    const recipients: Array<{ recipientId?: string; id?: string }> =
+      recipientsData.recipients ?? recipientsData ?? [];
+    const recipientId: string | null =
+      recipients[0]?.recipientId ?? recipients[0]?.id ?? null;
+
+    if (!recipientId) {
+      await logError("documenso_recipient", "recipientId missing from recipients response", { transaction_id, documentId, response: recipientsData });
+      return FALLBACK;
+    }
+
+    // ── Step 3: Send document for signing ────────────────────────────────────
+    const sendRes = await fetch(`${API_URL}/documents/${documentId}/send`, {
+      method: "POST",
+      headers: { ...authHeader, "Content-Type": "application/json" },
+      body: JSON.stringify({ sendEmail: false }),
+    });
 
     if (!sendRes.ok) {
-      console.error("[documenso] send failed:", await sendRes.text());
-      // Document and recipients exist — return success so UI reflects pending state
-      return NextResponse.json({ success: true, document_id });
+      const text = await sendRes.text();
+      await logError("documenso_send", `send failed: ${sendRes.status}`, { transaction_id, documentId, body: text });
+      return FALLBACK;
     }
 
-    return NextResponse.json({ success: true, document_id });
+    // ── Step 4: Retrieve signing URL ─────────────────────────────────────────
+    const recipientRes = await fetch(
+      `${API_URL}/documents/${documentId}/recipients/${recipientId}`,
+      { method: "GET", headers: authHeader }
+    );
+
+    if (!recipientRes.ok) {
+      const text = await recipientRes.text();
+      await logError("documenso_signing_url", `recipient fetch failed: ${recipientRes.status}`, { transaction_id, documentId, recipientId, body: text });
+      return FALLBACK;
+    }
+
+    const recipientData = await recipientRes.json();
+    const signingUrl: string | null =
+      recipientData.signingUrl ?? recipientData.signing_url ?? null;
+
+    if (!signingUrl) {
+      await logError("documenso_empty_url", "signingUrl missing from recipient response", { transaction_id, documentId, recipientId, response: recipientData });
+      return FALLBACK;
+    }
+
+    return NextResponse.json({ success: true, signing_url: signingUrl });
 
   } catch (err) {
-    // Network error, timeout, or unexpected exception — always fall back
-    console.error("[documenso] unexpected error:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    await logError("documenso_upload", `unexpected error: ${message}`, { transaction_id });
     return FALLBACK;
   }
 }

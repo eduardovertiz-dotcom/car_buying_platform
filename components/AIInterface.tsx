@@ -844,11 +844,10 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
   const [showShared, setShowShared] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [signingLoading, setSigningLoading] = useState(false);
-  const [signingFallback, setSigningFallback] = useState(false);
+  const documensoEnabled = process.env.NEXT_PUBLIC_DOCUMENSO_ENABLED === "true";
 
   async function handleSendForSignature() {
     setSigningLoading(true);
-    setSigningFallback(false);
     const date = new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" });
     const agreement_html = generateAgreementHTML({
       id:           transaction.id,
@@ -865,24 +864,16 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
       const res = await fetch("/api/documenso/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          buyer_name:    transaction.buyer_name  ?? "",
-          buyer_email:   transaction.buyer_email ?? "",
-          seller_name:   transaction.seller_name ?? "",
-          seller_email:  transaction.seller_email ?? "",
-          agreement_html,
-        }),
+        body: JSON.stringify({ transaction_id: transaction.id, agreement_html }),
       });
       const data = await res.json();
-      if (data.success && data.document_id) {
-        sendForSignature(data.document_id);
+      if (data.success && data.signing_url) {
+        window.open(data.signing_url, "_blank");
       } else {
-        // fallback: true or any unexpected shape — go to manual path
-        setSigningFallback(true);
+        handleDownload();
       }
     } catch {
-      // Network failure — always fall back, never block
-      setSigningFallback(true);
+      handleDownload();
     } finally {
       setSigningLoading(false);
     }
@@ -1233,55 +1224,31 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
 
       {contract.status === "generated" ? (
         <>
-          <p className="text-sm text-[var(--foreground-muted)] mb-2">
+          <p className="text-sm text-[var(--foreground-muted)] mb-4">
             Purchase agreement generated
           </p>
-          <button onClick={handleDownload} className="text-sm text-white underline mb-4">
+
+          {/* E-signature — primary action */}
+          {documensoEnabled && (
+            <button
+              onClick={handleSendForSignature}
+              disabled={signingLoading}
+              className={`w-full text-sm font-semibold px-5 py-3 rounded-lg transition-colors mb-3 ${
+                signingLoading
+                  ? "bg-[var(--accent)]/60 text-white/60 cursor-default"
+                  : "bg-[var(--accent)] hover:opacity-90 text-white"
+              }`}
+            >
+              {signingLoading ? "Opening…" : "Sign agreement now"}
+            </button>
+          )}
+
+          {/* Download — secondary action */}
+          <button onClick={handleDownload} className="text-sm text-[var(--foreground-muted)] hover:text-white transition-colors mb-6">
             Download purchase agreement
           </button>
 
-          {/* E-signature — Documenso */}
-          <div className="mb-6">
-            {/* Fallback: signature service unavailable — manual path */}
-            {signingFallback ? (
-              <div className="border border-[var(--border)] rounded-lg px-4 py-4">
-                <p className="text-sm text-white mb-1">
-                  Signature service unavailable right now.
-                </p>
-                <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-3">
-                  Download the agreement and sign it manually to proceed.
-                  You can still complete this transaction without delay.
-                </p>
-                <button
-                  onClick={handleDownload}
-                  className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
-                >
-                  Download agreement to sign manually
-                </button>
-              </div>
-            ) : (
-              <>
-                {(!transaction.signing_status || transaction.signing_status === "not_sent") && (
-                  <button
-                    onClick={handleSendForSignature}
-                    disabled={signingLoading}
-                    className={`w-full text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left ${
-                      signingLoading
-                        ? "bg-[var(--border)] text-[var(--foreground-muted)] cursor-default"
-                        : "bg-[var(--background)] border border-[var(--border)] hover:border-white/30 text-white"
-                    }`}
-                  >
-                    {signingLoading ? "Sending…" : "Send for signature"}
-                  </button>
-                )}
-                {transaction.signing_status === "pending" && (
-                  <p className="text-sm text-[var(--foreground-muted)]">
-                    Waiting for signatures
-                  </p>
-                )}
-              </>
-            )}
-          </div>
+          <div className="mb-6" />
 
           <div className="mb-8">
             <button
