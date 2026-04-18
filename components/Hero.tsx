@@ -63,13 +63,13 @@ export default function Hero() {
           <p className="text-white/75 leading-relaxed mt-4">
             Verify the vehicle, the seller, and the risk before you pay.
           </p>
-          <div className="mt-6 mb-4">
+          <div className="mt-6 mb-2">
             <Image
               src="/hero_mobile.png"
               alt="MexGuardian vehicle verification"
               width={800}
               height={1200}
-              className="w-full h-auto object-contain"
+              className="w-full h-auto max-h-[420px] object-contain"
               priority
             />
           </div>
