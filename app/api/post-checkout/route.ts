@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -41,14 +42,16 @@ export async function GET(req: Request) {
 
   const adminDb = createAdminClient();
 
+  // Best-effort: attach user_id if the user is still logged in when Stripe redirects back
+  const { data: { user } } = await createClient().auth.getUser();
+  const upsertPayload: Record<string, unknown> = { stripe_session_id: sessionId, email, amount, plan, status: "paid" };
+  if (user?.id) upsertPayload.user_id = user.id;
+
   // Idempotent upsert — if webhook already created the row, this is a no-op on data.
   // If user revisits the URL, same upsert → same row → same redirect.
   const { data, error } = await adminDb
     .from("transactions")
-    .upsert(
-      { stripe_session_id: sessionId, email, amount, plan, status: "paid" },
-      { onConflict: "stripe_session_id" }
-    )
+    .upsert(upsertPayload, { onConflict: "stripe_session_id" })
     .select("id")
     .single();
 

@@ -107,11 +107,22 @@ export default async function TransactionPage({
         `Access denied. Transaction email (${txEmail || "none"}) does not match your account email (${authEmail}). Sign in with the email address used at checkout.`
       );
     }
+
+    // Auto-bind: ownership is confirmed — silently set user_id if not yet attached
+    if (!data.user_id) {
+      console.log("[TX_LOAD] AUTO-BIND", { id, userId: sessionUser!.id });
+      await adminDb
+        .from("transactions")
+        .update({ user_id: sessionUser!.id })
+        .eq("id", id)
+        .is("user_id", null);
+    }
   }
 
   const plan = (data.plan as "39" | "69" | null) ?? null;
   const dbStatus = (data.status as string) ?? null;
-  const hasOwner = !!data.user_id;
+  // hasOwner: true once bound, or immediately if the authenticated user just auto-bound it
+  const hasOwner = !!data.user_id || (isAuthenticated && !isAdmin);
   const adminStatus = ((data as Record<string, unknown>).admin_verification_status as AdminStatus) ?? "pending";
   const adminNotes = ((data as Record<string, unknown>).admin_verification_notes as string | null) ?? null;
 
