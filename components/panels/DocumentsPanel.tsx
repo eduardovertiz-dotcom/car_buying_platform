@@ -14,9 +14,9 @@ export default function DocumentsPanel() {
   const [uploading, setUploading] = useState<Partial<Record<DocumentType, boolean>>>({});
 
   const allUploaded =
-    documents.ine.status === "uploaded" &&
-    documents.registration.status === "uploaded" &&
-    documents.invoice.status === "uploaded";
+    documents.ine?.status === "uploaded" &&
+    documents.registration?.status === "uploaded" &&
+    documents.invoice?.status === "uploaded";
 
   const inputRefs = useRef<Record<DocumentType, HTMLInputElement | null>>({
     ine: null,
@@ -66,17 +66,32 @@ export default function DocumentsPanel() {
       const { error: uploadError } = await supabase.storage
         .from("documents")
         .upload(filePath, file, { upsert: true });
-      if (uploadError) throw uploadError;
+
+      if (uploadError) {
+        console.error("[upload] storage error:", {
+          docType,
+          filePath,
+          message: uploadError.message,
+          error: uploadError,
+        });
+        throw new Error(uploadError.message);
+      }
 
       const { data: publicUrlData } = supabase.storage
         .from("documents")
         .getPublicUrl(filePath);
-      const file_url = publicUrlData.publicUrl;
+      const file_url = publicUrlData?.publicUrl;
 
+      if (!file_url) {
+        throw new Error("[upload] getPublicUrl returned empty URL");
+      }
+
+      console.log("[upload] dispatching:", { docType, file_name: file.name, file_url });
       uploadDocument(docType, file.name, file_url);
     } catch (err) {
-      console.error("[upload] failed:", err);
-      alert("Upload failed. Please try again.");
+      const message = err instanceof Error ? err.message : "Unknown upload error";
+      console.error("[upload] failed:", message, err);
+      alert(`Upload failed: ${message}. Please try again.`);
     } finally {
       setUploading((prev) => ({ ...prev, [docType]: false }));
     }
@@ -90,7 +105,7 @@ export default function DocumentsPanel() {
 
       <ul className="flex flex-col gap-4">
         {DOCUMENT_TYPES.map((docType) => {
-          const doc = documents[docType];
+          const doc = documents[docType] ?? { status: "missing" as const };
           const isUploaded = doc.status === "uploaded";
 
           return (
