@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useTransaction } from "@/context/TransactionContext";
 import { DocumentType, DOCUMENT_LABELS } from "@/lib/types";
+import { createClient } from "@/lib/supabase/client";
 
 
 const DOCUMENT_TYPES: DocumentType[] = ["ine", "registration", "invoice"];
@@ -10,6 +11,7 @@ const DOCUMENT_TYPES: DocumentType[] = ["ine", "registration", "invoice"];
 export default function DocumentsPanel() {
   const { transaction, uploadDocument } = useTransaction();
   const { documents } = transaction;
+  const [uploading, setUploading] = useState<Partial<Record<DocumentType, boolean>>>({});
 
   const allUploaded =
     documents.ine.status === "uploaded" &&
@@ -51,13 +53,33 @@ export default function DocumentsPanel() {
   // Verify and Complete steps own their own full UI — panels must not bleed in.
   if (transaction.current_step === "verify" || transaction.current_step === "complete") return null;
 
-  function handleFileChange(docType: DocumentType, e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(docType: DocumentType, e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const mockUrl = `https://storage.mexguardian.com/mock/${transaction.id}/${docType}/${file.name}`;
-    uploadDocument(docType, file.name, mockUrl);
-    // Reset input so the same file can be re-selected if needed
     e.target.value = "";
+
+    setUploading((prev) => ({ ...prev, [docType]: true }));
+    try {
+      const supabase = createClient();
+      const filePath = `transactions/${transaction.id}/${docType}/${file.name}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("documents")
+        .upload(filePath, file, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from("documents")
+        .getPublicUrl(filePath);
+      const file_url = publicUrlData.publicUrl;
+
+      uploadDocument(docType, file.name, file_url);
+    } catch (err) {
+      console.error("[upload] failed:", err);
+      alert("Upload failed. Please try again.");
+    } finally {
+      setUploading((prev) => ({ ...prev, [docType]: false }));
+    }
   }
 
   return (
@@ -95,7 +117,9 @@ export default function DocumentsPanel() {
                   className="hidden"
                   onChange={(e) => handleFileChange(docType, e)}
                 />
-                {isUploaded ? (
+                {uploading[docType] ? (
+                  <span className="text-xs text-[var(--foreground-muted)]">Uploading…</span>
+                ) : isUploaded ? (
                   <button
                     onClick={() => inputRefs.current[docType]?.click()}
                     className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors"
