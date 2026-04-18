@@ -919,27 +919,109 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
   async function handleDownloadAll() {
     const zip = new JSZip();
 
-    // Documents — fetch from Supabase storage URLs
-    await Promise.all(
-      Object.values(transaction.documents).map(async (doc) => {
-        if (doc?.status !== "uploaded" || !doc.file_url || !doc.file_name) return;
-        try {
-          const res = await fetch(doc.file_url);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          zip.file(`documents/${doc.file_name}`, await res.arrayBuffer());
-        } catch (err) {
-          console.warn("[zip] skipping document (fetch failed):", doc.file_url, err);
-        }
-      })
+    // ── 00_overview/transaction_summary.json ─────────────────────────────────
+    const summary = {
+      id:          transaction.id,
+      exported_at: new Date().toISOString(),
+      vehicle: {
+        make:  transaction.vehicle.make,
+        model: transaction.vehicle.model,
+        year:  transaction.vehicle.year,
+        vin:   transaction.vehicle.vin   ?? null,
+        plate: transaction.vehicle.plate ?? null,
+      },
+      parties: {
+        buyer_name:   transaction.buyer_name   ?? null,
+        buyer_email:  transaction.buyer_email  ?? null,
+        seller_name:  transaction.seller_name  ?? null,
+        seller_email: transaction.seller_email ?? null,
+      },
+      sale: {
+        price:    transaction.price    ?? null,
+        location: transaction.location ?? null,
+      },
+      plan,
+      status: {
+        current_step:        transaction.current_step,
+        transaction_status:  transaction.status               ?? null,
+        verification_status: transaction.verification_status,
+        decision:            transaction.accepted_risk_level  ?? null,
+      },
+      agreement: {
+        status:         contract.status,
+        signing_status: transaction.signing_status ?? null,
+      },
+    };
+    zip.file("00_overview/transaction_summary.json", JSON.stringify(summary, null, 2));
+
+    // ── 01_verification/verification.json ─────────────────────────────────────
+    zip.file(
+      "01_verification/verification.json",
+      JSON.stringify(
+        {
+          risk_level:          risk.riskLevel,
+          confidence:          risk.confidence,
+          confidence_label:    risk.confidenceLabel,
+          issues:              risk.issues,
+          unknowns:            risk.unknowns,
+          resolved:            risk.resolved,
+          verification_status: transaction.verification_status,
+          raw_results:         transaction.verification_results ?? null,
+        },
+        null,
+        2
+      )
     );
 
-    // Metadata
-    zip.file("metadata.json", JSON.stringify(transaction, null, 2));
+    // ── 02_agreement/purchase_agreement.html ──────────────────────────────────
+    // Included only when the agreement has been generated — never a placeholder.
+    if (contract.status === "generated") {
+      const agreementDate = new Date().toLocaleDateString("es-MX", {
+        year: "numeric", month: "long", day: "numeric",
+      });
+      zip.file(
+        "02_agreement/purchase_agreement.html",
+        generateAgreementHTML({
+          id:           transaction.id,
+          date:         agreementDate,
+          vehicle:      transaction.vehicle,
+          buyer_name:   transaction.buyer_name,
+          buyer_email:  transaction.buyer_email,
+          seller_name:  transaction.seller_name,
+          seller_email: transaction.seller_email,
+          price:        transaction.price,
+          location:     transaction.location,
+        })
+      );
+    }
 
+    // ── 03_documents/ — parallel fetch from Supabase storage ─────────────────
+    // Files are named {docType}.{ext} so the type is unambiguous regardless of
+    // what the user originally named the file.
+    await Promise.all(
+      (Object.entries(transaction.documents) as [string, typeof transaction.documents.ine][]).map(
+        async ([docType, doc]) => {
+          if (doc.status !== "uploaded" || !doc.file_url || !doc.file_name) return;
+          try {
+            const res = await fetch(doc.file_url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const ext = doc.file_name.split(".").pop() ?? "bin";
+            zip.file(`03_documents/${docType}.${ext}`, await res.arrayBuffer());
+          } catch (err) {
+            console.warn("[zip] failed to fetch document", { docType, file_url: doc.file_url, err });
+          }
+        }
+      )
+    );
+
+    // ── 99_raw/metadata.json — full unfiltered snapshot for audit purposes ────
+    zip.file("99_raw/metadata.json", JSON.stringify(transaction, null, 2));
+
+    // ── Trigger download ───────────────────────────────────────────────────────
     const blob = await zip.generateAsync({ type: "blob" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `vehicle_record_${transaction.id}.zip`;
+    a.download = `mexguardian-transaction-${transaction.id}.zip`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
