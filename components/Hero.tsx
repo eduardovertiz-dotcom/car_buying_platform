@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 
 
 /* ✅ NAVBAR (NOT EXPORTED) */
@@ -91,22 +92,27 @@ export default function Hero() {
 
           </div>
 
-          {/* IMAGE — desktop only */}
-          <div className="hidden md:flex items-center pl-6 -mr-32">
-            <img
+          {/* IMAGE */}
+          <div className="hidden md:flex items-center pl-6 -mr-32 relative w-full h-full">
+            {/* Desktop */}
+            <Image
               src="/hero_desktop_ok.png"
               alt="MexGuardian vehicle verification"
-              className="w-full object-contain lg:scale-125 lg:translate-x-6 brightness-110 contrast-110"
-              fetchPriority="high"
+              width={1600}
+              height={900}
+              className="hidden md:block w-full h-auto object-contain lg:scale-125 lg:translate-x-6 brightness-110 contrast-110"
+              priority
             />
           </div>
 
-          {/* IMAGE — mobile only */}
-          <img
+          {/* Mobile */}
+          <Image
             src="/hero_mobile.png"
             alt="MexGuardian vehicle verification"
-            className="block md:hidden w-full h-auto object-cover"
-            fetchPriority="high"
+            width={800}
+            height={1200}
+            className="block md:hidden w-full h-auto object-contain"
+            priority
           />
 
         </div>
