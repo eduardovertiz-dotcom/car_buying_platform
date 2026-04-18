@@ -18,6 +18,7 @@ import {
   MaintenanceRecord,
   MaintenanceRecordType,
   DEFAULT_DOCUMENTS,
+  normalizeDocuments,
 } from "@/lib/types";
 import { mockTransactions } from "@/lib/mock";
 
@@ -64,10 +65,9 @@ function reducer(state: Transaction, action: Action): Transaction {
       const rawStatus = payload.verification_status as string;
       const baseVerificationStatus = rawStatus === "none" ? "not_started" : payload.verification_status;
 
-      // Migration: ensure all document keys exist regardless of schema age.
-      // Merging with DEFAULT_DOCUMENTS guarantees ine/registration/invoice are always present.
-      const rawDocuments = Array.isArray(payload.documents) ? {} : (payload.documents ?? {});
-      const documents = { ...DEFAULT_DOCUMENTS, ...rawDocuments };
+      // Normalize documents through the single authoritative boundary.
+      // Guarantees all keys exist and every field has the correct type.
+      const documents = normalizeDocuments(payload.documents);
 
       // Migration: fill in fields added after initial schema
       const contract = payload.contract ?? { status: "not_started" as const };

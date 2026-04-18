@@ -14,9 +14,9 @@ export default function DocumentsPanel() {
   const [uploading, setUploading] = useState<Partial<Record<DocumentType, boolean>>>({});
 
   const allUploaded =
-    documents.ine?.status === "uploaded" &&
-    documents.registration?.status === "uploaded" &&
-    documents.invoice?.status === "uploaded";
+    documents.ine.status === "uploaded" &&
+    documents.registration.status === "uploaded" &&
+    documents.invoice.status === "uploaded";
 
   const inputRefs = useRef<Record<DocumentType, HTMLInputElement | null>>({
     ine: null,
@@ -36,9 +36,9 @@ export default function DocumentsPanel() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         transactionId: transaction.id,
-        hasINE: documents.ine?.status === "uploaded",
-        hasFactura: documents.invoice?.status === "uploaded",
-        hasCirculation: documents.registration?.status === "uploaded",
+        hasINE: documents.ine.status === "uploaded",
+        hasFactura: documents.invoice.status === "uploaded",
+        hasCirculation: documents.registration.status === "uploaded",
         plate: transaction.vehicle.plate ?? transaction.vehicle.vin ?? undefined,
       }),
     })
@@ -105,7 +105,7 @@ export default function DocumentsPanel() {
 
       <ul className="flex flex-col gap-4">
         {DOCUMENT_TYPES.map((docType) => {
-          const doc = documents[docType] ?? { status: "missing" as const };
+          const doc = documents[docType];
           const isUploaded = doc.status === "uploaded";
 
           return (

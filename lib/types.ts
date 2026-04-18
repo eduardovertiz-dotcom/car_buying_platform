@@ -17,10 +17,10 @@ export type VerificationResult = {
 export type DocumentType = "ine" | "registration" | "invoice";
 
 export type DocumentItem = {
-  status: "missing" | "uploaded";
-  file_name?: string;
-  file_url?: string;
-  uploaded_at?: string;
+  status: "missing" | "pending" | "uploaded";
+  file_name: string;
+  file_url: string;
+  uploaded_at: string;
 };
 
 export type DocumentCollection = {
@@ -126,8 +126,57 @@ export const DOCUMENT_LABELS: Record<DocumentType, string> = {
   invoice: "Ownership invoice (Factura)",
 };
 
+const EMPTY_DOC: DocumentItem = { status: "missing", file_name: "", file_url: "", uploaded_at: "" };
+
 export const DEFAULT_DOCUMENTS: DocumentCollection = {
-  ine: { status: "missing" },
-  registration: { status: "missing" },
-  invoice: { status: "missing" },
+  ine:          { ...EMPTY_DOC },
+  registration: { ...EMPTY_DOC },
+  invoice:      { ...EMPTY_DOC },
 };
+
+// ─── Document normalization ───────────────────────────────────────────────────
+//
+// Single authoritative boundary that enforces DocumentItem shape.
+// Called at every data-ingestion point (HYDRATE, API responses).
+// After this runs, all downstream code can trust the shape without guards.
+
+const VALID_DOC_STATUSES = new Set<DocumentItem["status"]>(["missing", "pending", "uploaded"]);
+
+function normalizeItem(raw: unknown): DocumentItem {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { ...EMPTY_DOC };
+  }
+  const obj = raw as Record<string, unknown>;
+  const status = VALID_DOC_STATUSES.has(obj.status as DocumentItem["status"])
+    ? (obj.status as DocumentItem["status"])
+    : "missing";
+  return {
+    status,
+    file_name:   typeof obj.file_name   === "string" ? obj.file_name   : "",
+    file_url:    typeof obj.file_url    === "string" ? obj.file_url    : "",
+    uploaded_at: typeof obj.uploaded_at === "string" ? obj.uploaded_at : "",
+  };
+}
+
+export function normalizeDocuments(input: unknown): DocumentCollection {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[normalizeDocuments] invalid input — using defaults:", input);
+    }
+    return { ...DEFAULT_DOCUMENTS };
+  }
+  const obj = input as Record<string, unknown>;
+  if (process.env.NODE_ENV !== "production") {
+    const needsCorrection =
+      !obj.ine || !obj.registration || !obj.invoice ||
+      typeof (obj.ine as Record<string, unknown>)?.file_name !== "string";
+    if (needsCorrection) {
+      console.warn("[normalizeDocuments] corrected input:", input);
+    }
+  }
+  return {
+    ine:          normalizeItem(obj.ine),
+    registration: normalizeItem(obj.registration),
+    invoice:      normalizeItem(obj.invoice),
+  };
+}
