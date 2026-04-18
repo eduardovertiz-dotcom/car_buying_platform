@@ -36,9 +36,9 @@ export default function DocumentsPanel() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         transactionId: transaction.id,
-        hasINE: documents.ine.status === "uploaded",
-        hasFactura: documents.invoice.status === "uploaded",
-        hasCirculation: documents.registration.status === "uploaded",
+        hasINE: documents.ine?.status === "uploaded",
+        hasFactura: documents.invoice?.status === "uploaded",
+        hasCirculation: documents.registration?.status === "uploaded",
         plate: transaction.vehicle.plate ?? transaction.vehicle.vin ?? undefined,
       }),
     })

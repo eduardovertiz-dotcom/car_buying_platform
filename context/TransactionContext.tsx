@@ -50,45 +50,57 @@ function reducer(state: Transaction, action: Action): Transaction {
   switch (action.type) {
     case "HYDRATE": {
       const payload = action.payload;
-      // Migration: remap legacy step keys to new keys
+
+      // Migration: remap legacy step keys — no mutation, derive clean value
       const STEP_MIGRATION: Record<string, Step> = {
         understand: "upload",
         find: "check",
         evaluate: "analyze",
       };
-      const migratedStep = STEP_MIGRATION[payload.current_step as string];
-      if (migratedStep) {
-        (payload as Transaction).current_step = migratedStep;
-      }
-      // Migration: remap legacy "none" status to "not_started"
-      const verification_status =
-        (payload.verification_status as string) === "none"
-          ? "not_started"
-          : payload.verification_status;
-      // Migration: remap legacy documents array to DocumentCollection
-      const documents = Array.isArray(payload.documents)
-        ? { ...DEFAULT_DOCUMENTS }
-        : payload.documents;
-      // Migration: add missing contract/maintenance fields from older saved state
+      const current_step: Step =
+        STEP_MIGRATION[payload.current_step as string] ?? payload.current_step;
+
+      // Migration: remap legacy "none" verification status
+      const rawStatus = payload.verification_status as string;
+      const baseVerificationStatus = rawStatus === "none" ? "not_started" : payload.verification_status;
+
+      // Migration: ensure all document keys exist regardless of schema age.
+      // Merging with DEFAULT_DOCUMENTS guarantees ine/registration/invoice are always present.
+      const rawDocuments = Array.isArray(payload.documents) ? {} : (payload.documents ?? {});
+      const documents = { ...DEFAULT_DOCUMENTS, ...rawDocuments };
+
+      // Migration: fill in fields added after initial schema
       const contract = payload.contract ?? { status: "not_started" as const };
       const maintenance = payload.maintenance ?? { records: [] };
       const share = payload.share ?? { enabled: false };
-      // Completed states are preserved; processing states reset to prevent refresh dead-end
+
+      // Processing states reset to prevent stuck spinner on refresh
       const finalVerificationStatus =
-        payload.verification_status === "basic_complete" ||
-        payload.verification_status === "professional_complete"
-          ? payload.verification_status
-          : payload.verification_status === "basic_processing" ||
-            payload.verification_status === "professional_processing"
-          ? "not_started"
-          : verification_status;
-      // Invariant: verification_results are only valid when verification is complete
+        baseVerificationStatus === "basic_complete" ||
+        baseVerificationStatus === "professional_complete"
+          ? baseVerificationStatus
+          : baseVerificationStatus === "basic_processing" ||
+            baseVerificationStatus === "professional_processing"
+          ? ("not_started" as const)
+          : baseVerificationStatus;
+
+      // Verification results are only valid when status is complete
       const finalVerificationResults =
         finalVerificationStatus === "basic_complete" ||
         finalVerificationStatus === "professional_complete"
           ? payload.verification_results
           : null;
-      return { ...payload, verification_status: finalVerificationStatus, verification_results: finalVerificationResults, documents, contract, maintenance, share };
+
+      return {
+        ...payload,
+        current_step,
+        verification_status: finalVerificationStatus,
+        verification_results: finalVerificationResults,
+        documents,
+        contract,
+        maintenance,
+        share,
+      };
     }
 
     case "ADVANCE_STEP": {

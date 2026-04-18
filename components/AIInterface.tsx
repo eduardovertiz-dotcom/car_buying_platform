@@ -919,45 +919,19 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
   async function handleDownloadAll() {
     const zip = new JSZip();
 
-    type DocEntry = { fileData?: string; name?: string };
-    type MaintenanceEntry = { fileData?: string; fileName?: string };
-
-    // Documents — legacy base64 path
-    (Object.values(transaction.documents) as DocEntry[]).forEach((doc) => {
-      if (doc?.fileData) {
-        zip.file(
-          `documents/${doc.name}`,
-          doc.fileData.split(",")[1],
-          { base64: true }
-        );
-      }
-    });
-
-    // Documents — storage URL path
-    type StorageDoc = { status?: string; file_url?: string; file_name?: string };
+    // Documents — fetch from Supabase storage URLs
     await Promise.all(
-      (Object.values(transaction.documents) as StorageDoc[]).map(async (doc) => {
+      Object.values(transaction.documents).map(async (doc) => {
         if (doc?.status !== "uploaded" || !doc.file_url || !doc.file_name) return;
         try {
           const res = await fetch(doc.file_url);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          zip.file(`03_documents/${doc.file_name}`, await res.arrayBuffer());
+          zip.file(`documents/${doc.file_name}`, await res.arrayBuffer());
         } catch (err) {
-          console.warn("[zip] failed to fetch document:", doc.file_url, err);
+          console.warn("[zip] skipping document (fetch failed):", doc.file_url, err);
         }
       })
     );
-
-    // Maintenance records
-    (transaction.maintenance.records as MaintenanceEntry[]).forEach((r) => {
-      if (r.fileData) {
-        zip.file(
-          `maintenance/${r.fileName}`,
-          r.fileData.split(",")[1],
-          { base64: true }
-        );
-      }
-    });
 
     // Metadata
     zip.file("metadata.json", JSON.stringify(transaction, null, 2));
