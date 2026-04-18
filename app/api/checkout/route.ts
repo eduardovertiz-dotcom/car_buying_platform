@@ -5,9 +5,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(req: Request) {
   try {
-    const { plan } = await req.json();
+    const { plan, transaction_id } = await req.json();
 
-    console.log("CHECKOUT API HIT", { plan });
+    console.log("[checkout]", { plan, transaction_id });
 
     if (plan !== "39" && plan !== "69") {
       throw new Error(`INVALID PLAN: ${plan}`);
@@ -26,6 +26,9 @@ export async function POST(req: Request) {
       throw new Error("INVALID NEXT_PUBLIC_BASE_URL");
     }
 
+    const metadata: Record<string, string> = { plan };
+    if (transaction_id) metadata.transaction_id = transaction_id;
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
@@ -41,9 +44,11 @@ export async function POST(req: Request) {
           quantity: 1,
         },
       ],
-      metadata: { plan },
+      metadata,
       success_url: `${baseUrl}/api/post-checkout?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/#pricing`,
+      cancel_url: transaction_id
+        ? `${baseUrl}/transaction/${transaction_id}`
+        : `${baseUrl}/#pricing`,
     });
 
     console.log("STRIPE SESSION CREATED", session.id);

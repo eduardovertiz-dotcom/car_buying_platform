@@ -84,7 +84,7 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "69" }),
+        body: JSON.stringify({ plan: "69", transaction_id: transaction.id }),
       });
       if (!res.ok) throw new Error("UPGRADE CHECKOUT FAILED");
       const { url } = await res.json();

@@ -19,8 +19,6 @@ export async function GET(req: Request) {
     return NextResponse.redirect(baseUrl);
   }
 
-  console.log("[post-checkout] session_id:", sessionId);
-
   let session: Stripe.Checkout.Session;
   try {
     session = await stripe.checkout.sessions.retrieve(sessionId);
@@ -29,11 +27,13 @@ export async function GET(req: Request) {
     return NextResponse.redirect(baseUrl);
   }
 
-  const plan   = session.metadata?.plan ?? null;
-  const email  = session.customer_details?.email ?? null;
-  const amount = session.amount_total ?? 0;
+  const plan           = session.metadata?.plan ?? null;
+  const transactionId  = session.metadata?.transaction_id ?? null;
+  const email          = session.customer_details?.email ?? null;
+  const amount         = session.amount_total ?? 0;
+  const isUpgrade      = !!transactionId;
 
-  console.log("[post-checkout] session retrieved:", { sessionId, plan, email, amount });
+  console.log("[post-checkout]", { transaction_id: transactionId, isUpgrade, plan, email, amount });
 
   if (!plan) {
     console.error("[post-checkout] no plan in session metadata:", sessionId);
@@ -42,13 +42,38 @@ export async function GET(req: Request) {
 
   const adminDb = createAdminClient();
 
-  // Best-effort: attach user_id if the user is still logged in when Stripe redirects back
+  // Best-effort: attach user_id if session is still active
   const { data: { user } } = await createClient().auth.getUser();
-  const upsertPayload: Record<string, unknown> = { stripe_session_id: sessionId, email, amount, plan, status: "paid" };
+
+  if (isUpgrade) {
+    // ── UPGRADE: mutate the existing transaction, never create a new one ─────
+    const updatePayload: Record<string, unknown> = { plan: "69", status: "paid" };
+    if (user?.id) updatePayload.user_id = user.id;
+
+    const { error } = await adminDb
+      .from("transactions")
+      .update(updatePayload)
+      .eq("id", transactionId);
+
+    if (error) {
+      console.error("[post-checkout] upgrade update failed:", error.message);
+      return NextResponse.redirect(baseUrl);
+    }
+
+    console.log("[post-checkout] transaction upgraded:", transactionId);
+    return NextResponse.redirect(`${baseUrl}/transaction/${transactionId}`);
+  }
+
+  // ── NEW PURCHASE: idempotent upsert on stripe_session_id ─────────────────
+  const upsertPayload: Record<string, unknown> = {
+    stripe_session_id: sessionId,
+    email,
+    amount,
+    plan,
+    status: "paid",
+  };
   if (user?.id) upsertPayload.user_id = user.id;
 
-  // Idempotent upsert — if webhook already created the row, this is a no-op on data.
-  // If user revisits the URL, same upsert → same row → same redirect.
   const { data, error } = await adminDb
     .from("transactions")
     .upsert(upsertPayload, { onConflict: "stripe_session_id" })

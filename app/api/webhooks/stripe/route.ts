@@ -1,12 +1,12 @@
 /**
  * POST /api/webhooks/stripe
  *
- * Receives Stripe events and ensures transactions are created in the DB
- * even if the user never completes the redirect back to the success page.
+ * Reliability backstop — ensures transactions exist in the DB even if the
+ * user never completes the browser redirect back to the success page.
  *
- * This is the reliability backstop — the success page upsert remains
- * in place and is idempotent (onConflict: stripe_session_id).
- * Whichever fires first wins; the second is a no-op.
+ * Two modes:
+ *   UPGRADE  — metadata.transaction_id present → UPDATE existing row to plan 69
+ *   NEW      — no transaction_id → idempotent upsert on stripe_session_id
  */
 
 import { NextResponse } from "next/server";
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
   }
 
-  // Raw body is required for signature verification — do NOT use req.json()
+  // Raw body required for signature verification
   const rawBody = await req.text();
 
   let event: Stripe.Event;
@@ -45,52 +45,65 @@ export async function POST(req: Request) {
 
   // ── Handle checkout.session.completed ────────────────────────────────────
   if (event.type === "checkout.session.completed") {
-    console.log("CHECKOUT COMPLETED");
     const session = event.data.object as Stripe.Checkout.Session;
 
     const stripe_session_id = session.id;
     const email             = session.customer_details?.email ?? null;
     const amount            = session.amount_total ?? 0;
     const plan              = session.metadata?.plan ?? null;
+    const transaction_id    = session.metadata?.transaction_id ?? null;
+    const isUpgrade         = !!transaction_id;
 
-    console.log("[webhook] checkout.session.completed", {
-      stripe_session_id,
-      plan,
-      email,
-      amount,
-    });
+    console.log("[webhook]", { session_id: stripe_session_id, plan, transaction_id, isUpgrade });
 
     if (!plan) {
-      console.error("[webhook] missing plan metadata on session:", stripe_session_id);
-    }
-    if (!email) {
-      console.error("[webhook] missing customer email on session:", stripe_session_id);
+      console.error("[webhook] missing plan metadata:", stripe_session_id);
     }
 
     const adminDb = createAdminClient();
 
-    // Upsert is idempotent — if the success page already ran, this is a no-op.
-    // If the user closed their browser before the redirect, this creates the row.
-    const { error } = await adminDb
-      .from("transactions")
-      .upsert(
-        { stripe_session_id, email, amount, plan, status: "paid" },
-        { onConflict: "stripe_session_id" }
-      );
+    if (isUpgrade) {
+      // ── UPGRADE: update existing transaction, never create a new row ───────
+      const { error } = await adminDb
+        .from("transactions")
+        .update({ plan: "69", status: "paid" })
+        .eq("id", transaction_id);
 
-    if (error) {
-      console.error("[webhook] upsert failed:", {
-        stripe_session_id,
-        code: error.code,
-        message: error.message,
-      });
-      // Return 500 so Stripe retries the webhook
-      return NextResponse.json({ error: "DB upsert failed" }, { status: 500 });
+      if (error) {
+        console.error("[webhook] upgrade update failed:", {
+          transaction_id,
+          code: error.code,
+          message: error.message,
+        });
+        return NextResponse.json({ error: "DB update failed" }, { status: 500 });
+      }
+
+      console.log("[webhook] transaction upgraded OK:", transaction_id);
+    } else {
+      // ── NEW PURCHASE: idempotent upsert on stripe_session_id ──────────────
+      if (!email) {
+        console.error("[webhook] missing customer email:", stripe_session_id);
+      }
+
+      const { error } = await adminDb
+        .from("transactions")
+        .upsert(
+          { stripe_session_id, email, amount, plan, status: "paid" },
+          { onConflict: "stripe_session_id" }
+        );
+
+      if (error) {
+        console.error("[webhook] upsert failed:", {
+          stripe_session_id,
+          code: error.code,
+          message: error.message,
+        });
+        return NextResponse.json({ error: "DB upsert failed" }, { status: 500 });
+      }
+
+      console.log("[webhook] transaction upserted OK:", stripe_session_id);
     }
-
-    console.log("[webhook] transaction upserted OK:", stripe_session_id);
   }
 
-  // Acknowledge all other event types so Stripe doesn't retry them
   return NextResponse.json({ received: true });
 }
