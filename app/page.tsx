@@ -399,32 +399,35 @@ export default function Home() {
                 <div className="flex flex-col bg-white/[0.06] border border-[var(--accent)] shadow-[0_0_32px_0_rgba(99,102,241,0.22)] rounded-xl px-6 py-8 lg:px-8 lg:py-10 w-full max-w-[460px] scale-105 ring-1 ring-[var(--accent)]/40">
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest">Full Protection Verification</p>
-                    <span className="text-[10px] font-medium uppercase tracking-widest text-[var(--accent)] bg-[var(--accent)]/10 px-2 py-0.5 rounded-full">Most buyers choose this</span>
+                    <span className="text-[10px] font-medium uppercase tracking-widest text-[var(--accent)] bg-[var(--accent)]/10 px-2 py-0.5 rounded-full">Most buyers choose this option</span>
                   </div>
-                  <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
-                    Verify the seller, documents, and fraud risk before you send money.
+                  <p className="text-sm text-white/70 leading-relaxed mb-6">
+                    Verify seller, documents, and fraud risk before you commit.
                   </p>
 
                   <div className="flex items-end gap-1.5 mb-2">
                     <span className="text-[3.5rem] lg:text-[4rem] font-semibold text-white leading-none tracking-tight">${PRICING.pro}</span>
-                    <span className="text-sm text-[var(--foreground-muted)] mb-2">one-time</span>
+                    <div className="flex flex-col mb-2">
+                      <span className="text-sm text-white/90 font-medium leading-tight">one-time</span>
+                      <span className="text-xs text-[var(--foreground-muted)]">payment</span>
+                    </div>
                   </div>
 
                   <div className="h-px bg-white/[0.08] mb-6" />
 
                   <ul className="flex flex-col gap-3 mb-6 lg:mb-8 flex-1">
                     {[
-                      "Everything in Basic",
-                      "Seller identity validation",
-                      "Document verification (factura, ID consistency)",
-                      "SAT, REPUVE, OCRA, and debt analysis",
-                      "Cross-checks across multiple sources",
-                      "Human expert review and validation",
-                      "Structured risk assessment with clear recommendation",
+                      "Includes all basic checks",
+                      "Verify seller identity",
+                      "Validate official documents",
+                      "SAT, REPUVE, OCRA, and debt checks",
+                      "Cross-referenced across multiple sources",
+                      "Expert review and validation",
+                      "Clear go / no-go recommendation",
                     ].map((f) => (
                       <li key={f} className="flex items-start gap-3">
-                        <span className="shrink-0 mt-0.5 text-[var(--foreground-muted)] opacity-70"><IconCheck /></span>
-                        <span className="text-sm text-[var(--foreground-muted)] leading-relaxed">{f}</span>
+                        <span className="shrink-0 mt-0.5 text-[var(--accent)] opacity-90"><IconCheck /></span>
+                        <span className="text-sm text-white/90 font-medium leading-relaxed">{f}</span>
                       </li>
                     ))}
                   </ul>
