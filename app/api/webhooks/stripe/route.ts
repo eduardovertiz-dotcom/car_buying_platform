@@ -12,6 +12,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logError } from "@/lib/logError";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -63,18 +64,26 @@ export async function POST(req: Request) {
     const adminDb = createAdminClient();
 
     if (isUpgrade) {
-      // ── UPGRADE: update existing transaction, never create a new row ───────
+      // ── UPGRADE: idempotency guard — skip if already on plan 69 ──────────
+      const { data: existing } = await adminDb
+        .from("transactions")
+        .select("plan")
+        .eq("id", transaction_id)
+        .single();
+
+      if (existing?.plan === "69") {
+        console.log("[webhook] already upgraded, skipping:", transaction_id);
+        return NextResponse.json({ received: true });
+      }
+
       const { error } = await adminDb
         .from("transactions")
         .update({ plan: "69", status: "paid" })
         .eq("id", transaction_id);
 
       if (error) {
-        console.error("[webhook] upgrade update failed:", {
-          transaction_id,
-          code: error.code,
-          message: error.message,
-        });
+        console.error("[webhook] upgrade update failed:", { transaction_id, code: error.code, message: error.message });
+        await logError("webhook_upgrade", error.message, { transaction_id, stripe_session_id, code: error.code });
         return NextResponse.json({ error: "DB update failed" }, { status: 500 });
       }
 
@@ -93,11 +102,8 @@ export async function POST(req: Request) {
         );
 
       if (error) {
-        console.error("[webhook] upsert failed:", {
-          stripe_session_id,
-          code: error.code,
-          message: error.message,
-        });
+        console.error("[webhook] upsert failed:", { stripe_session_id, code: error.code, message: error.message });
+        await logError("webhook_new_purchase", error.message, { stripe_session_id, plan, code: error.code });
         return NextResponse.json({ error: "DB upsert failed" }, { status: 500 });
       }
 

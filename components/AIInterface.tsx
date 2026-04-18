@@ -835,6 +835,8 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
     });
     generateContract();
     track("agreement_generated");
+    // Write agreement_generated_at to DB (best-effort, non-blocking)
+    fetch(`/api/transactions/${transaction.id}/agreement`, { method: "POST" }).catch(() => {});
   }
 
   const [showForm, setShowForm] = useState(false);

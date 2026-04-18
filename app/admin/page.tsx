@@ -53,7 +53,7 @@ export default async function AdminQueuePage() {
   const manualMode = isManualMode();
   const adminDb = createAdminClient();
 
-  // Fetch pending queue regardless of mode — page still loads, just shows notice
+  // Fetch pending verification queue
   const { data: rows, error } = await adminDb
     .from("transactions")
     .select("id, created_at, email, documents")
@@ -62,6 +62,13 @@ export default async function AdminQueuePage() {
     .order("created_at", { ascending: true });
 
   const transactions = error ? [] : (rows ?? []);
+
+  // Fetch all transactions for the full list
+  const { data: allRows } = await adminDb
+    .from("transactions")
+    .select("id, created_at, email, status, plan, decision")
+    .order("created_at", { ascending: false })
+    .limit(100);
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -166,6 +173,45 @@ export default async function AdminQueuePage() {
             </p>
           </>
         )}
+        {/* All transactions */}
+        <div className="mt-12">
+          <h2 className="text-xs uppercase tracking-widest text-[var(--foreground-muted)] mb-4">
+            All transactions
+          </h2>
+          {(!allRows || allRows.length === 0) ? (
+            <p className="text-sm text-[var(--foreground-muted)]">No transactions found.</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-[80px_1fr_80px_60px_100px] gap-x-4 px-3 mb-2">
+                <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">ID</p>
+                <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">Email</p>
+                <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">Status</p>
+                <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">Plan</p>
+                <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">Created</p>
+              </div>
+              <ul className="border-t border-[var(--border)] divide-y divide-[var(--border)]">
+                {(allRows ?? []).map((tx) => (
+                  <li key={tx.id}>
+                    <Link
+                      href={`/transaction/${tx.id}`}
+                      className="grid grid-cols-[80px_1fr_80px_60px_100px] gap-x-4 items-center px-3 py-3 hover:bg-white/[0.03] transition-colors rounded"
+                    >
+                      <span className="text-xs font-mono text-white">{tx.id.slice(0, 8).toUpperCase()}</span>
+                      <span className="text-xs text-[var(--foreground-muted)] truncate">{tx.email ?? "—"}</span>
+                      <span className="text-xs text-[var(--foreground-muted)]">{tx.status ?? "—"}</span>
+                      <span className="text-xs text-[var(--foreground-muted)]">{tx.plan ? `$${tx.plan}` : "—"}</span>
+                      <span className="text-xs text-[var(--foreground-muted)]">
+                        {tx.created_at ? relativeTime(tx.created_at) : "—"}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-[var(--foreground-muted)] mt-3">{allRows?.length ?? 0} total</p>
+            </>
+          )}
+        </div>
+
       </div>
     </main>
   );
