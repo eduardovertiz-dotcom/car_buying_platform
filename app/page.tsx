@@ -190,13 +190,12 @@ export default function Home() {
               <p className="text-sm text-white/75 mt-3">Most scams happen after everything looks legitimate.</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
               {[
-                { step: "01", label: "Prepare", description: "Upload your documents and basic details to start the verification." },
-                { step: "02", label: "Review", description: "We verify the vehicle and ownership across official records." },
-                { step: "03", label: "Analyze", description: "We identify hidden risks, inconsistencies, and signs of fraud before they become your problem." },
-                { step: "04", label: "Verify", description: "We validate identity, documents, and key risk factors — with expert review." },
-                { step: "05", label: "Complete", description: "Finalize your purchase securely with a signed agreement." },
+                { step: "01", label: "Upload",   description: "Add vehicle details and upload key documents to begin verification." },
+                { step: "02", label: "Check",    description: "We cross-check official records like REPUVE, liens, and tax status." },
+                { step: "03", label: "Analyze",  description: "We detect inconsistencies, risks, and potential fraud signals." },
+                { step: "04", label: "Complete", description: "Receive your full report and finalize your decision with confidence." },
               ].map(({ step, label, description }) => (
                 <div key={step} className="bg-white/[0.04] border border-white/[0.15] rounded-xl px-5 py-5 lg:px-6 lg:py-6">
                   <p className="text-xs font-mono text-[var(--foreground-muted)] mb-3">{step}</p>
