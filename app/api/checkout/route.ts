@@ -13,6 +13,8 @@ export async function POST(req: Request) {
       throw new Error(`INVALID PLAN: ${plan}`);
     }
 
+    const validPlan = plan as "39" | "69";
+
     const PRICE_MAP: Record<"39" | "69", number> = {
       "39": 3900,
       "69": 6900,
@@ -32,9 +34,9 @@ export async function POST(req: Request) {
           price_data: {
             currency: "usd",
             product_data: {
-              name: plan === "69" ? "Full Protection" : "Basic Report",
+              name: validPlan === "69" ? "Full Protection" : "Basic Report",
             },
-            unit_amount: PRICE_MAP[plan],
+            unit_amount: PRICE_MAP[validPlan],
           },
           quantity: 1,
         },
