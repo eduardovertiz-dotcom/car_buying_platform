@@ -245,11 +245,20 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
     }
 
     if (process.env.NODE_ENV !== "development") {
-      const res = await fetch(`/api/transactions/${transaction.id}/decision`, {
-        method: "POST",
-      });
-      if (!res.ok) {
-        console.error("DECISION API FAILED", res.status);
+      try {
+        const res = await fetch(`/api/transactions/${transaction.id}/decision`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ decision: "proceed" }),
+        });
+        if (!res.ok) {
+          console.error("DECISION API FAILED", res.status);
+          alert("Something went wrong. Please try again.");
+          return;
+        }
+      } catch (err) {
+        console.error("DECISION FETCH ERROR", err);
+        alert("Something went wrong. Please try again.");
         return;
       }
     }

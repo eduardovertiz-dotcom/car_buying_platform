@@ -1,32 +1,28 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: { id: string } }
 ) {
   const { id } = params;
+  const body = await req.json().catch(() => ({}));
+  const decision = body.decision ?? "proceed";
 
-  if (process.env.NODE_ENV === "development") {
-    console.log("API: DECISION_RECORDED", id);
-  }
+  console.log("[decision]", { id, decision });
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const adminDb = createAdminClient();
 
-  const { error } = await supabase
+  const { error } = await adminDb
     .from("transactions")
-    .update({ status: "decision_made", accepted_at: new Date().toISOString() })
+    .update({ status: "decision_made", decision })
     .eq("id", id);
 
   if (error) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("API: DECISION ERROR", error);
-    }
+    console.error("[decision] DB error:", { id, code: error.code, message: error.message });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  console.log("[decision] recorded OK:", id);
   return NextResponse.json({ success: true });
 }
