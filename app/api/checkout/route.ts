@@ -13,6 +13,10 @@ export async function POST(req: Request) {
       throw new Error(`INVALID PLAN: ${plan}`);
     }
 
+    if (plan === "69" && !transaction_id) {
+      throw new Error("UPGRADE REQUIRES TRANSACTION_ID");
+    }
+
     const validPlan = plan as "39" | "69";
 
     const PRICE_MAP: Record<"39" | "69", number> = {
