@@ -100,11 +100,11 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
   // No real input — do not render any risk output
   if (!hasMinimumInput) {
     return (
-      <div className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold text-white mb-2 leading-snug">
+      <div className="flex flex-col gap-5">
+        <h2 className="text-2xl font-semibold text-white leading-snug">
           We need more information.
         </h2>
-        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed">
+        <p className="text-[18px] text-white/75 leading-relaxed">
           Add a VIN or plate number, or upload at least one document to analyze
           this vehicle.
         </p>
@@ -118,25 +118,39 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
     );
   }
 
+  // Verdict — derived from existing risk data, no logic change
+  const verdictIsClean = risk.issues.length === 0 && risk.unknowns.length === 0;
+  const verdictText = verdictIsClean ? "Safe to proceed" : "Proceed with caution";
+
   return (
     <>
+      {/* ── Verdict block ─────────────────────────────────────────── */}
+      <div className="mb-8">
+        <p className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
+          Is this deal safe?
+        </p>
+        <p className={`text-[22px] font-semibold leading-snug ${verdictIsClean ? "text-green-400" : "text-amber-400"}`}>
+          {verdictText}
+        </p>
+      </div>
+
       {/* Risk block — single source of truth */}
       <RiskBlock data={risk} />
 
       {/* Section header */}
-      <div className="mb-4">
+      <div className="mb-6">
         <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-2">
           Risk analysis
         </p>
-        <p className="text-sm text-white/75 leading-relaxed">
+        <p className="text-[18px] text-white/75 leading-relaxed">
           We analyzed the vehicle, ownership, and records for potential issues.
         </p>
       </div>
 
       {/* No-documents notice */}
       {uploadedCount === 0 && (
-        <div className="border border-[var(--border)] rounded-lg px-4 py-3 mb-6">
-          <p className="text-xs text-[var(--foreground-muted)] leading-relaxed">
+        <div className="border border-[var(--border)] rounded-lg px-4 py-4 mb-8">
+          <p className="text-sm text-white/70 leading-relaxed">
             No documents were provided. Results are based on vehicle data only.
           </p>
         </div>
@@ -145,19 +159,19 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
       {/* Issues — dynamic, only when present */}
       {risk.issues.length > 0 && (
         <>
-          <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-2">
+          <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
             Issues detected
           </p>
-          <div className="flex flex-col gap-2.5 mb-6">
+          <div className="flex flex-col gap-3 mb-8">
             {risk.issues.map((issue) => (
               <div
                 key={issue}
-                className="flex items-start gap-3 bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-3"
+                className="flex items-start gap-3 bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-3.5"
               >
                 <span className="shrink-0 mt-0.5">
                   <IconWarning />
                 </span>
-                <p className="text-sm text-white">{issue}</p>
+                <p className="text-[17px] text-white leading-relaxed">{issue}</p>
               </div>
             ))}
           </div>
@@ -167,19 +181,19 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
       {/* Unknowns — dynamic, only when present */}
       {risk.unknowns.length > 0 && (
         <>
-          <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-2">
+          <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
             Unknowns
           </p>
-          <div className="flex flex-col gap-2.5 mb-6">
+          <div className="flex flex-col gap-3 mb-8">
             {risk.unknowns.map((unknown) => (
               <div
                 key={unknown}
-                className="flex items-start gap-3 bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-3"
+                className="flex items-start gap-3 bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-3.5"
               >
                 <span className="shrink-0 mt-0.5">
                   <IconInfo />
                 </span>
-                <p className="text-sm text-[var(--foreground-muted)]">{unknown}</p>
+                <p className="text-[17px] text-white/80 leading-relaxed">{unknown}</p>
               </div>
             ))}
           </div>
@@ -189,12 +203,12 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
       {/* Resolved — dynamic, only when present */}
       {risk.resolved.length > 0 && (
         <>
-          <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-2">
+          <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
             Resolved
           </p>
-          <div className="flex flex-col gap-1.5 mb-6">
+          <div className="flex flex-col gap-2.5 mb-8">
             {risk.resolved.map((item) => (
-              <p key={item} className="text-xs text-green-400 leading-relaxed">
+              <p key={item} className="text-sm text-green-400 leading-relaxed">
                 ✓ {item}
               </p>
             ))}
@@ -203,11 +217,11 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
       )}
 
       {/* Summary block */}
-      <div className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-4 mb-6">
-        <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-2">
+      <div className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-5 py-5 mb-8">
+        <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
           What this means
         </p>
-        <p className="text-sm text-white/75 leading-relaxed">
+        <p className="text-[18px] text-white/80 leading-relaxed">
           {risk.issues.length > 0
             ? "These issues should be resolved before proceeding. Some risks may not be fully verifiable with automated checks alone."
             : risk.unknowns.length > 0
@@ -218,11 +232,11 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
 
       {/* Upgrade trigger — Basic plan only */}
       {showUpgrade && (
-        <div className="border border-white/[0.12] rounded-lg px-4 py-5 mb-6">
-          <p className="text-sm font-medium text-white mb-2">
+        <div className="border border-white/[0.12] rounded-lg px-5 py-6 mb-8">
+          <p className="text-base font-medium text-white mb-2">
             Get full verification before you proceed
           </p>
-          <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-4">
+          <p className="text-[17px] text-white/70 leading-relaxed mb-4">
             Upgrade to include expert review, deeper document validation, and
             cross-checks across additional sources.
           </p>
@@ -233,7 +247,7 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
           >
             {upsellLoading ? "Redirecting…" : "Upgrade to full verification"}
           </button>
-          <p className="text-xs text-[var(--foreground-muted)] mt-3">
+          <p className="text-sm text-white/60 mt-3">
             Recommended before completing the purchase.
           </p>
         </div>
