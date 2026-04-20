@@ -45,34 +45,61 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-6">
+    <main
+      className="min-h-screen flex items-center justify-center px-6"
+      style={{ background: "#0F0F0F" }}
+    >
       <div className="w-full max-w-sm">
-        <h1 className="text-xl font-semibold text-white mb-2">
+        {/* Wordmark */}
+        <div className="mb-8">
+          <span style={{ fontSize: 20, fontWeight: 700, color: "#fff", letterSpacing: "-0.01em" }}>
+            Mex<span style={{ color: "#B4531A" }}>Guardian</span>
+          </span>
+        </div>
+
+        <h1 style={{ fontSize: 22, fontWeight: 600, color: "#fff", marginBottom: 8, lineHeight: 1.3 }}>
           Access your MexGuardian record
         </h1>
-        <p className="text-sm text-[var(--foreground-muted)] mb-8">
+        <p style={{ fontSize: 14, color: "rgba(255,255,255,0.45)", marginBottom: 32 }}>
           Sign in to save and access your verified transactions.
         </p>
 
         {/* Primary: Google */}
         <button
           onClick={handleGoogle}
-          className="w-full flex items-center justify-center gap-3 bg-[var(--accent)] text-white text-sm font-medium px-5 py-3 rounded-lg hover:bg-blue-600 transition-colors"
+          style={{
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            background: "#B4531A",
+            color: "#fff",
+            fontSize: 14,
+            fontWeight: 600,
+            padding: "13px 20px",
+            borderRadius: 10,
+            border: "none",
+            cursor: "pointer",
+            transition: "opacity .15s",
+          }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = "0.88")}
+          onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
         >
           <GoogleIcon />
           Continue with Google
         </button>
 
         {/* Divider */}
-        <div className="flex items-center gap-3 my-6">
-          <div className="flex-1 h-px bg-[var(--border)]" />
-          <span className="text-xs text-[var(--foreground-muted)] opacity-60">or</span>
-          <div className="flex-1 h-px bg-[var(--border)]" />
+        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "24px 0" }}>
+          <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.10)" }} />
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.30)" }}>or</span>
+          <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.10)" }} />
         </div>
 
         {/* Secondary: Email */}
         {sent ? (
-          <p className="text-sm text-white/70 text-center">
+          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.60)", textAlign: "center" }}>
             Check your email for a secure sign-in link.
           </p>
         ) : (
@@ -82,11 +109,43 @@ export default function LoginPage() {
               placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-transparent border border-[var(--border)] text-white text-sm rounded-lg px-4 py-3 mb-3 placeholder:text-[var(--foreground-muted)] focus:outline-none focus:border-white/30"
+              style={{
+                width: "100%",
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.14)",
+                color: "#fff",
+                fontSize: 14,
+                borderRadius: 10,
+                padding: "12px 16px",
+                marginBottom: 10,
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+              onFocus={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.30)")}
+              onBlur={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.14)")}
             />
             <button
               onClick={handleMagicLink}
-              className="w-full border border-[var(--border)] text-[var(--foreground-muted)] text-sm font-medium px-5 py-3 rounded-lg hover:border-white/30 hover:text-white transition-colors"
+              style={{
+                width: "100%",
+                border: "1px solid rgba(255,255,255,0.14)",
+                color: "rgba(255,255,255,0.55)",
+                fontSize: 14,
+                fontWeight: 500,
+                padding: "12px 20px",
+                borderRadius: 10,
+                background: "transparent",
+                cursor: "pointer",
+                transition: "border-color .15s, color .15s",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = "rgba(255,255,255,0.30)";
+                e.currentTarget.style.color = "#fff";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = "rgba(255,255,255,0.14)";
+                e.currentTarget.style.color = "rgba(255,255,255,0.55)";
+              }}
             >
               Use email instead
             </button>
@@ -94,23 +153,13 @@ export default function LoginPage() {
         )}
 
         {/* Legal */}
-        <p className="text-xs text-[var(--foreground-muted)] opacity-50 text-center mt-6 leading-relaxed">
+        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.28)", textAlign: "center", marginTop: 24, lineHeight: 1.6 }}>
           By continuing, you agree to our{" "}
-          <a
-            href="/terms"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline hover:opacity-80 transition-opacity"
-          >
+          <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: "rgba(255,255,255,0.45)", textDecoration: "underline" }}>
             Terms
           </a>{" "}
           and{" "}
-          <a
-            href="/privacy"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline hover:opacity-80 transition-opacity"
-          >
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "rgba(255,255,255,0.45)", textDecoration: "underline" }}>
             Privacy Policy
           </a>
           .
