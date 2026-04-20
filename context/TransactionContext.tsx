@@ -71,7 +71,12 @@ function reducer(state: Transaction, action: Action): Transaction {
       // Guarantees all keys exist and every field has the correct type.
       const documents = normalizeDocuments(payload.documents);
 
-      // Migration: fill in fields added after initial schema
+      // Migration: fill in fields added after initial schema, or corrupted by bad DB hydration
+      const vehicle = (payload.vehicle && typeof payload.vehicle.year === "number")
+        ? payload.vehicle
+        : { make: "", model: "", year: new Date().getFullYear() };
+      const activity_log = Array.isArray(payload.activity_log) ? payload.activity_log : [];
+      const checklist_progress = typeof payload.checklist_progress === "number" ? payload.checklist_progress : 0;
       const contract = payload.contract ?? { status: "not_started" as const };
       const maintenance = payload.maintenance ?? { records: [] };
       const share = payload.share ?? { enabled: false };
@@ -96,6 +101,9 @@ function reducer(state: Transaction, action: Action): Transaction {
       return {
         ...payload,
         current_step,
+        vehicle,
+        activity_log,
+        checklist_progress,
         verification_status: finalVerificationStatus,
         verification_results: finalVerificationResults,
         documents,

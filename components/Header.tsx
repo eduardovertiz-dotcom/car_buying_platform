@@ -46,8 +46,8 @@ export default function Header({ plan }: { plan: "39" | "69" | null }) {
           </div>
           <div className="text-right">
             <p className="text-xs text-[var(--foreground-muted)]">
-              {transaction.vehicle.year} {transaction.vehicle.make}{" "}
-              {transaction.vehicle.model}
+              {transaction.vehicle?.year} {transaction.vehicle?.make}{" "}
+              {transaction.vehicle?.model}
             </p>
             <div className="flex items-center justify-end gap-4 mt-0.5">
               <p className="text-xs text-[var(--foreground-muted)]">
