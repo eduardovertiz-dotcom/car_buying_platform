@@ -12,7 +12,7 @@ export function Navbar() {
         <nav className="flex items-center justify-between h-[72px]">
           <Link href="/" className="flex items-center gap-3">
             <img src="/MexGuardian_logo.png" alt="MexGuardian logo" className="h-6 w-auto" />
-            <span className="text-[15px] font-semibold text-white">
+            <span className="text-[15px] font-semibold text-[var(--foreground)]">
               MexGuardian
             </span>
           </Link>
@@ -39,7 +39,7 @@ export function Navbar() {
           </div>
         </nav>
       </div>
-      <div className="h-px bg-white/[0.06]" />
+      <div className="h-px bg-[var(--border)]" />
     </header>
   );
 }
@@ -55,12 +55,12 @@ export default function Hero() {
         {/* ── MOBILE ONLY ───────────────────────────────────────────────────── */}
         <div className="block md:hidden px-6">
           <h1
-            className="font-semibold text-white tracking-tight leading-[1.1]"
+            className="font-semibold text-[var(--foreground)] tracking-tight leading-[1.1]"
             style={{ fontSize: "clamp(2.5rem, 10vw, 3.5rem)" }}
           >
             Don&apos;t get scammed when buying a car in Mexico.
           </h1>
-          <p className="text-white/75 leading-relaxed mt-4">
+          <p className="text-[#444] leading-relaxed mt-4">
             Verify the vehicle, the seller, and the risk before you pay.
           </p>
           <div className="mt-6 mb-2">
@@ -92,12 +92,12 @@ export default function Hero() {
             {/* TEXT */}
             <div className="max-w-xl pr-8">
               <h1
-                className="max-w-2xl font-semibold text-white tracking-tight leading-[1.1]"
+                className="max-w-2xl font-semibold text-[var(--foreground)] tracking-tight leading-[1.1]"
                 style={{ fontSize: "clamp(2.5rem, 6vw, 4rem)" }}
               >
                 Don&apos;t get scammed when buying a car in Mexico.
               </h1>
-              <p className="max-w-lg text-white/75 leading-relaxed mt-4">
+              <p className="max-w-lg text-[#444] leading-relaxed mt-4">
                 Verify the vehicle, the seller, and the risk before you pay.
               </p>
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-6">

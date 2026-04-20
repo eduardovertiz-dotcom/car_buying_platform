@@ -7,7 +7,6 @@ import { Step, MaintenanceRecordType, getSteps } from "@/lib/types";
 import type { VerificationResult } from "@/lib/types";
 import AnalyzePanel from "@/components/panels/AnalyzePanel";
 import { generateAgreementHTML } from "@/lib/agreement";
-import RiskBlock from "@/components/RiskBlock";
 import { computeRisk, confidenceLabel, type RiskOutput } from "@/lib/risk";
 import { track } from "@/lib/track";
 import { hasMinimumInput as computeHasMinimumInput } from "@/lib/guards";
@@ -24,14 +23,14 @@ const stepContent: Record<Step, StepContent> = {
   upload: {
     heading: "Start your vehicle check",
     body: "We need basic vehicle details and the seller's documents to run verification. The more complete your upload, the more accurate your risk report.",
-    action: "Run initial check",
+    action: "Check this vehicle",
     completedAction: "Step completed",
     contextLine: "Most issues are discovered after payment. This step helps you avoid that.",
   },
   check: {
     heading: "Initial results",
     body: "We scan the vehicle details and documents for common red flags before deeper analysis.",
-    action: "See full results",
+    action: "Review risk analysis",
     completedAction: "Step completed",
   },
   // "analyze" is handled by AnalyzePanel — these values are never rendered
@@ -361,15 +360,15 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
   if (!plan) {
     return (
       <>
-        <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
+        <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
           Verification required
         </h2>
-        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-8">
+        <p className="text-[18px] text-[#444] leading-relaxed mb-10">
           A verification plan is required to run checks on this vehicle.
         </p>
         <a
           href="/start"
-          className="inline-block w-full bg-[var(--accent)] text-white text-sm font-medium px-5 py-3 rounded-lg text-center hover:opacity-90 transition-opacity"
+          className="inline-block w-full bg-[#B4531A] text-white text-base font-semibold px-5 py-4 rounded-lg text-center hover:opacity-85 transition-opacity shadow-[0_4px_16px_rgba(180,83,26,.28)]"
         >
           View plans →
         </a>
@@ -381,16 +380,16 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
   if (!hasMinimumInput) {
     return (
       <>
-        <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
+        <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
           Add vehicle information to continue.
         </h2>
-        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
+        <p className="text-[18px] text-[#444] leading-relaxed mb-8">
           Verification requires at least a VIN, plate number, or one uploaded
           document. Without this, no checks can be performed.
         </p>
         <button
           onClick={() => goToStep("upload")}
-          className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
+          className="w-full bg-[#B4531A] hover:opacity-85 text-white text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left shadow-[0_4px_16px_rgba(180,83,26,.28)]"
         >
           ← Back to Upload
         </button>
@@ -426,21 +425,21 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
   if (verifyState === "error") {
     return (
       <>
-        <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
+        <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
           Verification could not complete.
         </h2>
-        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
+        <p className="text-[18px] text-[#444] leading-relaxed mb-8">
           Something went wrong. Check your connection and try again.
         </p>
         <button
           onClick={handleRetry}
-          className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left mb-3"
+          className="w-full bg-[#B4531A] hover:opacity-85 text-white text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left shadow-[0_4px_16px_rgba(180,83,26,.28)] mb-3"
         >
           Retry verification
         </button>
         <button
           onClick={() => goToStep("upload")}
-          className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors underline underline-offset-2"
+          className="text-[15px] text-[#666] hover:text-white transition-colors underline underline-offset-2"
         >
           ← Back to Upload
         </button>
@@ -452,22 +451,22 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
   if (!hasIdentifier && hasDocs && verification_status === "not_started") {
     return (
       <>
-        <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
+        <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
           Ready to verify your documents.
         </h2>
-        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
+        <p className="text-[18px] text-[#444] leading-relaxed mb-8">
           We&apos;ll verify using your uploaded documents. Adding a VIN or plate
           number improves accuracy and enables registry checks.
         </p>
         <button
           onClick={startDocVerification}
-          className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left mb-3"
+          className="w-full bg-[#B4531A] hover:opacity-85 text-white text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left shadow-[0_4px_16px_rgba(180,83,26,.28)] mb-3"
         >
           Start verification
         </button>
         <button
           onClick={() => goToStep("upload")}
-          className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors underline underline-offset-2"
+          className="text-[15px] text-[#666] hover:text-white transition-colors underline underline-offset-2"
         >
           ← Back to Upload to add VIN/plate
         </button>
@@ -479,14 +478,14 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
   if (verifyState === "idle" && hasIdentifier) {
     return (
       <>
-        <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
+        <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
           Running verification checks.
         </h2>
-        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
+        <p className="text-[18px] text-[#444] leading-relaxed mb-8">
           Checking registry sources and document data.
         </p>
         <div className="border border-[var(--border)] rounded-lg px-5 py-4">
-          <p className="text-sm text-[var(--foreground-muted)]">
+          <p className="text-[15px] text-[var(--foreground-muted)]">
             Initializing — do not close this page.
           </p>
         </div>
@@ -499,16 +498,16 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
     const isPro = plan === "69";
     return (
       <>
-        <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
+        <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
           {isPro ? "Running full verification checks" : "Verifying this deal"}
         </h2>
-        <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
+        <p className="text-[18px] text-[#444] leading-relaxed mb-8">
           {isPro
             ? "Verifying identity, documents, ownership, and running advanced fraud pattern checks."
             : "Checking REPUVE, outstanding liabilities, factura validity, and VIN registry. This will take a moment."}
         </p>
         <div className="border border-[var(--border)] rounded-lg px-5 py-4">
-          <p className="text-sm text-[var(--foreground-muted)]">
+          <p className="text-[15px] text-[var(--foreground-muted)]">
             Running official vehicle checks — do not close this page.
           </p>
         </div>
@@ -516,9 +515,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
     );
   }
 
-  // Verdict — derived from existing risk data, no logic change
   const verdictIsClean = risk.issues.length === 0 && risk.unknowns.length === 0;
-  const verdictText = verdictIsClean ? "Safe to proceed" : "Proceed with caution";
 
   // ── Basic complete — show results + upsell ($49 users only) ─────────────
   if (verification_status === "basic_complete") {
@@ -527,115 +524,151 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
     const allUnavailable =
       (!repuveResult || repuveResult.status === "unavailable") &&
       (!facturaResult || facturaResult.status === "unavailable");
+    const hasVerifyIssues =
+      repuveResult?.status === "warning" || facturaResult?.status === "warning";
+    const verifyPillText = hasVerifyIssues
+      ? "⚠ Issues detected"
+      : allUnavailable || verifyMode === "manual"
+      ? "Caution"
+      : null;
+    const verifyRecVariant = hasVerifyIssues ? "risk"
+      : allUnavailable || verifyMode === "manual" ? "moderate"
+      : "clear";
+    const verifyRecText = verifyMode === "manual"
+      ? "Expert review is in progress. Do not proceed until results are available."
+      : hasVerifyIssues
+      ? "Do not proceed until these issues are resolved with the seller."
+      : allUnavailable
+      ? "Registry checks were unavailable. Review documents carefully before proceeding."
+      : "Registry checks passed. No issues found in official records.";
 
     return (
       <>
-        {/* ── Verdict block ───────────────────────────────────────── */}
-        <div className="mb-8">
-          <p className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
-            Is this deal safe?
-          </p>
-          <p className={`text-[22px] font-semibold leading-snug ${verdictIsClean ? "text-green-400" : "text-amber-400"}`}>
-            {verdictText}
-          </p>
-        </div>
+        {/* ── Report card ─────────────────────────────────────────── */}
+        <div className="vr-wrap">
+          {verifyPillText && (
+            <div className={`vr-pill${hasVerifyIssues ? "" : " warn"}`}>{verifyPillText}</div>
+          )}
+          <div className="vr-card">
+            <div className="vr-header">
+              <span className="vr-title">Verification Report</span>
+            </div>
+            <div className="vr-body">
 
-        {/* Decision heading */}
-        <h2 className="text-xl font-semibold text-white mb-3 leading-snug">
-          Review the results and decide how to proceed
-        </h2>
-        <p className="text-[18px] text-white/75 leading-relaxed mb-8">
-          These results reflect registry data and document checks.
-          Review carefully before proceeding.
-        </p>
+              {/* Outstanding issues — first */}
+              {hasVerifyIssues && (
+                <div className="vr-section">
+                  <div className="vr-k">Outstanding issues</div>
+                  {repuveResult?.status === "warning" && (
+                    <div className="vr-row">
+                      <span className="vr-row-label">Theft record detected in REPUVE</span>
+                      <span className="vr-status s-risk">Theft</span>
+                    </div>
+                  )}
+                  {facturaResult?.status === "warning" && (
+                    <div className="vr-row">
+                      <span className="vr-row-label">Ownership invoice failed SAT validation</span>
+                      <span className="vr-status s-risk">Invalid</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
-        {/* Risk position — single source of truth */}
-        <RiskBlock data={risk} headerLabel="You are about to proceed with" />
-
-        {/* Results section — manual message or real check results */}
-        {verifyMode === "manual" ? (
-          <div className="mb-8">
-            <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
-              Verification results
-            </p>
-            <p className="text-[17px] font-medium leading-relaxed text-white/80">
-              Expert review in progress.
-            </p>
-            <p className="text-[17px] leading-relaxed text-white/70 mt-2">
-              Our team will review your documents. You&apos;ll receive results within 24 hours.
-            </p>
-          </div>
-        ) : (
-          <>
-            {(repuveResult || facturaResult) && (
-              <div className="mb-8">
-                <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
-                  Verification results
-                </p>
-
-                {allUnavailable ? (
-                  <div className="mb-2">
-                    <p className="text-[17px] font-medium leading-relaxed text-white/70">
-                      Checks could not be completed at this time.
-                    </p>
+              {/* Registry checks */}
+              <div className="vr-section">
+                <div className="vr-k">Registry checks</div>
+                {verifyMode === "manual" ? (
+                  <div className="vr-row">
+                    <span className="vr-row-label">Expert review</span>
+                    <span className="vr-status s-warn">In progress</span>
                   </div>
                 ) : (
                   <>
                     {repuveResult && (
-                      <div className="mb-3">
-                        <p className={`text-[17px] font-medium leading-relaxed ${
-                          repuveResult.status === "success" ? "text-green-400"
-                          : repuveResult.status === "warning" ? "text-amber-400"
-                          : "text-white/60"
+                      <div className="vr-row">
+                        <span className="vr-row-label">Theft registry (REPUVE)</span>
+                        <span className={`vr-status ${
+                          repuveResult.status === "success" ? "s-ok"
+                          : repuveResult.status === "warning" ? "s-risk" : "s-warn"
                         }`}>
-                          REPUVE — {repuveResult.text}
-                        </p>
+                          {repuveResult.status === "success" ? "Clear"
+                          : repuveResult.status === "warning" ? "Theft record" : "Unavailable"}
+                        </span>
                       </div>
                     )}
                     {facturaResult && (
-                      <div className="mb-3">
-                        <p className={`text-[17px] font-medium leading-relaxed ${
-                          facturaResult.status === "success" ? "text-green-400"
-                          : facturaResult.status === "warning" ? "text-amber-400"
-                          : "text-white/60"
+                      <div className="vr-row">
+                        <span className="vr-row-label">Ownership invoice (SAT)</span>
+                        <span className={`vr-status ${
+                          facturaResult.status === "success" ? "s-ok"
+                          : facturaResult.status === "warning" ? "s-risk" : "s-warn"
                         }`}>
-                          Factura — {facturaResult.text}
-                        </p>
+                          {facturaResult.status === "success" ? "Valid"
+                          : facturaResult.status === "warning" ? "Invalid" : "Unavailable"}
+                        </span>
+                      </div>
+                    )}
+                    {!repuveResult && !facturaResult && (
+                      <div className="vr-row">
+                        <span className="vr-row-label">Registry checks</span>
+                        <span className="vr-status s-warn">Not available</span>
                       </div>
                     )}
                   </>
                 )}
               </div>
-            )}
-          </>
-        )}
 
-        {verifyMode === "mock" && (
-          <div className="border border-white/[0.08] rounded-lg px-4 py-4 mb-6">
-            <p className="text-sm text-white/70 leading-relaxed">
-              Full verification is not yet available. Results are based on available data.
-            </p>
+              {/* Document integrity */}
+              <div className="vr-section">
+                <div className="vr-k">Document integrity</div>
+                <div className="vr-row">
+                  <span className="vr-row-label">Ownership invoice (factura)</span>
+                  <span className={`vr-status ${documents.invoice.status === "uploaded" ? "s-ok" : "s-warn"}`}>
+                    {documents.invoice.status === "uploaded" ? "Submitted" : "Not provided"}
+                  </span>
+                </div>
+                <div className="vr-row">
+                  <span className="vr-row-label">Seller ID (INE)</span>
+                  <span className={`vr-status ${documents.ine.status === "uploaded" ? "s-ok" : "s-warn"}`}>
+                    {documents.ine.status === "uploaded" ? "Submitted" : "Not provided"}
+                  </span>
+                </div>
+                <div className="vr-row">
+                  <span className="vr-row-label">Registration card</span>
+                  <span className={`vr-status ${documents.registration.status === "uploaded" ? "s-ok" : "s-warn"}`}>
+                    {documents.registration.status === "uploaded" ? "Submitted" : "Not provided"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Recommendation */}
+              <div className={`vr-rec ${verifyRecVariant === "clear" ? "clear" : verifyRecVariant === "moderate" ? "moderate" : ""}`}>
+                <div className="vr-rec-label">Recommendation</div>
+                <p className="vr-rec-text">{verifyRecText}</p>
+              </div>
+
+            </div>
           </div>
-        )}
+        </div>
 
         {/* Upsell */}
-        <div className="border border-white/[0.12] rounded-lg px-5 py-6 mb-6">
-          <p className="text-base font-medium text-white mb-2">
+        <div className="border border-[var(--border)] rounded-lg px-5 py-5 mb-6">
+          <p className="text-[15px] font-semibold text-[var(--foreground)] mb-2">
             Expert review available
           </p>
-          <p className="text-[17px] text-white/70 leading-relaxed mb-4">
+          <p className="text-[14px] text-[#444] leading-relaxed mb-4">
             Automated checks cover public records only. They cannot detect document
             alterations, confirm seller identity, or flag risks outside registry data.
           </p>
           <button
             onClick={handleUpsell}
             disabled={upsellLoading}
-            className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left disabled:opacity-60"
+            className="w-full bg-[#B4531A] hover:opacity-85 text-white text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left shadow-[0_4px_16px_rgba(180,83,26,.28)] disabled:opacity-60 disabled:shadow-none"
           >
             {upsellLoading ? "Redirecting…" : "Upgrade to full verification — $30"}
           </button>
           {showDocWarning && (
-            <p className="text-sm text-amber-400 leading-relaxed mt-3">
+            <p className="text-[13px] text-amber-400 leading-relaxed mt-3">
               Upload all required documents before upgrading.
             </p>
           )}
@@ -645,18 +678,20 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
           <p className="text-sm text-green-400 leading-relaxed">
             ✓ Decision recorded.
           </p>
+        ) : verdictIsClean ? (
+          <button
+            onClick={handleDecision}
+            className="w-full bg-[#B4531A] hover:opacity-85 text-white text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left shadow-[0_4px_16px_rgba(180,83,26,.28)]"
+          >
+            Proceed to agreement
+          </button>
         ) : (
-          <>
-            <button
-              onClick={handleDecision}
-              className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors underline underline-offset-2"
-            >
-              Proceed with this risk level
-            </button>
-            <p className="text-sm text-white/60 leading-relaxed mt-2">
-              You are proceeding based on automated checks only.
-            </p>
-          </>
+          <button
+            onClick={handleDecision}
+            className="text-[14px] text-[#666] hover:text-[var(--foreground)] transition-colors underline underline-offset-2"
+          >
+            Continue with automated results only
+          </button>
         )}
       </>
     );
@@ -670,82 +705,127 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
       (!repuveResult || repuveResult.status === "unavailable") &&
       (!facturaResult || facturaResult.status === "unavailable");
 
+    const hasVerifyIssues = repuveResult?.status === "warning" || facturaResult?.status === "warning";
+    const verifyPillText = hasVerifyIssues ? "⚠ Issues detected"
+      : allUnavailable || verifyMode === "manual" ? "Caution" : null;
+    const verifyRecVariant = hasVerifyIssues ? "risk"
+      : allUnavailable || verifyMode === "manual" ? "moderate" : "clear";
+    const verifyRecText = verifyMode === "manual"
+      ? "Expert review is in progress. Do not proceed until results are available."
+      : hasVerifyIssues
+      ? "Do not proceed until these issues are resolved with the seller."
+      : allUnavailable
+      ? "Registry checks were unavailable. Review documents carefully before proceeding."
+      : "Registry checks passed. No issues found in official records.";
+
     return (
       <>
-        {/* ── Verdict block ───────────────────────────────────────── */}
-        <div className="mb-8">
-          <p className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
-            Is this deal safe?
-          </p>
-          <p className={`text-[22px] font-semibold leading-snug ${verdictIsClean ? "text-green-400" : "text-amber-400"}`}>
-            {verdictText}
-          </p>
-        </div>
+        {/* Report card */}
+        <div className="vr-wrap">
+          {verifyPillText && (
+            <div className={`vr-pill${hasVerifyIssues ? "" : " warn"}`}>{verifyPillText}</div>
+          )}
+          <div className="vr-card">
+            <div className="vr-header">
+              <span className="vr-title">Verification Report</span>
+            </div>
+            <div className="vr-body">
 
-        {/* Decision heading */}
-        <h2 className="text-xl font-semibold text-white mb-3 leading-snug">
-          Review the results and decide how to proceed
-        </h2>
-        <p className="text-[18px] text-white/75 leading-relaxed mb-8">
-          These results reflect registry data and document checks.
-          Review carefully before proceeding.
-        </p>
+              {/* Outstanding issues — first when present */}
+              {hasVerifyIssues && (
+                <div className="vr-section">
+                  <div className="vr-k">Outstanding issues</div>
+                  {repuveResult?.status === "warning" && (
+                    <div className="vr-row">
+                      <span className="vr-row-label">Theft record detected in REPUVE</span>
+                      <span className="vr-status s-risk">Theft</span>
+                    </div>
+                  )}
+                  {facturaResult?.status === "warning" && (
+                    <div className="vr-row">
+                      <span className="vr-row-label">Ownership invoice failed SAT validation</span>
+                      <span className="vr-status s-risk">Invalid</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
-        {/* Risk position — single source of truth */}
-        <RiskBlock data={risk} headerLabel="You are about to proceed with" />
-
-        {/* Results section */}
-        {verifyMode === "manual" ? (
-          <div className="mb-8">
-            <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
-              Expert review in progress
-            </p>
-            <p className="text-[17px] font-medium leading-relaxed text-white/80">
-              Our team will review your documents. You&apos;ll receive results within 24 hours.
-            </p>
-          </div>
-        ) : (
-          <>
-            {(repuveResult || facturaResult) && (
-              <div className="mb-8">
-                <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
-                  Verification results
-                </p>
-
-                {allUnavailable ? (
-                  <p className="text-[17px] font-medium leading-relaxed text-white/70">
-                    Checks could not be completed at this time.
-                  </p>
+              {/* Registry checks */}
+              <div className="vr-section">
+                <div className="vr-k">Registry checks</div>
+                {verifyMode === "manual" ? (
+                  <div className="vr-row">
+                    <span className="vr-row-label">Expert review</span>
+                    <span className="vr-status s-warn">In progress</span>
+                  </div>
                 ) : (
                   <>
                     {repuveResult && (
-                      <div className="mb-3">
-                        <p className={`text-[17px] font-medium leading-relaxed ${
-                          repuveResult.status === "success" ? "text-green-400"
-                          : repuveResult.status === "warning" ? "text-amber-400"
-                          : "text-white/60"
+                      <div className="vr-row">
+                        <span className="vr-row-label">Theft registry (REPUVE)</span>
+                        <span className={`vr-status ${
+                          repuveResult.status === "success" ? "s-ok"
+                          : repuveResult.status === "warning" ? "s-risk" : "s-warn"
                         }`}>
-                          REPUVE — {repuveResult.text}
-                        </p>
+                          {repuveResult.status === "success" ? "Clear"
+                          : repuveResult.status === "warning" ? "Theft record" : "Unavailable"}
+                        </span>
                       </div>
                     )}
                     {facturaResult && (
-                      <div className="mb-3">
-                        <p className={`text-[17px] font-medium leading-relaxed ${
-                          facturaResult.status === "success" ? "text-green-400"
-                          : facturaResult.status === "warning" ? "text-amber-400"
-                          : "text-white/60"
+                      <div className="vr-row">
+                        <span className="vr-row-label">Ownership invoice (SAT)</span>
+                        <span className={`vr-status ${
+                          facturaResult.status === "success" ? "s-ok"
+                          : facturaResult.status === "warning" ? "s-risk" : "s-warn"
                         }`}>
-                          Factura — {facturaResult.text}
-                        </p>
+                          {facturaResult.status === "success" ? "Valid"
+                          : facturaResult.status === "warning" ? "Invalid" : "Unavailable"}
+                        </span>
+                      </div>
+                    )}
+                    {!repuveResult && !facturaResult && (
+                      <div className="vr-row">
+                        <span className="vr-row-label">Registry checks</span>
+                        <span className="vr-status s-warn">Not available</span>
                       </div>
                     )}
                   </>
                 )}
               </div>
-            )}
-          </>
-        )}
+
+              {/* Document integrity */}
+              <div className="vr-section">
+                <div className="vr-k">Document integrity</div>
+                <div className="vr-row">
+                  <span className="vr-row-label">Ownership invoice (factura)</span>
+                  <span className={`vr-status ${documents.invoice.status === "uploaded" ? "s-ok" : "s-warn"}`}>
+                    {documents.invoice.status === "uploaded" ? "Submitted" : "Not provided"}
+                  </span>
+                </div>
+                <div className="vr-row">
+                  <span className="vr-row-label">Seller ID (INE)</span>
+                  <span className={`vr-status ${documents.ine.status === "uploaded" ? "s-ok" : "s-warn"}`}>
+                    {documents.ine.status === "uploaded" ? "Submitted" : "Not provided"}
+                  </span>
+                </div>
+                <div className="vr-row">
+                  <span className="vr-row-label">Registration card</span>
+                  <span className={`vr-status ${documents.registration.status === "uploaded" ? "s-ok" : "s-warn"}`}>
+                    {documents.registration.status === "uploaded" ? "Submitted" : "Not provided"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Recommendation */}
+              <div className={`vr-rec ${verifyRecVariant === "clear" ? "clear" : verifyRecVariant === "moderate" ? "moderate" : ""}`}>
+                <div className="vr-rec-label">Recommendation</div>
+                <p className="vr-rec-text">{verifyRecText}</p>
+              </div>
+
+            </div>
+          </div>
+        </div>
 
         {/* Upgrade delta — only when user came from basic and we have a before snapshot */}
         {previousRisk && (() => {
@@ -756,17 +836,17 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
           const hasDelta = newResolved.length > 0 || issuesCleared;
           if (!hasDelta) return null;
           return (
-            <div className="border border-green-400/20 bg-green-400/[0.06] rounded-lg px-4 py-5 mb-8">
-              <p className="text-[10px] uppercase tracking-widest text-green-400 mb-3">
+            <div className="border border-green-400/20 bg-green-400/[0.06] rounded-lg px-4 py-5 mb-6">
+              <p className="text-[11px] uppercase tracking-widest text-green-400 mb-3">
                 What changed after full verification
               </p>
               {issuesCleared && (
-                <p className="text-sm text-green-400 leading-relaxed mb-2">
+                <p className="text-[15px] text-green-400 leading-relaxed mb-2">
                   ✓ No remaining issues after full verification
                 </p>
               )}
               {newResolved.map((item) => (
-                <p key={item} className="text-sm text-green-400 leading-relaxed">
+                <p key={item} className="text-[15px] text-green-400 leading-relaxed">
                   ✓ {item}
                 </p>
               ))}
@@ -774,25 +854,32 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
           );
         })()}
 
-        {verifyMode === "mock" && (
-          <div className="border border-white/[0.08] rounded-lg px-4 py-4 mb-6">
-            <p className="text-sm text-white/70 leading-relaxed">
-              Full verification is not yet available. Results are based on available data.
-            </p>
-          </div>
-        )}
-
         {isDecisionMade ? (
           <p className="text-sm text-green-400 leading-relaxed">
             ✓ Decision recorded.
           </p>
-        ) : (
+        ) : verdictIsClean ? (
           <button
             onClick={handleDecision}
-            className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
+            className="w-full bg-[#B4531A] hover:opacity-85 text-white text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left shadow-[0_4px_16px_rgba(180,83,26,.28)]"
           >
-            Proceed with this risk level
+            Proceed to agreement
           </button>
+        ) : (
+          <>
+            <button
+              onClick={() => goToStep("upload")}
+              className="w-full bg-[#B4531A] hover:opacity-85 text-white text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left shadow-[0_4px_16px_rgba(180,83,26,.28)] mb-3"
+            >
+              Resolve issues before proceeding
+            </button>
+            <button
+              onClick={handleDecision}
+              className="text-[14px] text-[#666] hover:text-[var(--foreground)] transition-colors underline underline-offset-2"
+            >
+              Continue anyway
+            </button>
+          </>
         )}
       </>
     );
@@ -801,15 +888,15 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
   // Safety net — should never reach here, but guarantees no blank screen.
   return (
     <>
-      <h2 className="text-lg font-semibold text-white mb-4 leading-snug">
+      <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
         Something went wrong.
       </h2>
-      <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-6">
+      <p className="text-[18px] text-[#444] leading-relaxed mb-8">
         An unexpected state was reached. Reload the page or go back to continue.
       </p>
       <button
         onClick={() => goToStep("upload")}
-        className="w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
+        className="w-full bg-[#B4531A] hover:opacity-85 text-white text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left shadow-[0_4px_16px_rgba(180,83,26,.28)]"
       >
         ← Back to Upload
       </button>
@@ -831,7 +918,7 @@ function timeAgo(isoString: string): string {
 
 function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { transaction, generateContract, updateAgreementFields, addMaintenanceRecord, enableShare, revokeShare, sendForSignature } = useTransaction();
+  const { transaction, generateContract, updateAgreementFields, addMaintenanceRecord, enableShare, revokeShare, sendForSignature, goToStep } = useTransaction();
   const { contract, share } = transaction;
 
   const isBasic = plan === "39";
@@ -1188,82 +1275,131 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
     setRecordType("service");
   }
 
+  const verdictIsClean = risk.issues.length === 0 && risk.unknowns.length === 0;
+
+  const hasIssues   = risk.issues.length > 0;
+  const hasUnknowns = risk.unknowns.length > 0;
+  const badgeClass  = verdictIsClean ? "clear" : "caution";
+  const badgeText   = verdictIsClean ? "Clear" : "Caution";
+  const recVariant  = hasIssues ? "risk" : hasUnknowns ? "moderate" : "clear";
+  const recText     = hasIssues
+    ? "Do not proceed until these issues are resolved with the seller."
+    : hasUnknowns
+    ? "Proceed only if you can verify the outstanding items with the seller."
+    : "No blocking issues found. You may proceed with confidence.";
+  const hasFindings = risk.issues.length > 0 || risk.resolved.length > 0;
+
+  const { vehicle, documents } = transaction;
+
   return (
     <section className="py-10">
-      <div className="mb-3">
-        <span className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">
+      <div className="mb-6">
+        <span className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)]">
           Complete
         </span>
       </div>
 
-      {/* ── Decision summary ────────────────────────────────────── */}
-      {transaction.accepted_risk_level != null && (
-        <div className="mb-8">
-          <p className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)] mb-3">
-            Is this deal safe?
-          </p>
-          <p className={`text-[22px] font-semibold leading-snug ${
-            transaction.accepted_risk_level === "LOW" ? "text-green-400" : "text-amber-400"
-          }`}>
-            You chose to proceed with {transaction.accepted_risk_level.toLowerCase()} risk
-          </p>
+      {/* ── Report card ──────────────────────────────────────────── */}
+      <div className="vr-card">
+        <div className="vr-header">
+          <span className="vr-title">Verification Report</span>
+          <span className={`vr-badge ${badgeClass}`}>{badgeText}</span>
         </div>
-      )}
 
-      <h2 className="text-2xl font-semibold text-white mb-5 leading-snug">
-        {isBasic ? "Your risk summary" : "Verification complete."}
-      </h2>
+        <div className="vr-body">
 
-      <p className="text-[18px] text-white/75 leading-relaxed mb-8">
-        {isBasic
-          ? "Automated checks are complete. Generate a purchase agreement to proceed with the transaction."
-          : "Full verification is complete. Generate a purchase agreement to finalize the transaction."}
-      </p>
+          {/* Vehicle */}
+          <div className="vr-section">
+            <div className="vr-k">Vehicle</div>
+            <div className="vr-row">
+              <span className="vr-row-label">VIN</span>
+              <span className={`vr-status ${vehicle.vin?.trim() ? "s-ok" : "s-warn"}`}>
+                {vehicle.vin?.trim() ? "Provided" : "Not provided"}
+              </span>
+            </div>
+            <div className="vr-row">
+              <span className="vr-row-label">License plate</span>
+              <span className={`vr-status ${vehicle.plate?.trim() ? "s-ok" : "s-warn"}`}>
+                {vehicle.plate?.trim() ? "Provided" : "Not provided"}
+              </span>
+            </div>
+          </div>
 
-      {/* Risk block — only rendered after a real verified decision has been recorded */}
-      {transaction.accepted_risk_level != null && (() => {
-        const { accepted_risk_level, accepted_confidence, accepted_at } = transaction;
-        const displayRisk: RiskOutput = {
-          ...risk,
-          riskLevel: accepted_risk_level!,
-          confidence: accepted_confidence ?? risk.confidence,
-          confidenceLabel: confidenceLabel(accepted_confidence ?? risk.confidence),
-        };
-        return (
-          <>
-            <RiskBlock
-              data={displayRisk}
-              headerLabel="You chose to proceed with"
-            />
-            {accepted_at && (
-              <p className="text-sm text-white/50 -mt-4 mb-8">
-                Decision recorded {timeAgo(accepted_at)}
-              </p>
-            )}
-          </>
-        );
-      })()}
+          {/* Documents */}
+          <div className="vr-section">
+            <div className="vr-k">Documents</div>
+            <div className="vr-row">
+              <span className="vr-row-label">Seller ID (INE)</span>
+              <span className={`vr-status ${documents.ine.status === "uploaded" ? "s-ok" : "s-warn"}`}>
+                {documents.ine.status === "uploaded" ? "Submitted" : "Not provided"}
+              </span>
+            </div>
+            <div className="vr-row">
+              <span className="vr-row-label">Registration</span>
+              <span className={`vr-status ${documents.registration.status === "uploaded" ? "s-ok" : "s-warn"}`}>
+                {documents.registration.status === "uploaded" ? "Submitted" : "Not provided"}
+              </span>
+            </div>
+            <div className="vr-row">
+              <span className="vr-row-label">Ownership invoice</span>
+              <span className={`vr-status ${documents.invoice.status === "uploaded" ? "s-ok" : "s-warn"}`}>
+                {documents.invoice.status === "uploaded" ? "Submitted" : "Not provided"}
+              </span>
+            </div>
+          </div>
 
-      <p className="text-[18px] text-white/75 leading-relaxed mb-8">
-        You are proceeding based on the results above.
-        Make sure both parties understand and accept the terms before signing.
-      </p>
+          {/* Findings — resolved + issues */}
+          {hasFindings && (
+            <div className="vr-section">
+              <div className="vr-k">Findings</div>
+              {risk.resolved.map((item) => (
+                <div key={item} className="vr-row">
+                  <span className="vr-row-label">{item}</span>
+                  <span className="vr-status s-ok">Verified</span>
+                </div>
+              ))}
+              {risk.issues.map((item) => (
+                <div key={item} className="vr-row">
+                  <span className="vr-row-label">{item}</span>
+                  <span className="vr-status s-risk">Issue</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Unverified */}
+          {hasUnknowns && (
+            <div className="vr-section">
+              <div className="vr-k">Unverified</div>
+              {risk.unknowns.map((item) => (
+                <div key={item} className="vr-row">
+                  <span className="vr-row-label">{item}</span>
+                  <span className="vr-status s-warn">Unverified</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Recommendation */}
+          <div className={`vr-rec ${recVariant === "clear" ? "clear" : recVariant === "moderate" ? "moderate" : ""}`}>
+            <div className="vr-rec-label">Recommendation</div>
+            <p className="vr-rec-text">{recText}</p>
+          </div>
+
+        </div>
+      </div>
 
       {isBasic && (
-        <div className="border border-amber-400/30 bg-amber-400/[0.08] rounded-lg px-5 py-4 mb-8">
-          <p className="text-sm text-amber-400 leading-relaxed">
-            This check covers public records only. For full protection, expert review is recommended.
+        <div className="border border-amber-400/20 bg-amber-400/[0.06] rounded-lg px-4 py-4 mb-6">
+          <p className="text-[13px] text-amber-400/80 leading-relaxed">
+            This report covers public records only. Expert review was not included.
           </p>
         </div>
       )}
-
-      <p className="text-[18px] text-white/90 mb-8">
-        You are ready to proceed with this transaction.
-      </p>
 
       {contract.status === "generated" ? (
         <>
-          <p className="text-base text-white/70 mb-5">
+          <p className="text-[15px] text-[#444] mb-5">
             Purchase agreement generated
           </p>
 
@@ -1272,10 +1408,10 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
             <button
               onClick={handleSendForSignature}
               disabled={signingLoading}
-              className={`w-full text-sm font-semibold px-5 py-3 rounded-lg transition-colors mb-3 ${
+              className={`w-full text-base font-semibold px-5 py-4 rounded-lg transition-opacity mb-3 ${
                 signingLoading
-                  ? "bg-[var(--accent)]/60 text-white/60 cursor-default"
-                  : "bg-[var(--accent)] hover:opacity-90 text-white"
+                  ? "bg-[#B4531A]/60 text-white/60 cursor-default"
+                  : "bg-[#B4531A] hover:opacity-85 text-white shadow-[0_4px_16px_rgba(180,83,26,.28)]"
               }`}
             >
               {signingLoading ? "Opening…" : "Sign agreement now"}
@@ -1283,7 +1419,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
           )}
 
           {/* Download — secondary action */}
-          <button onClick={handleDownload} className="text-sm text-white/60 hover:text-white transition-colors mb-6">
+          <button onClick={handleDownload} className="text-[15px] text-[#666] hover:text-white transition-colors mb-6">
             Download purchase agreement
           </button>
 
@@ -1292,28 +1428,28 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
           <div className="mb-8">
             <button
               onClick={handleShare}
-              className="text-sm text-[var(--accent)] hover:text-blue-400 transition-colors"
+              className="text-[15px] text-[var(--accent)] hover:text-blue-400 transition-colors"
             >
               Share verified transaction
             </button>
-            <p className="text-sm text-gray-400 mt-1">
+            <p className="text-[15px] text-[#666] mt-1">
               Anyone with this link can view the verification and contract
             </p>
             {showShared && (
               <>
-                <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mt-3">
+                <p className="text-[15px] text-[var(--foreground-muted)] leading-relaxed mt-3">
                   Link copied. You can now share this transaction.
                 </p>
                 <div className="flex gap-4 mt-2">
                   <button
                     onClick={() => window.open(shareUrl, "_blank")}
-                    className="text-sm text-blue-400 underline"
+                    className="text-[15px] text-blue-400 underline"
                   >
                     Open link
                   </button>
                   <button
                     onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(shareUrl)}`, "_blank")}
-                    className="text-sm text-green-400 underline"
+                    className="text-[15px] text-green-400 underline"
                   >
                     Share via WhatsApp
                   </button>
@@ -1324,92 +1460,119 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
         </>
       ) : (
         <div className="mb-8">
-          <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-5">
+          <p className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)] mb-4">
             Agreement details
           </p>
-          <div className="flex flex-col gap-5 mb-5">
+          <div className="flex flex-col gap-6 mb-6">
             <div>
-              <p className="text-sm text-white/80 mb-2">Buyer full name</p>
+              <p className="text-base text-[#444] mb-2">Buyer full name</p>
               <input
                 type="text"
                 value={buyerName}
                 onChange={(e) => setBuyerName(e.target.value)}
                 placeholder="Full legal name"
-                className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
+                className="w-full bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
               />
             </div>
             <div>
-              <p className="text-sm text-white/80 mb-2">Buyer email</p>
+              <p className="text-base text-[#444] mb-2">Buyer email</p>
               <input
                 type="email"
                 value={buyerEmail}
                 onChange={(e) => setBuyerEmail(e.target.value)}
                 placeholder="buyer@email.com"
-                className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
+                className="w-full bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
               />
             </div>
             <div>
-              <p className="text-sm text-white/80 mb-2">Seller full name</p>
+              <p className="text-base text-[#444] mb-2">Seller full name</p>
               <input
                 type="text"
                 value={sellerName}
                 onChange={(e) => setSellerName(e.target.value)}
                 placeholder="Full legal name"
-                className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
+                className="w-full bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
               />
             </div>
             <div>
-              <p className="text-sm text-white/80 mb-2">Seller email</p>
+              <p className="text-base text-[#444] mb-2">Seller email</p>
               <input
                 type="email"
                 value={sellerEmail}
                 onChange={(e) => setSellerEmail(e.target.value)}
                 placeholder="seller@email.com"
-                className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
+                className="w-full bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
               />
             </div>
             <div>
-              <p className="text-sm text-white/80 mb-2">Sale price (MXN)</p>
+              <p className="text-base text-[#444] mb-2">Sale price (MXN)</p>
               <input
                 type="text"
                 value={salePrice}
                 onChange={(e) => setSalePrice(e.target.value)}
                 placeholder="e.g. 120,000"
-                className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
+                className="w-full bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
               />
             </div>
             <div>
-              <p className="text-sm text-white/80 mb-2">City / State</p>
+              <p className="text-base text-[#444] mb-2">City / State</p>
               <input
                 type="text"
                 value={saleLocation}
                 onChange={(e) => setSaleLocation(e.target.value)}
                 placeholder="e.g. Ciudad de México, CDMX"
-                className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
+                className="w-full bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
               />
             </div>
           </div>
-          <p className="text-sm text-white/60 leading-relaxed mb-4">
+          <p className="text-[15px] text-[#666] leading-relaxed mb-4">
             Both parties should review and confirm all details before signing.
           </p>
-          <button
-            onClick={handleGenerate}
-            disabled={!canGenerate}
-            className={`w-full text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left ${
-              !canGenerate
-                ? "bg-[var(--border)] text-[var(--foreground-muted)] cursor-default"
-                : "bg-[var(--accent)] hover:bg-blue-600 text-white"
-            }`}
-          >
-            Generate purchase agreement
-          </button>
+          {(risk.confidence < 40 || transaction.documents.invoice.status !== "uploaded") && (
+            <p className="text-[15px] text-amber-400/80 leading-relaxed mb-4">
+              You are generating an agreement based on incomplete verification data. Review carefully before signing.
+            </p>
+          )}
+          {verdictIsClean ? (
+            <button
+              onClick={handleGenerate}
+              disabled={!canGenerate}
+              className={`w-full text-base font-semibold px-5 py-4 rounded-lg transition-colors text-left ${
+                !canGenerate
+                  ? "bg-[var(--border)] text-[var(--foreground-muted)] cursor-default"
+                  : "bg-[#B4531A] hover:opacity-85 text-white shadow-[0_4px_16px_rgba(180,83,26,.28)]"
+              }`}
+            >
+              Generate purchase agreement
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => goToStep("check")}
+                className="w-full bg-[#B4531A] hover:opacity-85 text-white shadow-[0_4px_16px_rgba(180,83,26,.28)] text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left"
+              >
+                Resolve these risks before you proceed
+              </button>
+              <button
+                onClick={handleGenerate}
+                disabled={!canGenerate}
+                className={`w-full mt-3 text-base font-semibold px-5 py-4 rounded-lg border transition-colors text-left ${
+                  !canGenerate
+                    ? "border-[var(--border)] text-[var(--foreground-muted)] cursor-default"
+                    : "border-[var(--border)] hover:border-white/30 text-[var(--foreground-muted)] hover:text-white"
+                }`}
+              >
+                Continue anyway
+              </button>
+            </>
+          )}
         </div>
       )}
 
       <div className="mb-8">
         <button
           onClick={handleDownloadAll}
-          className="text-sm text-white/60 hover:text-white transition-colors"
+          className="text-[15px] text-[#666] hover:text-white transition-colors"
         >
           Download full vehicle record (.zip)
         </button>
@@ -1417,16 +1580,16 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
 
       {showForm ? (
         <div>
-          <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-4">
+          <p className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)] mb-4">
             Add Maintenance
           </p>
           <div className="flex flex-col gap-4">
             <div>
-              <p className="text-sm text-white/80 mb-2">Type</p>
+              <p className="text-base text-[#444] mb-2">Type</p>
               <select
                 value={recordType}
                 onChange={(e) => setRecordType(e.target.value as MaintenanceRecordType)}
-                className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2"
+                className="w-full bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] text-sm rounded-lg px-3 py-2"
               >
                 <option value="service">Service</option>
                 <option value="repair">Repair</option>
@@ -1434,32 +1597,32 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
               </select>
             </div>
             <div>
-              <p className="text-sm text-white/80 mb-2">Title</p>
+              <p className="text-base text-[#444] mb-2">Title</p>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Oil change"
-                className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
+                className="w-full bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
               />
             </div>
             <div>
-              <p className="text-sm text-white/80 mb-2">Date</p>
+              <p className="text-base text-[#444] mb-2">Date</p>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2"
+                className="w-full bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] text-sm rounded-lg px-3 py-2"
               />
             </div>
           </div>
           <button
             onClick={handleSave}
             disabled={!title.trim() || !date}
-            className={`mt-5 w-full text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left ${
+            className={`mt-5 w-full text-base font-semibold px-5 py-4 rounded-lg transition-colors text-left ${
               !title.trim() || !date
                 ? "bg-[var(--border)] text-[var(--foreground-muted)] cursor-default"
-                : "bg-[var(--accent)] hover:bg-blue-600 text-white cursor-pointer"
+                : "bg-[#B4531A] hover:opacity-85 text-white cursor-pointer shadow-[0_4px_16px_rgba(180,83,26,.28)]"
             }`}
           >
             Save record
@@ -1468,13 +1631,13 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
       ) : (
         <>
           {showMaintenanceSaved && (
-            <p className="text-sm text-white/60 leading-relaxed mb-3">
+            <p className="text-[15px] text-[#666] leading-relaxed mb-3">
               Maintenance record saved.
             </p>
           )}
           <button
             onClick={() => { setShowForm(true); setShowMaintenanceSaved(false); }}
-            className="text-sm text-[var(--accent)] hover:text-blue-400 transition-colors"
+            className="text-[15px] text-[var(--accent)] hover:text-blue-400 transition-colors"
           >
             Add maintenance record
           </button>
@@ -1547,50 +1710,50 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
         {backLink}
         {changesBanner}
         <section className="py-10">
-          <div className="mb-3">
-            <span className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">
+          <div className="mb-4">
+            <span className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)]">
               Upload
             </span>
           </div>
 
-          <h2 className="text-2xl font-semibold text-white mb-5 leading-snug">
+          <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
             Start your vehicle check
           </h2>
 
-          <p className="text-[18px] text-white/75 leading-relaxed mb-8">
+          <p className="text-[18px] text-[#444] leading-relaxed mb-10">
             We need basic vehicle details and the seller&apos;s documents to run
             verification. The more complete your upload, the more accurate your
             risk report.
           </p>
 
           {/* Vehicle info */}
-          <p className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)] mb-4">
+          <p className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)] mb-4">
             Vehicle details
           </p>
-          <div className="flex flex-col gap-5 mb-5">
+          <div className="flex flex-col gap-6 mb-6">
             <div className="flex gap-4">
               <div className="flex-1">
-                <p className="text-sm text-white/80 mb-2">Make</p>
+                <p className="text-base text-[#444] mb-2">Make</p>
                 <input
                   type="text"
                   defaultValue={vehicle.make}
                   onBlur={(e) => updateVehicle({ make: e.target.value.trim() })}
                   placeholder="e.g. Nissan"
-                  className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)] focus:outline-none focus:border-white/30"
+                  className="w-full bg-white border border-[rgba(0,0,0,0.12)] text-[#111111] text-base rounded-lg px-3 py-2.5 placeholder:text-[#999999] focus:outline-none focus:border-[rgba(0,0,0,0.3)]"
                 />
               </div>
               <div className="flex-1">
-                <p className="text-sm text-white/80 mb-2">Model</p>
+                <p className="text-base text-[#444] mb-2">Model</p>
                 <input
                   type="text"
                   defaultValue={vehicle.model}
                   onBlur={(e) => updateVehicle({ model: e.target.value.trim() })}
                   placeholder="e.g. Sentra"
-                  className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)] focus:outline-none focus:border-white/30"
+                  className="w-full bg-white border border-[rgba(0,0,0,0.12)] text-[#111111] text-base rounded-lg px-3 py-2.5 placeholder:text-[#999999] focus:outline-none focus:border-[rgba(0,0,0,0.3)]"
                 />
               </div>
               <div className="w-24">
-                <p className="text-sm text-white/80 mb-2">Year</p>
+                <p className="text-base text-[#444] mb-2">Year</p>
                 <input
                   type="number"
                   defaultValue={vehicle.year || ""}
@@ -1603,38 +1766,38 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
                   placeholder="2020"
                   min={1900}
                   max={new Date().getFullYear() + 1}
-                  className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)] focus:outline-none focus:border-white/30"
+                  className="w-full bg-white border border-[rgba(0,0,0,0.12)] text-[#111111] text-base rounded-lg px-3 py-2.5 placeholder:text-[#999999] focus:outline-none focus:border-[rgba(0,0,0,0.3)]"
                 />
               </div>
             </div>
             <div className="flex gap-4">
               <div className="flex-1">
-                <p className="text-sm text-white/80 mb-2">
-                  VIN <span className="normal-case text-white/50">(recommended)</span>
+                <p className="text-base text-[#444] mb-2">
+                  VIN <span className="normal-case text-[#666]">(recommended)</span>
                 </p>
                 <input
                   type="text"
                   defaultValue={vehicle.vin ?? ""}
                   onBlur={(e) => updateVehicle({ vin: e.target.value.trim() || undefined })}
                   placeholder="17-character VIN"
-                  className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)] font-mono focus:outline-none focus:border-white/30"
+                  className="w-full bg-white border border-[rgba(0,0,0,0.12)] text-[#111111] text-base rounded-lg px-3 py-2.5 placeholder:text-[#999999] font-mono focus:outline-none focus:border-[rgba(0,0,0,0.3)]"
                 />
               </div>
               <div className="flex-1">
-                <p className="text-sm text-white/80 mb-2">
-                  Plate <span className="normal-case text-white/50">(recommended)</span>
+                <p className="text-base text-[#444] mb-2">
+                  Plate <span className="normal-case text-[#666]">(recommended)</span>
                 </p>
                 <input
                   type="text"
                   defaultValue={vehicle.plate ?? ""}
                   onBlur={(e) => updateVehicle({ plate: e.target.value.trim() || undefined })}
                   placeholder="e.g. ABC-123-D"
-                  className="w-full bg-[var(--background)] border border-[var(--border)] text-white text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)] font-mono focus:outline-none focus:border-white/30"
+                  className="w-full bg-white border border-[rgba(0,0,0,0.12)] text-[#111111] text-base rounded-lg px-3 py-2.5 placeholder:text-[#999999] font-mono focus:outline-none focus:border-[rgba(0,0,0,0.3)]"
                 />
               </div>
             </div>
           </div>
-          <p className="text-sm text-white/60 leading-relaxed mb-10">
+          <p className="text-[15px] text-[#666] leading-relaxed mb-10">
             Adding a VIN or plate allows theft and registry checks. Without it,
             your results will be limited.
           </p>
@@ -1642,7 +1805,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
           {/* Document upload progress */}
           {uploadedDocs > 0 && !allUploaded && (
             <div className="border border-[var(--border)] rounded-lg px-4 py-4 mb-6">
-              <p className="text-sm text-white/70 leading-relaxed">
+              <p className="text-[15px] text-[#444] leading-relaxed">
                 {uploadedDocs} of 3 documents uploaded — missing documents will
                 appear as unknowns in your report.
               </p>
@@ -1652,7 +1815,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
           {/* Warning: no identifier — non-blocking, shown once minimum input is met */}
           {hasDocs && !hasIdentifier && (
             <div className="border border-amber-400/20 bg-amber-400/[0.06] rounded-lg px-4 py-4 mb-4">
-              <p className="text-sm text-amber-400 leading-relaxed">
+              <p className="text-[15px] text-amber-400 leading-relaxed">
                 Proceeding without a VIN or plate will reduce verification
                 accuracy. Registry and theft checks will not run.
               </p>
@@ -1662,7 +1825,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
           {/* Hard gate warning — shown only when nothing has been provided */}
           {!hasMinimumInput && (
             <div className="border border-[var(--border)] rounded-lg px-4 py-4 mb-4">
-              <p className="text-sm text-white/70 leading-relaxed">
+              <p className="text-[15px] text-[#444] leading-relaxed">
                 Add a VIN/plate or upload at least one document to continue.
               </p>
             </div>
@@ -1676,21 +1839,21 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
               advanceStep();
             }}
             disabled={!canContinue}
-            className={`w-full text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left mb-3 ${
+            className={`w-full text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left mb-3 ${
               !canContinue
-                ? "bg-[var(--border)] text-[var(--foreground-muted)] cursor-default"
-                : "bg-[var(--accent)] hover:bg-blue-600 text-white"
+                ? "bg-[rgba(0,0,0,0.06)] text-[#999999] cursor-default"
+                : "bg-[#B4531A] hover:opacity-85 text-white shadow-[0_4px_16px_rgba(180,83,26,.28)]"
             }`}
           >
             {!hasMinimumInput
               ? "Add a VIN/plate or document to continue"
               : !hasIdentifier
-              ? "Run initial check — registry checks limited without VIN/plate"
-              : "Run initial check"}
+              ? "Check this vehicle — registry checks limited without VIN/plate"
+              : "Check this vehicle"}
           </button>
 
           {vehicleComplete && !allUploaded && uploadedDocs > 0 && (
-            <p className="text-sm text-white/60 leading-relaxed">
+            <p className="text-[15px] text-[#666] leading-relaxed">
               You can add more documents later to improve your results.
             </p>
           )}
@@ -1708,45 +1871,43 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
         {backLink}
         {changesBanner}
         <section className="py-10">
-          <div className="mb-3">
-            <span className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">
+          <div className="mb-4">
+            <span className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)]">
               {planSteps[currentIndex]?.label}
             </span>
           </div>
-          <h2 className="text-2xl font-semibold text-white mb-5 leading-snug">
+          <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
             {checkContent.heading}
           </h2>
-          <p className="text-[18px] text-white/75 leading-relaxed mb-8">
+          <p className="text-[18px] text-[#444] leading-relaxed mb-10">
             {checkContent.body}
           </p>
           {!checkHasMinimumInput && (
             <div className="border border-amber-400/20 bg-amber-400/[0.06] rounded-lg px-4 py-4 mb-6">
-              <p className="text-sm text-amber-400 leading-relaxed">
+              <p className="text-[15px] text-amber-400 leading-relaxed">
                 We need at least a VIN, plate, or one uploaded document to analyze
                 this vehicle.
               </p>
             </div>
           )}
-          <div className="mt-2">
-            <button
-              onClick={() => {
-                if (checkHasMinimumInput) {
-                  if (process.env.NODE_ENV === "development") {
-                    console.log("ACTION: CONTINUE", { step: current_step, transactionId: transaction.id });
-                  }
-                  advanceStep();
+          <button
+            onClick={() => {
+              if (checkHasMinimumInput) {
+                if (process.env.NODE_ENV === "development") {
+                  console.log("ACTION: CONTINUE", { step: current_step, transactionId: transaction.id });
                 }
-              }}
-              disabled={!checkHasMinimumInput}
-              className={`w-full text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left ${
-                !checkHasMinimumInput
-                  ? "bg-[var(--border)] text-[var(--foreground-muted)] cursor-default"
-                  : "bg-[var(--accent)] hover:bg-blue-600 text-white"
-              }`}
-            >
-              {checkContent.action}
-            </button>
-          </div>
+                advanceStep();
+              }
+            }}
+            disabled={!checkHasMinimumInput}
+            className={`w-full text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left ${
+              !checkHasMinimumInput
+                ? "bg-[var(--border)] text-[var(--foreground-muted)] cursor-default"
+                : "bg-[#B4531A] hover:opacity-85 text-white shadow-[0_4px_16px_rgba(180,83,26,.28)]"
+            }`}
+          >
+            {checkContent.action}
+          </button>
         </section>
       </>
     );
@@ -1758,8 +1919,8 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
         {backLink}
         {changesBanner}
         <section className="py-8">
-          <div className="mb-2">
-            <span className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">
+          <div className="mb-4">
+            <span className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)]">
               {planSteps[currentIndex]?.label}
             </span>
           </div>
@@ -1775,8 +1936,8 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
         {backLink}
         {changesBanner}
         <section className="py-8">
-          <div className="mb-2">
-            <span className="text-[10px] uppercase tracking-widest text-[var(--foreground-muted)]">
+          <div className="mb-4">
+            <span className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)]">
               Verify
             </span>
           </div>
@@ -1801,12 +1962,12 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
     <>
       {backLink}
       <section className="py-8">
-        <p className="text-sm text-[var(--foreground-muted)]">
+        <p className="text-[18px] text-[#444] leading-relaxed mb-8">
           Something went wrong. Reload the page or go back.
         </p>
         <button
           onClick={() => goToStep("upload")}
-          className="mt-4 w-full bg-[var(--accent)] hover:bg-blue-600 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors text-left"
+          className="mt-4 w-full bg-[#B4531A] hover:opacity-85 text-white text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left shadow-[0_4px_16px_rgba(180,83,26,.28)]"
         >
           ← Back to Upload
         </button>

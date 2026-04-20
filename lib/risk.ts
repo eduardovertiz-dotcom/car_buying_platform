@@ -16,8 +16,9 @@ export type RiskOutput = {
 export function confidenceLabel(n: number): string {
   if (n >= 90) return "High confidence — all key sources verified";
   if (n >= 70) return "Moderate confidence — most sources verified";
-  if (n >= 50) return "Partial confidence — limited data available";
-  if (n > 0)   return "Low confidence — significant data gaps";
+  if (n > 60)  return "Partial confidence — limited data available";
+  if (n >= 30) return "Some important data could not be verified. Risk assessment may be incomplete.";
+  if (n > 0)   return "Very limited data available. Most critical information could not be verified.";
   return "No data — analysis could not run";
 }
 
@@ -46,13 +47,13 @@ export function computeRisk(transaction: Transaction): RiskOutput {
   // ── Unknowns — gaps we cannot resolve without more data ───────────────────
   const unknowns: string[] = [];
   if (documents.invoice.status !== "uploaded")
-    unknowns.push("Ownership chain could not be fully verified");
+    unknowns.push("Ownership chain is unverified");
   if (!vehicle.vin?.trim() && !vehicle.plate?.trim())
     unknowns.push("Theft and registry checks were not performed");
   if (documents.registration.status !== "uploaded")
-    unknowns.push("State registration could not be verified");
+    unknowns.push("State registration is unverified");
   if (documents.ine.status !== "uploaded")
-    unknowns.push("Seller identity could not be verified");
+    unknowns.push("Seller identity is unverified");
 
   // ── Issues + Resolved ──────────────────────────────────────────────────────
   const issues: string[] = [];

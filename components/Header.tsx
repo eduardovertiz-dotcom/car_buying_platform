@@ -28,7 +28,7 @@ export default function Header({ plan }: { plan: "39" | "69" | null }) {
             <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-0.5">
               Step {currentStepIndex + 1} of {steps.length}
             </p>
-            <p className="text-white font-semibold">
+            <p className="text-[var(--foreground)] font-semibold">
               {steps[currentStepIndex]?.label}
             </p>
           </div>
@@ -43,7 +43,7 @@ export default function Header({ plan }: { plan: "39" | "69" | null }) {
               </p>
               <button
                 onClick={handleLogout}
-                className="text-xs text-white hover:underline cursor-pointer transition-colors"
+                className="text-xs text-[var(--foreground)] hover:underline cursor-pointer transition-colors"
               >
                 Logout
               </button>
@@ -56,8 +56,10 @@ export default function Header({ plan }: { plan: "39" | "69" | null }) {
             <div key={step.key} className="flex-1">
               <div
                 className={`h-1 w-full rounded-full transition-colors duration-300 ${
-                  i <= currentStepIndex
-                    ? "bg-[var(--accent)]"
+                  i === currentStepIndex
+                    ? "bg-[#B4531A]"
+                    : i < currentStepIndex
+                    ? "bg-white/20"
                     : "bg-[var(--border)]"
                 }`}
               />
@@ -81,7 +83,7 @@ export default function Header({ plan }: { plan: "39" | "69" | null }) {
               <p
                 key={step.key}
                 className={`text-[10px] uppercase tracking-wider transition-colors duration-300 ${
-                  isCurrent ? "text-[var(--accent)]" : "text-[var(--border)]"
+                  isCurrent ? "text-[#B4531A]" : "text-[var(--border)]"
                 }`}
               >
                 {step.label}

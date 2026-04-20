@@ -92,9 +92,14 @@ export default function SharePage() {
     <main className="px-6 pb-16">
       <div className="max-w-[680px] mx-auto">
 
-        <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mb-6">
+        <p className="text-xs text-[var(--foreground-muted)] leading-relaxed mb-4">
           Shared record — read-only
         </p>
+        <div className="border border-amber-400/20 bg-amber-400/[0.06] rounded-lg px-4 py-3 mb-6">
+          <p className="text-[13px] text-amber-400/80 leading-relaxed">
+            This is a user-generated verification summary based on available data. It does not guarantee the safety or validity of the transaction.
+          </p>
+        </div>
 
         {/* Header */}
         <div className="py-6 border-b border-[var(--border)] mb-8">

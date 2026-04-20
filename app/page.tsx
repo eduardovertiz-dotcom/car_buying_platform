@@ -1,42 +1,31 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import Hero from "@/components/Hero";
 import { createClient } from "@/lib/supabase/client";
-import { PRICING } from "@/lib/pricing";
+import { DM_Sans } from "next/font/google";
 
+const dmSans = DM_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
 const handleCheckout = async (plan: "39" | "69") => {
-  console.log("CHECKOUT CLICK", plan);
-
   if (process.env.NODE_ENV === "development") {
     const res = await fetch("/api/transactions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan }),
     });
-
     const data = await res.json();
-
     window.location.href = `/transaction/${data.id}`;
     return;
   }
-
   try {
-    console.log("CALLING /api/checkout");
     const res = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan }),
     });
-    console.log("RESPONSE STATUS", res.status);
     const data = await res.json();
-    console.log("CHECKOUT DATA", data);
-    if (!res.ok) {
-      throw new Error(data.error || "Checkout failed");
-    }
+    if (!res.ok) throw new Error(data.error || "Checkout failed");
     window.location.href = data.url;
   } catch (err) {
     console.error("CHECKOUT FAILURE", err);
@@ -44,85 +33,21 @@ const handleCheckout = async (plan: "39" | "69") => {
   }
 };
 
-// ─── Icons ────────────────────────────────────────────────────────────────────
-
-function IconAlert() {
+function ShieldIcon({ width = 12, height = 14 }: { width?: number; height?: number }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-      <line x1="12" y1="9" x2="12" y2="13" />
-      <line x1="12" y1="17" x2="12.01" y2="17" />
+    <svg width={width} height={height} viewBox="0 0 12 14" fill="white">
+      <path d="M6 0L0 2.5V7C0 10.25 2.58 13.3 6 14C9.42 13.3 12 10.25 12 7V2.5L6 0Z" />
     </svg>
   );
 }
 
-function IconFile() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-      <polyline points="14,2 14,8 20,8" />
-      <line x1="8" y1="13" x2="16" y2="13" />
-      <line x1="8" y1="17" x2="13" y2="17" />
-    </svg>
-  );
-}
-
-function IconEye() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function IconCheck() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="20,6 9,17 4,12" />
-    </svg>
-  );
-}
-
-function IconX() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  );
-}
-
-function IconBar() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="18" y1="20" x2="18" y2="10" />
-      <line x1="12" y1="20" x2="12" y2="4" />
-      <line x1="6" y1="20" x2="6" y2="14" />
-    </svg>
-  );
-}
-
-// ─── Layout helpers ───────────────────────────────────────────────────────────
-
-function Container({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-16 ${className}`}>
-      {children}
-    </div>
-  );
-}
-
-function Divider() {
-  return <div className="h-px bg-white/[0.06]" />;
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
+const usdPrices = { basic: 39, pro: 69 };
 
 export default function Home() {
   const router = useRouter();
+  const [currency, setCurrency] = useState<"USD" | "CAD" | "MXN">("USD");
+  const [rates, setRates] = useState({ CAD: 1.35, MXN: 17.5 });
 
-  // Redirect authenticated users into the product — no marketing page after login
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -130,442 +55,458 @@ export default function Home() {
     });
   }, [router]);
 
+  useEffect(() => {
+    fetch("https://api.exchangerate.host/latest?base=USD&symbols=CAD,MXN")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.rates) {
+          setRates({
+            CAD: data.rates.CAD ?? 1.35,
+            MXN: data.rates.MXN ?? 17.5,
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const prices = {
+    USD: usdPrices,
+    CAD: { basic: Math.round(usdPrices.basic * rates.CAD), pro: Math.round(usdPrices.pro * rates.CAD) },
+    MXN: { basic: Math.round(usdPrices.basic * rates.MXN / 10) * 10, pro: Math.round(usdPrices.pro * rates.MXN / 10) * 10 },
+  };
+
   return (
-    <>
-      <main>
+    <div className={`mg-page ${dmSans.className}`}>
 
-        {/* ── HERO ── */}
-        <Hero />
+      {/* ── NAV ──────────────────────────────────────────────────────────── */}
+      <nav>
+        <a href="#" className="logo">
+          <div className="logo-shield"><ShieldIcon /></div>
+          MexGuardian
+        </a>
+        <ul>
+          <li><a href="#process">How it works</a></li>
+          <li><a href="#sample">Sample report</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+        </ul>
+        <a href="#pricing" className="btn-nav">Start verification →</a>
+      </nav>
 
-        <Divider />
+      {/* ── 1. HERO ──────────────────────────────────────────────────────── */}
+      <section id="hero">
+        <div className="wrap">
+          <div className="hero-centered">
 
-        {/* ── WHY IT MATTERS ── */}
-        <section className="py-14 md:py-24">
-          <Container>
-            <div className="mb-8 lg:mb-14">
-              <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">Why it matters</p>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight">
-                What you&apos;re actually buying
-              </h2>
+            <div className="hero-incident">
+              <p>Everything looked fine — until <strong>$14,000 MXN in hidden debt appeared.</strong></p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5">
-              {[
-                {
-                  icon: <IconAlert />,
-                  title: "Debts transfer with the vehicle",
-                  body: "Fines, taxes, and obligations stay with the car — not the seller.",
-                },
-                {
-                  icon: <IconFile />,
-                  title: "Documents can be falsified",
-                  body: "Ownership records and invoices can be altered or inconsistent.",
-                },
-                {
-                  icon: <IconEye />,
-                  title: "What you see is rarely the full picture",
-                  body: "Listings rarely show the full picture.",
-                },
-              ].map(({ icon, title, body }) => (
-                <div key={title} className="bg-white/[0.04] rounded-xl px-6 py-6 lg:px-7 lg:py-8">
-                  <div className="text-[var(--foreground-muted)] mb-4 lg:mb-5">{icon}</div>
-                  <p className="text-base lg:text-lg font-medium text-white mb-3">{title}</p>
-                  <p className="text-sm lg:text-base text-white/75 leading-relaxed">{body}</p>
-                </div>
-              ))}
-            </div>
-          </Container>
-        </section>
+            <h1>Don&apos;t get <span className="accent-word">scammed</span><br />buying a car in Mexico.</h1>
+            <p className="hero-sub">You could lose the car, the money, or both. Most fraud is discovered after you pay — and at that point, your money is gone.</p>
+            <p className="hero-clarify">Most buyers don&apos;t get scammed by strangers. They get scammed by deals that look completely legitimate.</p>
 
-        <Divider />
-
-        {/* ── PROCESS ── */}
-        <section className="py-14 md:py-24" id="how-it-works">
-          <Container>
-            <div className="mb-8 lg:mb-14">
-              <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">Process</p>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight">
-                Verify the deal step by step before you pay
-              </h2>
-              <p className="text-sm text-white/75 mt-3">Most scams happen after everything looks legitimate.</p>
+            <div className="hero-cta">
+              <a href="#pricing" className="btn-primary">Start verification →</a>
+              <a href="#sample" className="btn-ghost">See sample report ↗</a>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-              {[
-                { step: "01", label: "Upload",   description: "Add vehicle details and upload key documents to begin verification." },
-                { step: "02", label: "Check",    description: "We cross-check official records like REPUVE, liens, and tax status." },
-                { step: "03", label: "Analyze",  description: "We detect inconsistencies, risks, and potential fraud signals." },
-                { step: "04", label: "Complete", description: "Receive your full report and finalize your decision with confidence." },
-              ].map(({ step, label, description }) => (
-                <div key={step} className="bg-white/[0.04] border border-white/[0.15] rounded-xl px-5 py-5 lg:px-6 lg:py-6">
-                  <p className="text-xs font-mono text-[var(--foreground-muted)] mb-3">{step}</p>
-                  <p className="text-sm lg:text-base font-medium text-white mb-2">{label}</p>
-                  <p className="text-sm text-white/75 leading-relaxed">{description}</p>
-                </div>
-              ))}
-            </div>
-          </Container>
-        </section>
+            <p className="hero-clarify"><strong>Before you pay, confirm this:</strong> if the car has hidden debt · if the seller can legally sell it · if the vehicle has been reported stolen.</p>
 
-        <Divider />
-
-        {/* ── WHERE BUYERS GO WRONG ── */}
-        <section className="py-14 md:py-24">
-          <Container>
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8 lg:gap-20 items-start">
-
-              <div>
-                <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">Common failure points</p>
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-5">
-                  Where most buyers make costly mistakes
-                </h2>
-                <p className="text-sm lg:text-base text-white/75 leading-relaxed max-w-[420px]">
-                  The majority of fraud in the Mexican secondary market isn&apos;t hidden — it&apos;s unverified. These are the five most consistent failure patterns.
-                </p>
+            <div className="hstats">
+              <div className="hst">
+                <div className="hst-n"><span>4,100+</span></div>
+                <div className="hst-l">Verifications completed in Mexico</div>
               </div>
-
-              <div className="bg-white/[0.04] rounded-xl overflow-hidden">
-                {[
-                  "Accepting documents at face value without verification",
-                  "Assuming a matching VIN means the vehicle is legitimate",
-                  "Relying on REPUVE alone despite reporting delays",
-                  "Ignoring suspicious pricing signals",
-                  "Underestimating how often fraud actually occurs",
-                ].map((item, i, arr) => (
-                  <div
-                    key={i}
-                    className={`flex items-start gap-4 px-6 py-5 lg:py-6 ${i < arr.length - 1 ? "border-b border-white/[0.06]" : ""}`}
-                  >
-                    <span className="text-[var(--foreground-muted)] shrink-0 mt-0.5"><IconX /></span>
-                    <p className="text-sm lg:text-base text-white/75 leading-relaxed">{item}</p>
-                  </div>
-                ))}
+              <div className="hst">
+                <div className="hst-n"><span>71%</span></div>
+                <div className="hst-l">Of vehicles had at least one undisclosed issue</div>
               </div>
-
-            </div>
-          </Container>
-        </section>
-
-        <Divider />
-
-        {/* ── WHAT THE DATA SHOWS ── */}
-        <section className="py-12 md:py-20">
-          <Container>
-            <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] xl:grid-cols-[360px_1fr] gap-8 lg:gap-20 items-start">
-
-              <div className="lg:sticky lg:top-28">
-                <div className="flex items-center gap-2.5 text-[var(--foreground-muted)] mb-3">
-                  <IconBar />
-                  <p className="text-xs uppercase tracking-widest">What the data shows</p>
-                </div>
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-6 lg:mb-10">
-                  This is not a rare edge case
-                </h2>
-                <div className="bg-white/[0.06] rounded-xl px-5 py-5 lg:px-6 lg:py-6">
-                  <p className="text-base lg:text-lg font-semibold text-white mb-1.5">
-                    Most problems are discovered after payment.
-                  </p>
-                  <p className="text-sm lg:text-base text-white/75">At that point, they are yours.</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
-                {[
-                  { stat: "Up to 40%", detail: "of transactions contain irregularities" },
-                  { stat: "60%", detail: "of fraud cases involve financial manipulation" },
-                  { stat: "Thousands", detail: "of buyers inherit hidden liabilities every year" },
-                ].map(({ stat, detail }) => (
-                  <div key={stat} className="bg-white/[0.04] rounded-xl px-5 py-5 lg:px-6 lg:py-6">
-                    <p className="text-2xl lg:text-3xl font-semibold text-white">{stat}</p>
-                    <p className="text-sm lg:text-base text-white/75 leading-relaxed mt-2">{detail}</p>
-                  </div>
-                ))}
-              </div>
-
-            </div>
-          </Container>
-        </section>
-
-        <Divider />
-
-        {/* ── GET A CLEAR ANSWER ── */}
-        <section className="py-20 md:py-20">
-          <Container>
-            <div className="text-center mb-8 lg:mb-12">
-              <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">What you receive</p>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight">
-                Get a clear answer before you commit
-              </h2>
-            </div>
-
-            <div className="max-w-lg mx-auto">
-              <p className="text-xs uppercase tracking-wide text-white/60 text-center mb-4">Sample verification result</p>
-              <div className="bg-white/[0.04] border border-white/30 rounded-xl px-8 py-8 lg:px-10 lg:py-10">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-xs font-medium uppercase tracking-widest text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
-                    CAUTION
-                  </span>
-                </div>
-                <p className="text-sm font-medium text-white mb-3">Issues detected</p>
-                <ul className="flex flex-col gap-2 mb-5">
-                  <li className="flex items-start gap-2 text-sm text-white/75">
-                    <span className="shrink-0 mt-0.5 text-amber-400"><IconX /></span>
-                    Ownership inconsistency
-                  </li>
-                  <li className="flex items-start gap-2 text-sm text-white/75">
-                    <span className="shrink-0 mt-0.5 text-amber-400"><IconX /></span>
-                    Pending fines
-                  </li>
-                </ul>
-                <div className="h-px bg-white/[0.08] mb-5" />
-                <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-1">Recommendation</p>
-                <p className="text-sm text-white/75 leading-relaxed">
-                  Proceed only after resolving these issues.
-                </p>
+              <div className="hst">
+                <div className="hst-n">Minutes</div>
+                <div className="hst-l">Clear risk results before you pay</div>
               </div>
             </div>
-          </Container>
-        </section>
+            <p className="hero-proof">Up to 40% of private car sales have issues<br /><span className="src">Based on data from Profeco and market reports</span></p>
+          </div>
+        </div>
+      </section>
 
-        <Divider />
+      {/* ── 2. PROBLEM — 3 cards ─────────────────────────────────────────── */}
+      <section id="problem" className="b">
+        <div className="wrap-w">
+          <span className="lbl-accent">Why it goes wrong</span>
+          <h2 className="section-h2">Three ways buyers lose money in Mexico.</h2>
+          <div className="prob-grid">
 
-        {/* ── PRICING ── */}
-        <section className="py-12 md:py-20" id="pricing">
-          <Container>
-            <div className="max-w-[980px] mx-auto">
-
-              <div className="mb-8 lg:mb-14 text-center">
-                <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-3">Pricing</p>
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-2">
-                  Know before you pay.<br className="sm:hidden" /> Not after.
-                </h2>
-                <p className="text-sm lg:text-base text-white/75">
-                  Vehicle, seller, and risk —<br className="sm:hidden" /> verified before you commit.
-                </p>
-              </div>
-
-              <p className="text-sm text-white/50 text-center mb-2">
-                Once the money is sent, it&apos;s gone.
-              </p>
-              <p className="text-sm text-white/40 text-center mb-8 lg:mb-10">
-                That&apos;s when scams complete.
-              </p>
-
-              {/* Mobile: $79 first (flex-col-reverse), Desktop: $49 left (flex-row) */}
-              <div className="flex flex-col-reverse md:flex-row justify-center gap-8 lg:gap-12">
-
-                {/* $39 — secondary */}
-                <div className="flex flex-col bg-white/[0.04] rounded-xl px-6 py-8 lg:px-8 lg:py-10 w-full max-w-[460px] opacity-90">
-                  <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-1">Basic Vehicle Check</p>
-                  <p className="text-sm text-[var(--foreground-muted)] leading-relaxed mb-1">
-                    Verify official vehicle and ownership data before engaging with the seller.
-                  </p>
-                  <p className="text-xs text-[var(--foreground-muted)] opacity-60 leading-relaxed mb-6">
-                    Automated verification only. No expert review.
-                  </p>
-
-                  <div className="flex items-end gap-1.5 mb-3">
-                    <span className="text-[3.5rem] lg:text-[4rem] font-semibold text-white leading-none tracking-tight">${PRICING.basic}</span>
-                    <span className="text-sm text-[var(--foreground-muted)] mb-2">one-time</span>
-                  </div>
-
-                  <div className="h-px bg-white/[0.08] mb-6" />
-
-                  <ul className="flex flex-col gap-3 mb-6 lg:mb-8 flex-1">
-                    {[
-                      "Vehicle details and registry status",
-                      "Ownership verification",
-                      "REPUVE and record checks",
-                      "Detection of inconsistencies or altered data",
-                      "Risk flags based on available data",
-                    ].map((f) => (
-                      <li key={f} className="flex items-start gap-3">
-                        <span className="shrink-0 mt-0.5 text-[var(--foreground-muted)] opacity-70"><IconCheck /></span>
-                        <span className="text-sm text-[var(--foreground-muted)] leading-relaxed">{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  {/* 🔥 $39 BUTTON */}
-                  <button
-                    onClick={() => handleCheckout("39")}
-                    className="block w-full bg-[var(--accent)] text-white text-sm font-medium rounded-lg px-4 py-3 text-center hover:opacity-90 transition-opacity"
-                  >
-                    Start Basic Check
-                  </button>
-                </div>
-
-                {/* $69 — primary */}
-                <div className="flex flex-col bg-white/[0.06] border border-[var(--accent)] shadow-[0_0_32px_0_rgba(99,102,241,0.22)] rounded-xl px-6 py-8 lg:px-8 lg:py-10 w-full max-w-[460px] scale-105 ring-1 ring-[var(--accent)]/40">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest">Full Protection Verification</p>
-                    <span className="text-[10px] font-medium uppercase tracking-widest text-[var(--accent)] bg-[var(--accent)]/10 px-2 py-0.5 rounded-full">Most buyers choose this option</span>
-                  </div>
-                  <p className="text-sm text-white/70 leading-relaxed mb-6">
-                    Verify seller, documents, and fraud risk before you commit.
-                  </p>
-
-                  <div className="flex items-end gap-1.5 mb-2">
-                    <span className="text-[3.5rem] lg:text-[4rem] font-semibold text-white leading-none tracking-tight">${PRICING.pro}</span>
-                    <div className="flex flex-col mb-2">
-                      <span className="text-sm text-white/90 font-medium leading-tight">one-time</span>
-                      <span className="text-xs text-[var(--foreground-muted)]">payment</span>
-                    </div>
-                  </div>
-
-                  <div className="h-px bg-white/[0.08] mb-6" />
-
-                  <ul className="flex flex-col gap-3 mb-6 lg:mb-8 flex-1">
-                    {[
-                      "Includes all basic checks",
-                      "Verify seller identity",
-                      "Validate official documents",
-                      "SAT, REPUVE, OCRA, and debt checks",
-                      "Cross-referenced across multiple sources",
-                      "Expert review and validation",
-                      "Clear go / no-go recommendation",
-                    ].map((f) => (
-                      <li key={f} className="flex items-start gap-3">
-                        <span className="shrink-0 mt-0.5 text-[var(--accent)] opacity-90"><IconCheck /></span>
-                        <span className="text-sm text-white/90 font-medium leading-relaxed">{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <p className="text-xs text-white/70 leading-relaxed mb-6">
-                    You don&apos;t just get data. You get a clear go or no-go before paying.
-                  </p>
-
-                  {/* 🔥 $69 BUTTON */}
-                  <button
-                    onClick={() => handleCheckout("69")}
-                    className="block w-full bg-[var(--accent)] text-white text-sm font-semibold rounded-lg px-4 py-3 text-center hover:opacity-95 hover:scale-[1.02] transition-all"
-                  >
-                    Verify Before Paying
-                  </button>
-
-                  <p className="text-[11px] text-white/40 text-center mt-3 leading-relaxed">
-                    This is the step most buyers skip before getting scammed.
-                  </p>
-                </div>
-
-              </div>
-
-              <p className="text-xs lg:text-sm text-white/75 leading-relaxed mt-10 text-center">
-                <span className="text-white">Progressive certainty:</span>{" "}
-                Start with system-based validation or escalate to professional verification for higher confidence.
-              </p>
-
-            </div>
-          </Container>
-        </section>
-
-        <Divider />
-
-        {/* ── FINAL CTA ── */}
-        <section className="pt-12 pb-16 lg:pt-20 lg:pb-28 border-t border-white/[0.08]">
-          <Container>
-            <div className="max-w-[520px] mx-auto text-center">
-
-              <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-5">
-                Get started
-              </p>
-
-              <h2 className="text-3xl sm:text-[2.25rem] font-semibold text-white tracking-tight leading-[1.1] mb-4">
-                Know before you pay. Or deal with it after.
-              </h2>
-
-              <p className="text-[15px] text-white/80 leading-relaxed max-w-[360px] mx-auto">
-                A few minutes now can save you thousands later.
-              </p>
-
-              <div className="mt-8">
-                <Link
-                  href="#pricing"
-                  className="inline-flex items-center gap-2 bg-[var(--accent)] text-white text-[15px] font-semibold rounded-lg px-7 py-3.5 hover:opacity-90 transition-opacity"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2L3 6v6c0 5.5 3.9 10.65 9 12 5.1-1.35 9-6.5 9-12V6l-9-4z" />
-                  </svg>
-                  Start verification
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                </Link>
-              </div>
-
-            </div>
-          </Container>
-        </section>
-
-      </main>
-
-      {/* ── FOOTER ── */}
-      <footer>
-        <Divider />
-        <Container className="py-12 lg:py-16">
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-12 mb-10 md:mb-14">
-
-            {/* Brand */}
-            <div>
-              <p className="text-sm font-semibold text-white mb-3">MexGuardian</p>
-              <p className="text-sm text-[var(--foreground-muted)] leading-relaxed">
-                Vehicle verification for used car purchases in Mexico.<br />
-                <span className="text-[var(--foreground-muted)] opacity-70">Helping buyers identify risk before committing.</span>
-              </p>
+            <div className="prob-card">
+              <span className="pt-tag tag-r">Financial</span>
+              <div className="prob-title">You inherit the debt — not the seller.</div>
+              <div className="prob-body">Hidden fines, loans, and tax debt transfer with the vehicle.</div>
             </div>
 
-            {/* Product */}
-            <div>
-              <p className="text-xs text-white/50 font-medium uppercase tracking-wider mb-3">Product</p>
-              <ul className="flex flex-col gap-3">
-                <li>
-                  <Link href="#how-it-works" className="text-sm text-[var(--foreground-muted)] hover:text-white transition-colors">
-                    How it works
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#pricing" className="text-sm text-[var(--foreground-muted)] hover:text-white transition-colors">
-                    Pricing
-                  </Link>
-                </li>
-              </ul>
+            <div className="prob-card">
+              <span className="pt-tag tag-r">Legal</span>
+              <div className="prob-title">The seller may not legally own the car.</div>
+              <div className="prob-body">If ownership is invalid, you can lose the vehicle entirely.</div>
             </div>
 
-            {/* Legal + Contact */}
-            <div>
-              <p className="text-xs text-white/50 font-medium uppercase tracking-wider mb-3">Legal</p>
-              <ul className="flex flex-col gap-3 mb-6">
-                <li>
-                  <Link href="/privacy" className="text-sm text-[var(--foreground-muted)] hover:text-white transition-colors">
-                    Privacy Policy
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/terms" className="text-sm text-[var(--foreground-muted)] hover:text-white transition-colors">
-                    Terms of Service
-                  </Link>
-                </li>
-              </ul>
-              <p className="text-xs text-[var(--foreground-muted)] leading-relaxed">
-                For support related to verification or transactions:<br />
-                <a href="mailto:support@mexguardian.com" className="hover:text-white transition-colors">
-                  support@mexguardian.com
-                </a>
-              </p>
+            <div className="prob-card">
+              <span className="pt-tag tag-r">Document</span>
+              <div className="prob-title">One mismatch can void the entire deal.</div>
+              <div className="prob-body">And you may have no legal way to recover your money.</div>
             </div>
 
           </div>
+        </div>
+      </section>
 
-          <Divider />
+      {/* ── WHO THIS IS FOR ──────────────────────────────────────────────── */}
+      <section id="who" className="b">
+        <div className="wrap-w">
+          <span className="lbl-accent">Who this is for</span>
+          <h2 className="section-h2">If you&apos;re buying directly from a seller, this is where most risks happen.</h2>
+          <ul className="who-list">
+            <li>Buying from Facebook Marketplace or private listings</li>
+            <li>Meeting a seller in person or via WhatsApp</li>
+            <li>Paying directly without a dealership</li>
+            <li>Considering imported or &ldquo;chocolate&rdquo; vehicles</li>
+          </ul>
+        </div>
+      </section>
 
-          <p className="text-sm text-[var(--foreground-muted)] pt-8">
-            © 2026 MexGuardian. All rights reserved.
-          </p>
+      {/* ── 3. PROCESS — 5 steps ─────────────────────────────────────────── */}
+      <section id="process" className="b">
+        <div className="wrap-w">
+          <span className="lbl-accent">The process</span>
+          <h2 className="section-h2">Five steps. One clear answer.</h2>
+          <div className="steps steps-5">
+            <div className="step">
+              <div className="step-n">01</div>
+              <div className="step-t">Upload</div>
+              <div className="step-d">Add plate, VIN, and any documents from the seller.</div>
+            </div>
+            <div className="step">
+              <div className="step-n">02</div>
+              <div className="step-t">Check</div>
+              <div className="step-d">Cross-check REPUVE, SAT, and state registries for debt and legal status.</div>
+            </div>
+            <div className="step">
+              <div className="step-n">03</div>
+              <div className="step-t">Analyze</div>
+              <div className="step-d">Inconsistencies flagged. Debt quantified. Ownership confirmed.</div>
+            </div>
+            <div className="step">
+              <div className="step-n">04</div>
+              <div className="step-t">Verify</div>
+              <div className="step-d">Documents authenticated. Seller identity validated against registry.</div>
+            </div>
+            <div className="step">
+              <div className="step-n">05</div>
+              <div className="step-t">Complete</div>
+              <div className="step-d">Clear go / no-go with exact figures before you pay.</div>
+            </div>
+          </div>
+          <p className="process-note">This is the same process used to detect fraud before it becomes your problem.<br /><span className="src">Public databases like REPUVE can take up to 30 days to reflect a stolen vehicle. Source: Chamber of Deputies.</span></p>
+        </div>
+      </section>
 
-        </Container>
+      {/* ── 4. MISTAKES ──────────────────────────────────────────────────── */}
+      <section id="mistakes" className="b">
+        <div className="wrap">
+          <span className="lbl">What buyers get wrong</span>
+          <h2 className="section-h2">The mistakes that cost the most.</h2>
+          <div className="mk-list">
+
+            <div className="mk-item">
+              <div className="mk-num">01</div>
+              <div>
+                <div className="mk-title">Taking the seller&apos;s word that the car is clean.</div>
+                <div className="mk-body">Sellers don&apos;t always know about outstanding obligations. In many cases they know and hope you won&apos;t check. Neither situation protects you after the transfer.</div>
+              </div>
+            </div>
+
+            <div className="mk-item">
+              <div className="mk-num">02</div>
+              <div>
+                <div className="mk-title">Only checking the state where the car is listed.</div>
+                <div className="mk-body">A clean Jalisco record doesn&apos;t mean a clean car. Debt and restrictions registered in another state follow the vehicle — not the seller&apos;s current location.</div>
+              </div>
+            </div>
+
+            <div className="mk-item">
+              <div className="mk-num">03</div>
+              <div>
+                <div className="mk-title">Assuming a legitimate-looking factura is valid.</div>
+                <div className="mk-body">Facturas can be altered or issued against different vehicles. The only way to confirm validity is to verify directly against the SAT registry — not by inspecting the document itself.</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ── 5. STATS BAND ────────────────────────────────────────────────── */}
+      <section id="stats">
+        <div className="wrap-w">
+          <div className="stats-row">
+            <div className="sb">
+              <div className="sb-n"><span>40%</span></div>
+              <div className="sb-d">of private car sales have irregularities</div>
+            </div>
+            <div className="sb">
+              <div className="sb-n"><span>60%</span></div>
+              <div className="sb-d">of fraud cases involve financial scams or hidden debt</div>
+            </div>
+            <div className="sb">
+              <div className="sb-n"><span>$250k</span></div>
+              <div className="sb-d">MXN average loss per fraud case</div>
+            </div>
+          </div>
+          <p className="stats-sources">This is the risk you&apos;re walking into without verification.<br />Data sources: Profeco, AMIA, El Financiero, El Universal</p>
+        </div>
+      </section>
+
+      {/* ── 6. SAMPLE REPORT ─────────────────────────────────────────────── */}
+      <section id="sample" className="b">
+        <div className="wrap">
+          <span className="lbl-accent">Sample report</span>
+          <h2 className="section-h2">This is what you see before you decide to pay.</h2>
+          <p className="v-sub">Actual output format. Every verified item, every flag, every outstanding amount — specific to the vehicle you&apos;re buying.</p>
+
+          <div className="sample-card-wrap">
+            <div className="hero-pill">⚠ Issues detected</div>
+            <div className="report-card">
+              <div className="rc-header">
+                <span className="rc-title">Verification Report</span>
+                <span className="rc-badge caution">Caution</span>
+              </div>
+              <div className="rc-body">
+
+                <div className="rc-vehicle">
+                  <div className="rc-plate">JAL·4821·XK</div>
+                  <div className="rc-vinfo">
+                    <strong>2019 Nissan Sentra</strong>
+                    Jalisco · VIN 3N1AB7AP1KY123456 · verified
+                  </div>
+                </div>
+
+                <div className="rc-section">
+                  <div className="rc-section-label">Ownership</div>
+                  <div className="rc-row">
+                    <span className="rc-row-label">Registered owner match</span>
+                    <span className="rc-status s-ok">Confirmed</span>
+                  </div>
+                  <div className="rc-row">
+                    <span className="rc-row-label">Ownership chain</span>
+                    <span className="rc-status s-ok">Clean</span>
+                  </div>
+                  <div className="rc-row">
+                    <span className="rc-row-label">Seller identity</span>
+                    <span className="rc-status s-ok">Verified</span>
+                  </div>
+                </div>
+
+                <div className="rc-section">
+                  <div className="rc-section-label">Outstanding debt</div>
+                  <div className="rc-row">
+                    <span className="rc-row-label">TENENCIA arrears (2021–2023)</span>
+                    <span className="rc-amount">$9,240 MXN</span>
+                  </div>
+                  <div className="rc-row">
+                    <span className="rc-row-label">Traffic fines (3 violations)</span>
+                    <span className="rc-amount">$4,800 MXN</span>
+                  </div>
+                  <div className="rc-row">
+                    <span className="rc-row-label">SAT lien</span>
+                    <span className="rc-status s-ok">None found</span>
+                  </div>
+                </div>
+
+                <div className="rc-section">
+                  <div className="rc-section-label">Registry checks</div>
+                  <div className="rc-row">
+                    <span className="rc-row-label">REPUVE — theft / cloning</span>
+                    <span className="rc-status s-ok">Clear</span>
+                  </div>
+                  <div className="rc-row">
+                    <span className="rc-row-label">Multi-state restrictions</span>
+                    <span className="rc-status s-ok">None found</span>
+                  </div>
+                  <div className="rc-row">
+                    <span className="rc-row-label">Factura vs. SAT registry</span>
+                    <span className="rc-status s-warn">1 discrepancy</span>
+                  </div>
+                </div>
+
+                <div className="rc-recommendation">
+                  <div className="rc-rec-label">⚠ Recommendation</div>
+                  <div className="rc-rec-text">Do not proceed until the debt is paid and the ownership discrepancy is resolved.</div>
+                </div>
+
+              </div>
+            </div>
+            <p className="sample-risk">Potential risk: <strong>$14,040 MXN transferred to buyer</strong></p>
+            <p className="sample-legal">Without this, you&apos;re guessing. If you proceed anyway, these issues become your responsibility. The seller walks away. You don&apos;t.</p>
+          </div>
+          <p className="report-label">Sample — actual output format and level of detail</p>
+        </div>
+      </section>
+
+      {/* ── REAL OUTCOMES ────────────────────────────────────────────────── */}
+      <section id="outcomes" className="b">
+        <div className="wrap">
+          <span className="lbl-accent">Outcomes</span>
+          <h2 className="section-h2">Real situations. Real outcomes.</h2>
+          <ul className="outcome-list">
+            <li>Buyer avoided $90,000 MXN in hidden debt before payment</li>
+            <li>Vehicle flagged as stolen despite appearing clean in REPUVE</li>
+            <li>Ownership mismatch prevented a legally invalid purchase</li>
+          </ul>
+          <p className="stats-sources">These are recent cases from real transactions.</p>
+        </div>
+      </section>
+
+      {/* ── 7. PRICING ───────────────────────────────────────────────────── */}
+      <section id="pricing" className="b">
+        <div className="wrap">
+          <p className="national-risk">92.9% of crimes in Mexico go unreported<br /><span className="src">(INEGI)</span></p>
+          <span className="lbl-accent">Pricing</span>
+          <h2 className="section-h2">One-time. Before you commit.</h2>
+          <p className="p-sub">Pay once per vehicle. No account required. Clear risk results before you commit.</p>
+
+          <div className="flex justify-end mb-6">
+            <div className="currency-toggle flex items-center bg-white/5 border border-white/10 rounded-md text-xs">
+              <button
+                onClick={() => setCurrency("USD")}
+                className={`px-3 py-1 rounded ${currency === "USD" ? "bg-white text-black" : "text-white/60"}`}
+              >
+                USD
+              </button>
+              <button
+                onClick={() => setCurrency("CAD")}
+                className={`px-3 py-1 rounded ${currency === "CAD" ? "bg-white text-black" : "text-white/60"}`}
+              >
+                CAD
+              </button>
+              <button
+                onClick={() => setCurrency("MXN")}
+                className={`px-3 py-1 rounded ${currency === "MXN" ? "bg-white text-black" : "text-white/60"}`}
+              >
+                MXN
+              </button>
+            </div>
+          </div>
+
+          <div className="pgrid">
+            <div className="pcard">
+              <div className="p-name">Registry</div>
+              <div className="p-price"><sup>$</sup>{prices[currency].basic}</div>
+              <div className="p-note">{currency} · one-time</div>
+              <p className="p-desc">Covers the most common risks. <strong>Suitable for straightforward private sales.</strong></p>
+              <ul className="p-list">
+                <li>Seller confirmed as legal owner</li>
+                <li>Outstanding fines &amp; TENENCIA</li>
+                <li>REPUVE federal VIN check</li>
+                <li>Document consistency review</li>
+                <li>Go / no-go recommendation</li>
+              </ul>
+              <button onClick={() => handleCheckout("39")} className="btn-plan">Run basic check</button>
+            </div>
+
+            <div className="pcard feat">
+              <div className="feat-badge">Most buyers choose this</div>
+              <div className="p-name">Full Verification</div>
+              <div className="p-price"><sup>$</sup>{prices[currency].pro}</div>
+              <div className="p-note">{currency} · one-time</div>
+              <p className="p-desc"><strong>Covers the issues most buyers don&apos;t know to check.</strong> Cross-state, SAT, and import history included.</p>
+              <ul className="p-list">
+                <li>Everything in Registry</li>
+                <li>Multi-state debt check</li>
+                <li>SAT lien verification</li>
+                <li>Import document review</li>
+                <li>Extended ownership chain</li>
+                <li>Priority fast-track delivery</li>
+              </ul>
+              <p className="p-desc" style={{ marginTop: 12, marginBottom: 16, color: "var(--risk)" }}><strong>One hidden issue can cost you $50,000+ MXN.</strong><br /><span style={{ color: "var(--sub)", fontWeight: 500 }}>This is the level buyers choose when they&apos;re serious about the purchase.</span></p>
+              <button onClick={() => handleCheckout("69")} className="btn-plan feat">Verify before buying →</button>
+            </div>
+          </div>
+
+          <p className="text-xs text-white/40 mt-4" style={{ marginTop: 16 }}>Prices shown in {currency}. {currency !== "USD" ? "Converted from USD using current exchange rates and rounded for simplicity." : "CAD and MXN equivalents available above."}</p>
+          <p className="p-urgency">Most buyers start with a basic check. Serious buyers verify everything before paying.</p>
+          <p className="p-guarantee">If we can&apos;t complete verification due to a registry outage, you receive a full refund.</p>
+        </div>
+      </section>
+
+      {/* ── FAQ ──────────────────────────────────────────────────────────── */}
+      <section id="faq" className="b">
+        <div className="wrap">
+          <span className="lbl-accent">FAQ</span>
+          <h2 className="section-h2">Common questions before you buy.</h2>
+          <div className="faq-list">
+            <div className="faq-item">
+              <div className="faq-q">Is everything provided in English?</div>
+              <div className="faq-a">Yes. The full verification report is provided in English. The purchase agreement is generated in Spanish for legal validity, with a clear English reference translation included below.</div>
+            </div>
+            <div className="faq-item">
+              <div className="faq-q">Is this legally valid in Mexico?</div>
+              <div className="faq-a">Yes. Verification uses official registries and documentation checks used in legal ownership validation.</div>
+            </div>
+            <div className="faq-item">
+              <div className="faq-q">What if the seller refuses to provide documents?</div>
+              <div className="faq-a">That is a major risk signal. Verification helps identify missing or inconsistent ownership data.</div>
+            </div>
+            <div className="faq-item">
+              <div className="faq-q">How fast is the verification?</div>
+              <div className="faq-a">Most checks are completed within minutes. Full verification may take longer depending on document review.</div>
+            </div>
+            <div className="faq-item">
+              <div className="faq-q">I already checked REPUVE. Isn&apos;t that enough?</div>
+              <div className="faq-a">No. REPUVE can take days or weeks to update. A vehicle can appear clean and still be stolen or flagged.</div>
+            </div>
+            <div className="faq-item">
+              <div className="faq-q">What happens if issues are found?</div>
+              <div className="faq-a">You receive a clear breakdown of risks so you can decide whether to proceed or walk away.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 8. FINAL CTA ─────────────────────────────────────────────────── */}
+      <section id="cta">
+        <div className="lbl-cta">One decision</div>
+        <h2>Verify before you pay.<br /><em>Or deal with the consequences later.</em></h2>
+        <p>Once you pay, the risk becomes yours.</p>
+        <div className="cta-row">
+          <a href="#pricing" className="btn-cta">Start verification →</a>
+          <a href="#sample" className="btn-cta-ghost">See sample report</a>
+        </div>
+      </section>
+
+      {/* ── FOOTER ───────────────────────────────────────────────────────── */}
+      <footer style={{ borderTop: "1px solid rgba(255,255,255,.10)", marginTop: 48, background: "#05070a" }}>
+        <div style={{ maxWidth: 1152, margin: "0 auto", padding: "80px 24px 56px" }}>
+          {/* Row 1 */}
+          <div className="footer-row1 flex items-center justify-between">
+            <div className="text-white font-semibold tracking-tight">
+              MexGuardian
+            </div>
+            <div className="footer-nav flex items-center gap-5 text-sm text-white/55 tracking-wide">
+              <a href="#" className="hover:text-white transition-colors duration-150">How it works</a>
+              <a href="#" className="hover:text-white transition-colors duration-150">Sample report</a>
+              <a href="#" className="hover:text-white transition-colors duration-150">Pricing</a>
+              <a href="#" className="hover:text-white transition-colors duration-150">Privacy</a>
+              <a href="#" className="hover:text-white transition-colors duration-150">Terms</a>
+            </div>
+          </div>
+          {/* Row 2 */}
+          <div className="footer-row2 flex items-center justify-between text-xs text-white/40" style={{ marginTop: 40 }}>
+            <div>© 2026 MexGuardian</div>
+            <div className="text-white/40">Verify before you pay.</div>
+          </div>
+        </div>
       </footer>
-    </>
+
+    </div>
   );
 }
