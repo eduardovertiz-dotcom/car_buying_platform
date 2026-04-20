@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { stepEngineCopy } from "@/lib/i18n/stepEngine";
 
 interface Props {
   transactionId: string;
@@ -9,6 +11,9 @@ interface Props {
 }
 
 export default function BindBanner({ transactionId, hasOwner }: Props) {
+  const pathname = usePathname();
+  const lang = (pathname.startsWith('/es') ? 'es' : 'en') as 'en' | 'es';
+  const t = stepEngineCopy[lang];
   const [bound, setBound] = useState(false);
   const [loading, setLoading] = useState(true);
   const [bindError, setBindError] = useState<string | null>(null);
@@ -95,7 +100,7 @@ export default function BindBanner({ transactionId, hasOwner }: Props) {
     return (
       <div className="mb-6 px-4 py-3 bg-green-900/30 border border-green-700/40 rounded-lg">
         <p className="text-sm text-green-300">
-          Saved. You can now access this from any device.
+          {t.bind.saved}
         </p>
       </div>
     );
@@ -104,7 +109,7 @@ export default function BindBanner({ transactionId, hasOwner }: Props) {
   if (bindError) {
     return (
       <div className="mb-6 px-4 py-3 bg-red-900/20 border border-red-700/40 rounded-lg">
-        <p className="text-sm text-red-400">{bindError}</p>
+        <p className="text-sm text-red-400">{t.bind.differentEmail}</p>
       </div>
     );
   }
@@ -112,14 +117,14 @@ export default function BindBanner({ transactionId, hasOwner }: Props) {
   return (
     <div className="mb-6 px-4 py-3 bg-white/5 border border-[var(--border)] rounded-lg flex items-center justify-between gap-4">
       <p className="text-sm text-white/70">
-        This transaction isn&apos;t saved to any account.
+        {t.bind.notSaved}
       </p>
       <button
         onClick={handleBind}
         disabled={binding}
         className="text-sm text-white underline shrink-0 hover:opacity-80 transition-opacity disabled:opacity-40"
       >
-        {binding ? "Saving…" : "Save to your account →"}
+        {binding ? t.bind.saving : t.bind.saveToAccount}
       </button>
     </div>
   );

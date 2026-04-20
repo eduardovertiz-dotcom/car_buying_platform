@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { DM_Sans } from "next/font/google";
+import HeroCard from "@/components/HeroCard";
 
 const dmSans = DM_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
@@ -89,44 +90,55 @@ export default function Home() {
           <li><a href="#sample">Sample report</a></li>
           <li><a href="#pricing">Pricing</a></li>
         </ul>
-        <a href="#pricing" className="btn-nav">Start verification →</a>
+        <div className="nav-lang">
+          <a href="/" className="active">ENG</a>
+          <span>|</span>
+          <a href="/es">ESP</a>
+        </div>
+        <a href="#pricing" className="btn-nav">Start →</a>
       </nav>
 
       {/* ── 1. HERO ──────────────────────────────────────────────────────── */}
       <section id="hero">
         <div className="wrap">
-          <div className="hero-centered">
+          <div className="hero-wrap">
+            <div className="hero-left">
 
-            <div className="hero-incident">
-              <p>Everything looked fine — until <strong>$14,000 MXN in hidden debt appeared.</strong></p>
+              <div className="hero-incident">
+                <p>Everything looked fine — until <strong>$14,000 MXN in hidden debt appeared.</strong></p>
+              </div>
+
+              <h1>Don&apos;t get <span className="accent-word">scammed</span><br />buying a car in Mexico.</h1>
+              <p className="hero-sub">You could lose the car, the money, or both. Most fraud is discovered after you pay — and at that point, your money is gone.</p>
+              <p className="hero-clarify">Most buyers don&apos;t get scammed by strangers. They get scammed by deals that look completely legitimate.</p>
+
+              <div className="hero-cta">
+                <a href="#pricing" className="btn-primary">Start verification →</a>
+                <a href="#sample" className="btn-ghost">See sample report ↗</a>
+              </div>
+
+              <p className="hero-clarify"><strong>Before you pay, confirm this:</strong> if the car has hidden debt · if the seller can legally sell it · if the vehicle has been reported stolen.</p>
+
+              <div className="hstats">
+                <div className="hst">
+                  <div className="hst-n"><span>4,100+</span></div>
+                  <div className="hst-l">Verifications completed in Mexico</div>
+                </div>
+                <div className="hst">
+                  <div className="hst-n"><span>71%</span></div>
+                  <div className="hst-l">Of vehicles had at least one undisclosed issue</div>
+                </div>
+                <div className="hst">
+                  <div className="hst-n">Minutes</div>
+                  <div className="hst-l">Clear risk results before you pay</div>
+                </div>
+              </div>
+              <p className="hero-proof">Up to 40% of private car sales have issues<br /><span className="src">Based on data from Profeco and market reports</span></p>
             </div>
 
-            <h1>Don&apos;t get <span className="accent-word">scammed</span><br />buying a car in Mexico.</h1>
-            <p className="hero-sub">You could lose the car, the money, or both. Most fraud is discovered after you pay — and at that point, your money is gone.</p>
-            <p className="hero-clarify">Most buyers don&apos;t get scammed by strangers. They get scammed by deals that look completely legitimate.</p>
-
-            <div className="hero-cta">
-              <a href="#pricing" className="btn-primary">Start verification →</a>
-              <a href="#sample" className="btn-ghost">See sample report ↗</a>
+            <div className="hero-right">
+              <HeroCard />
             </div>
-
-            <p className="hero-clarify"><strong>Before you pay, confirm this:</strong> if the car has hidden debt · if the seller can legally sell it · if the vehicle has been reported stolen.</p>
-
-            <div className="hstats">
-              <div className="hst">
-                <div className="hst-n"><span>4,100+</span></div>
-                <div className="hst-l">Verifications completed in Mexico</div>
-              </div>
-              <div className="hst">
-                <div className="hst-n"><span>71%</span></div>
-                <div className="hst-l">Of vehicles had at least one undisclosed issue</div>
-              </div>
-              <div className="hst">
-                <div className="hst-n">Minutes</div>
-                <div className="hst-l">Clear risk results before you pay</div>
-              </div>
-            </div>
-            <p className="hero-proof">Up to 40% of private car sales have issues<br /><span className="src">Based on data from Profeco and market reports</span></p>
           </div>
         </div>
       </section>
@@ -492,11 +504,11 @@ export default function Home() {
               MexGuardian
             </div>
             <div className="footer-nav flex items-center gap-5 text-sm text-white/55 tracking-wide">
-              <a href="#" className="hover:text-white transition-colors duration-150">How it works</a>
-              <a href="#" className="hover:text-white transition-colors duration-150">Sample report</a>
-              <a href="#" className="hover:text-white transition-colors duration-150">Pricing</a>
-              <a href="#" className="hover:text-white transition-colors duration-150">Privacy</a>
-              <a href="#" className="hover:text-white transition-colors duration-150">Terms</a>
+              <a href="#process" className="hover:text-white transition-colors duration-150">How it works</a>
+              <a href="#sample" className="hover:text-white transition-colors duration-150">Sample report</a>
+              <a href="#pricing" className="hover:text-white transition-colors duration-150">Pricing</a>
+              <a href="/privacy" className="hover:text-white transition-colors duration-150">Privacy</a>
+              <a href="/terms" className="hover:text-white transition-colors duration-150">Terms</a>
             </div>
           </div>
           {/* Row 2 */}

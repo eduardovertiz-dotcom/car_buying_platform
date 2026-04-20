@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 interface CheckoutButtonProps {
-  plan: "basic" | "pro";
+  plan: "39" | "69";
   className?: string;
   children: React.ReactNode;
 }

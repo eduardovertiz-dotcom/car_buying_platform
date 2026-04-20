@@ -7,6 +7,7 @@ import { isManualMode } from "@/lib/verification/mode";
 import AIInterface from "@/components/AIInterface";
 import BindBanner from "@/components/BindBanner";
 import Header from "@/components/Header";
+import PlanBadge from "@/components/PlanBadge";
 import AdminVerifyPanel from "@/components/AdminVerifyPanel";
 import VerificationReport from "@/components/VerificationReport";
 import DocumentsPanel from "@/components/panels/DocumentsPanel";
@@ -132,9 +133,7 @@ export default async function TransactionPage({
       <main className="px-6 pb-16">
         <div className="max-w-[680px] mx-auto">
           <BindBanner transactionId={id} hasOwner={hasOwner} />
-          <div className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-4">
-            {plan === "69" ? "Full Protection" : "Basic Report"}
-          </div>
+          <PlanBadge plan={plan} />
           <AIInterface plan={plan} dbStatus={dbStatus} />
           <DocumentsPanel />
           <VerificationPanel />

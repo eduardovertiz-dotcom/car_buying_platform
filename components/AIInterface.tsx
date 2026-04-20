@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import JSZip from "jszip";
 import { useTransaction } from "@/context/TransactionContext";
 import { Step, MaintenanceRecordType, getSteps } from "@/lib/types";
@@ -10,6 +11,7 @@ import { generateAgreementHTML } from "@/lib/agreement";
 import { computeRisk, confidenceLabel, type RiskOutput } from "@/lib/risk";
 import { track } from "@/lib/track";
 import { hasMinimumInput as computeHasMinimumInput } from "@/lib/guards";
+import { stepEngineCopy } from "@/lib/i18n/stepEngine";
 
 type StepContent = {
   heading: string;
@@ -19,27 +21,27 @@ type StepContent = {
   contextLine?: string;
 };
 
-const stepContent: Record<Step, StepContent> = {
-  upload: {
-    heading: "Start your vehicle check",
-    body: "We need basic vehicle details and the seller's documents to run verification. The more complete your upload, the more accurate your risk report.",
-    action: "Check this vehicle",
-    completedAction: "Step completed",
-    contextLine: "Most issues are discovered after payment. This step helps you avoid that.",
-  },
-  check: {
-    heading: "Initial results",
-    body: "We scan the vehicle details and documents for common red flags before deeper analysis.",
-    action: "Review risk analysis",
-    completedAction: "Step completed",
-  },
-  // "analyze" is handled by AnalyzePanel — these values are never rendered
-  analyze: { heading: "", body: "", action: "", completedAction: "" },
-  // "verify" is handled by VerifyInterface — these values are never rendered
-  verify:  { heading: "", body: "", action: "", completedAction: "" },
-  // "complete" is handled by CompleteInterface — these values are never rendered
-  complete: { heading: "", body: "", action: "", completedAction: "" },
-};
+function getStepContent(lang: 'en' | 'es'): Record<Step, StepContent> {
+  const t = stepEngineCopy[lang];
+  return {
+    upload: {
+      heading: t.steps.uploadHeading,
+      body: t.steps.uploadBody,
+      action: t.steps.uploadAction,
+      completedAction: t.steps.stepCompleted,
+      contextLine: t.steps.uploadContext,
+    },
+    check: {
+      heading: t.steps.checkHeading,
+      body: t.steps.checkBody,
+      action: t.steps.checkAction,
+      completedAction: t.steps.stepCompleted,
+    },
+    analyze: { heading: "", body: "", action: "", completedAction: "" },
+    verify:  { heading: "", body: "", action: "", completedAction: "" },
+    complete: { heading: "", body: "", action: "", completedAction: "" },
+  };
+}
 
 // ─── Verify ──────────────────────────────────────────────────────────────────
 
@@ -66,20 +68,23 @@ type VerifyChecks = {
 
 type MappedCheck = { status: "success" | "warning" | "unavailable"; text: string };
 
-function mapRepuve(check: RepuveCheck): MappedCheck {
-  if (!check.ok) return { status: "unavailable", text: "Registry check unavailable" };
-  if (check.data?.theft) return { status: "warning", text: "Potential theft record detected" };
-  return { status: "success", text: "No theft record found in official registry" };
+function mapRepuve(check: RepuveCheck, lang: 'en' | 'es' = 'en'): MappedCheck {
+  const t = stepEngineCopy[lang];
+  if (!check.ok) return { status: "unavailable", text: t.status.registryUnavailable };
+  if (check.data?.theft) return { status: "warning", text: t.status.theftDetected };
+  return { status: "success", text: t.status.noTheft };
 }
 
-function mapFactura(check: FacturaCheck): MappedCheck | null {
+function mapFactura(check: FacturaCheck, lang: 'en' | 'es' = 'en'): MappedCheck | null {
+  const t = stepEngineCopy[lang];
   if (check.error === "not_provided") return null;
-  if (!check.ok) return { status: "unavailable", text: "Invoice validation unavailable" };
-  if (!check.data?.valid) return { status: "warning", text: "Invoice is not valid or has been cancelled" };
-  return { status: "success", text: "Invoice is valid (SAT verified)" };
+  if (!check.ok) return { status: "unavailable", text: t.status.invoiceUnavailable };
+  if (!check.data?.valid) return { status: "warning", text: t.status.invoiceInvalid };
+  return { status: "success", text: t.status.invoiceValid };
 }
 
-function checksToVerificationResult(checks: VerifyChecks): VerificationResult {
+function checksToVerificationResult(checks: VerifyChecks, lang: 'en' | 'es' = 'en'): VerificationResult {
+  const t = stepEngineCopy[lang];
   const theft = checks.repuve.ok && checks.repuve.data?.theft === true;
   const facturaInvalid = checks.factura.ok && checks.factura.data?.valid === false;
   const findings: string[] = [];
@@ -97,16 +102,21 @@ function checksToVerificationResult(checks: VerifyChecks): VerificationResult {
   return {
     status: theft ? "high_risk" : facturaInvalid ? "review" : "safe",
     summary: theft
-      ? "Potential theft record detected. Proceed with caution."
+      ? t.decision.theftDetected
       : facturaInvalid
-      ? "Invoice concern detected. Verify with seller."
-      : "No major issues detected.",
+      ? t.decision.invoiceConcern
+      : t.decision.noIssues,
     findings,
     confidence: theft ? 90 : facturaInvalid ? 72 : 85,
   };
 }
 
 function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
+  const pathname = usePathname();
+  const lang = (pathname.startsWith('/es') ? 'es' : 'en') as 'en' | 'es';
+  const t = stepEngineCopy[lang];
+  const stepContent = getStepContent(lang);
+
   const {
     transaction,
     advanceToStep,
@@ -149,7 +159,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
     documents.invoice.status === "uploaded";
 
   // Single source of truth for risk — same output used in all result states
-  const risk = computeRisk(transaction);
+  const risk = computeRisk(transaction, lang);
 
   // Dev: log every state transition
   useEffect(() => {
@@ -216,7 +226,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
         } else {
           const checks = data.checks!;
           setVerifyChecks(checks);
-          const result = checksToVerificationResult(checks);
+          const result = checksToVerificationResult(checks, lang);
           if (shouldRunProfessional) completeProfessionalVerification(result);
           else completeBasicVerification(result);
         }
@@ -283,7 +293,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "pro", transactionId: transaction.id }),
+        body: JSON.stringify({ plan: "69", transaction_id: transaction.id }),
       });
       const { url, error } = await res.json();
       if (error || !url) throw new Error(error ?? "No checkout URL");
@@ -345,7 +355,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
         } else {
           const checks = data.checks!;
           setVerifyChecks(checks);
-          const result = checksToVerificationResult(checks);
+          const result = checksToVerificationResult(checks, lang);
           if (shouldRunProfessional) completeProfessionalVerification(result);
           else completeBasicVerification(result);
         }
@@ -519,28 +529,28 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
 
   // ── Basic complete — show results + upsell ($49 users only) ─────────────
   if (verification_status === "basic_complete") {
-    const repuveResult = verifyChecks ? mapRepuve(verifyChecks.repuve) : null;
-    const facturaResult = verifyChecks ? mapFactura(verifyChecks.factura) : null;
+    const repuveResult = verifyChecks ? mapRepuve(verifyChecks.repuve, lang) : null;
+    const facturaResult = verifyChecks ? mapFactura(verifyChecks.factura, lang) : null;
     const allUnavailable =
       (!repuveResult || repuveResult.status === "unavailable") &&
       (!facturaResult || facturaResult.status === "unavailable");
     const hasVerifyIssues =
       repuveResult?.status === "warning" || facturaResult?.status === "warning";
     const verifyPillText = hasVerifyIssues
-      ? "⚠ Issues detected"
+      ? t.reports.issuesDetected
       : allUnavailable || verifyMode === "manual"
-      ? "Caution"
+      ? t.status.caution
       : null;
     const verifyRecVariant = hasVerifyIssues ? "risk"
       : allUnavailable || verifyMode === "manual" ? "moderate"
       : "clear";
     const verifyRecText = verifyMode === "manual"
-      ? "Expert review is in progress. Do not proceed until results are available."
+      ? t.decision.expertInProgress
       : hasVerifyIssues
-      ? "Do not proceed until these issues are resolved with the seller."
+      ? t.decision.resolveIssues
       : allUnavailable
-      ? "Registry checks were unavailable. Review documents carefully before proceeding."
-      : "Registry checks passed. No issues found in official records.";
+      ? t.decision.registryUnavailable
+      : t.decision.registryPassed;
 
     return (
       <>
@@ -551,14 +561,14 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
           )}
           <div className="vr-card">
             <div className="vr-header">
-              <span className="vr-title">Verification Report</span>
+              <span className="vr-title">{t.reports.verificationReport}</span>
             </div>
             <div className="vr-body">
 
               {/* Outstanding issues — first */}
               {hasVerifyIssues && (
                 <div className="vr-section">
-                  <div className="vr-k">Outstanding issues</div>
+                  <div className="vr-k">{t.reports.outstandingIssues}</div>
                   {repuveResult?.status === "warning" && (
                     <div className="vr-row">
                       <span className="vr-row-label">Theft record detected in REPUVE</span>
@@ -576,11 +586,11 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
 
               {/* Registry checks */}
               <div className="vr-section">
-                <div className="vr-k">Registry checks</div>
+                <div className="vr-k">{t.reports.registryChecks}</div>
                 {verifyMode === "manual" ? (
                   <div className="vr-row">
                     <span className="vr-row-label">Expert review</span>
-                    <span className="vr-status s-warn">In progress</span>
+                    <span className="vr-status s-warn">{t.status.inProgress}</span>
                   </div>
                 ) : (
                   <>
@@ -591,8 +601,8 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
                           repuveResult.status === "success" ? "s-ok"
                           : repuveResult.status === "warning" ? "s-risk" : "s-warn"
                         }`}>
-                          {repuveResult.status === "success" ? "Clear"
-                          : repuveResult.status === "warning" ? "Theft record" : "Unavailable"}
+                          {repuveResult.status === "success" ? t.status.clear
+                          : repuveResult.status === "warning" ? t.status.theftRecord : t.status.unavailable}
                         </span>
                       </div>
                     )}
@@ -603,15 +613,15 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
                           facturaResult.status === "success" ? "s-ok"
                           : facturaResult.status === "warning" ? "s-risk" : "s-warn"
                         }`}>
-                          {facturaResult.status === "success" ? "Valid"
-                          : facturaResult.status === "warning" ? "Invalid" : "Unavailable"}
+                          {facturaResult.status === "success" ? t.status.valid
+                          : facturaResult.status === "warning" ? t.status.invalid : t.status.unavailable}
                         </span>
                       </div>
                     )}
                     {!repuveResult && !facturaResult && (
                       <div className="vr-row">
                         <span className="vr-row-label">Registry checks</span>
-                        <span className="vr-status s-warn">Not available</span>
+                        <span className="vr-status s-warn">{t.status.notAvailable}</span>
                       </div>
                     )}
                   </>
@@ -620,30 +630,30 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
 
               {/* Document integrity */}
               <div className="vr-section">
-                <div className="vr-k">Document integrity</div>
+                <div className="vr-k">{t.reports.documentIntegrity}</div>
                 <div className="vr-row">
-                  <span className="vr-row-label">Ownership invoice (factura)</span>
+                  <span className="vr-row-label">{t.fields.ownershipInvoice}</span>
                   <span className={`vr-status ${documents.invoice.status === "uploaded" ? "s-ok" : "s-warn"}`}>
-                    {documents.invoice.status === "uploaded" ? "Submitted" : "Not provided"}
+                    {documents.invoice.status === "uploaded" ? t.status.submitted : t.status.notProvided}
                   </span>
                 </div>
                 <div className="vr-row">
-                  <span className="vr-row-label">Seller ID (INE)</span>
+                  <span className="vr-row-label">{t.fields.sellerId}</span>
                   <span className={`vr-status ${documents.ine.status === "uploaded" ? "s-ok" : "s-warn"}`}>
-                    {documents.ine.status === "uploaded" ? "Submitted" : "Not provided"}
+                    {documents.ine.status === "uploaded" ? t.status.submitted : t.status.notProvided}
                   </span>
                 </div>
                 <div className="vr-row">
-                  <span className="vr-row-label">Registration card</span>
+                  <span className="vr-row-label">{t.fields.registration}</span>
                   <span className={`vr-status ${documents.registration.status === "uploaded" ? "s-ok" : "s-warn"}`}>
-                    {documents.registration.status === "uploaded" ? "Submitted" : "Not provided"}
+                    {documents.registration.status === "uploaded" ? t.status.submitted : t.status.notProvided}
                   </span>
                 </div>
               </div>
 
               {/* Recommendation */}
               <div className={`vr-rec ${verifyRecVariant === "clear" ? "clear" : verifyRecVariant === "moderate" ? "moderate" : ""}`}>
-                <div className="vr-rec-label">Recommendation</div>
+                <div className="vr-rec-label">{t.reports.recommendation}</div>
                 <p className="vr-rec-text">{verifyRecText}</p>
               </div>
 
@@ -654,43 +664,42 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
         {/* Upsell */}
         <div className="border border-[var(--border)] rounded-lg px-5 py-5 mb-6">
           <p className="text-[15px] font-semibold text-[var(--foreground)] mb-2">
-            Expert review available
+            {t.fields.expertAvailable}
           </p>
           <p className="text-[14px] text-[#444] leading-relaxed mb-4">
-            Automated checks cover public records only. They cannot detect document
-            alterations, confirm seller identity, or flag risks outside registry data.
+            {t.warnings.automatedLimited}
           </p>
           <button
             onClick={handleUpsell}
             disabled={upsellLoading}
             className="w-full bg-[#B4531A] hover:opacity-85 text-white text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left shadow-[0_4px_16px_rgba(180,83,26,.28)] disabled:opacity-60 disabled:shadow-none"
           >
-            {upsellLoading ? "Redirecting…" : "Upgrade to full verification — $30"}
+            {upsellLoading ? t.reports.redirecting : t.cta.upgradeVerification}
           </button>
           {showDocWarning && (
             <p className="text-[13px] text-amber-400 leading-relaxed mt-3">
-              Upload all required documents before upgrading.
+              {t.warnings.uploadDocs}
             </p>
           )}
         </div>
 
         {isDecisionMade ? (
           <p className="text-sm text-green-400 leading-relaxed">
-            ✓ Decision recorded.
+            ✓ {t.reports.decisionRecorded}
           </p>
         ) : verdictIsClean ? (
           <button
             onClick={handleDecision}
             className="w-full bg-[#B4531A] hover:opacity-85 text-white text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left shadow-[0_4px_16px_rgba(180,83,26,.28)]"
           >
-            Proceed to agreement
+            {t.cta.proceedAgreement}
           </button>
         ) : (
           <button
             onClick={handleDecision}
             className="text-[14px] text-[#666] hover:text-[var(--foreground)] transition-colors underline underline-offset-2"
           >
-            Continue with automated results only
+            {t.cta.continueResults}
           </button>
         )}
       </>
@@ -699,24 +708,24 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
 
   // ── Professional complete ────────────────────────────────────────────────
   if (verification_status === "professional_complete") {
-    const repuveResult = verifyChecks ? mapRepuve(verifyChecks.repuve) : null;
-    const facturaResult = verifyChecks ? mapFactura(verifyChecks.factura) : null;
+    const repuveResult = verifyChecks ? mapRepuve(verifyChecks.repuve, lang) : null;
+    const facturaResult = verifyChecks ? mapFactura(verifyChecks.factura, lang) : null;
     const allUnavailable =
       (!repuveResult || repuveResult.status === "unavailable") &&
       (!facturaResult || facturaResult.status === "unavailable");
 
     const hasVerifyIssues = repuveResult?.status === "warning" || facturaResult?.status === "warning";
-    const verifyPillText = hasVerifyIssues ? "⚠ Issues detected"
-      : allUnavailable || verifyMode === "manual" ? "Caution" : null;
+    const verifyPillText = hasVerifyIssues ? t.reports.issuesDetected
+      : allUnavailable || verifyMode === "manual" ? t.status.caution : null;
     const verifyRecVariant = hasVerifyIssues ? "risk"
       : allUnavailable || verifyMode === "manual" ? "moderate" : "clear";
     const verifyRecText = verifyMode === "manual"
-      ? "Expert review is in progress. Do not proceed until results are available."
+      ? t.decision.expertInProgress
       : hasVerifyIssues
-      ? "Do not proceed until these issues are resolved with the seller."
+      ? t.decision.resolveIssues
       : allUnavailable
-      ? "Registry checks were unavailable. Review documents carefully before proceeding."
-      : "Registry checks passed. No issues found in official records.";
+      ? t.decision.registryUnavailable
+      : t.decision.registryPassed;
 
     return (
       <>
@@ -727,24 +736,24 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
           )}
           <div className="vr-card">
             <div className="vr-header">
-              <span className="vr-title">Verification Report</span>
+              <span className="vr-title">{t.reports.verificationReport}</span>
             </div>
             <div className="vr-body">
 
               {/* Outstanding issues — first when present */}
               {hasVerifyIssues && (
                 <div className="vr-section">
-                  <div className="vr-k">Outstanding issues</div>
+                  <div className="vr-k">{t.reports.outstandingIssues}</div>
                   {repuveResult?.status === "warning" && (
                     <div className="vr-row">
-                      <span className="vr-row-label">Theft record detected in REPUVE</span>
-                      <span className="vr-status s-risk">Theft</span>
+                      <span className="vr-row-label">{t.reports.theftDetectedRepuve}</span>
+                      <span className="vr-status s-risk">{t.status.theftRecord}</span>
                     </div>
                   )}
                   {facturaResult?.status === "warning" && (
                     <div className="vr-row">
-                      <span className="vr-row-label">Ownership invoice failed SAT validation</span>
-                      <span className="vr-status s-risk">Invalid</span>
+                      <span className="vr-row-label">{t.reports.invoiceFailedSAT}</span>
+                      <span className="vr-status s-risk">{t.status.invalid}</span>
                     </div>
                   )}
                 </div>
@@ -752,42 +761,42 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
 
               {/* Registry checks */}
               <div className="vr-section">
-                <div className="vr-k">Registry checks</div>
+                <div className="vr-k">{t.reports.registryChecks}</div>
                 {verifyMode === "manual" ? (
                   <div className="vr-row">
-                    <span className="vr-row-label">Expert review</span>
-                    <span className="vr-status s-warn">In progress</span>
+                    <span className="vr-row-label">{t.reports.expertReview}</span>
+                    <span className="vr-status s-warn">{t.status.inProgress}</span>
                   </div>
                 ) : (
                   <>
                     {repuveResult && (
                       <div className="vr-row">
-                        <span className="vr-row-label">Theft registry (REPUVE)</span>
+                        <span className="vr-row-label">{t.reports.theftRegistry}</span>
                         <span className={`vr-status ${
                           repuveResult.status === "success" ? "s-ok"
                           : repuveResult.status === "warning" ? "s-risk" : "s-warn"
                         }`}>
-                          {repuveResult.status === "success" ? "Clear"
-                          : repuveResult.status === "warning" ? "Theft record" : "Unavailable"}
+                          {repuveResult.status === "success" ? t.status.clear
+                          : repuveResult.status === "warning" ? t.status.theftRecord : t.status.unavailable}
                         </span>
                       </div>
                     )}
                     {facturaResult && (
                       <div className="vr-row">
-                        <span className="vr-row-label">Ownership invoice (SAT)</span>
+                        <span className="vr-row-label">{t.reports.ownershipSAT}</span>
                         <span className={`vr-status ${
                           facturaResult.status === "success" ? "s-ok"
                           : facturaResult.status === "warning" ? "s-risk" : "s-warn"
                         }`}>
-                          {facturaResult.status === "success" ? "Valid"
-                          : facturaResult.status === "warning" ? "Invalid" : "Unavailable"}
+                          {facturaResult.status === "success" ? t.status.valid
+                          : facturaResult.status === "warning" ? t.status.invalid : t.status.unavailable}
                         </span>
                       </div>
                     )}
                     {!repuveResult && !facturaResult && (
                       <div className="vr-row">
-                        <span className="vr-row-label">Registry checks</span>
-                        <span className="vr-status s-warn">Not available</span>
+                        <span className="vr-row-label">{t.reports.registryChecks}</span>
+                        <span className="vr-status s-warn">{t.status.notAvailable}</span>
                       </div>
                     )}
                   </>
@@ -796,30 +805,30 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
 
               {/* Document integrity */}
               <div className="vr-section">
-                <div className="vr-k">Document integrity</div>
+                <div className="vr-k">{t.reports.documentIntegrity}</div>
                 <div className="vr-row">
-                  <span className="vr-row-label">Ownership invoice (factura)</span>
+                  <span className="vr-row-label">{t.fields.ownershipInvoice}</span>
                   <span className={`vr-status ${documents.invoice.status === "uploaded" ? "s-ok" : "s-warn"}`}>
-                    {documents.invoice.status === "uploaded" ? "Submitted" : "Not provided"}
+                    {documents.invoice.status === "uploaded" ? t.status.submitted : t.status.notProvided}
                   </span>
                 </div>
                 <div className="vr-row">
-                  <span className="vr-row-label">Seller ID (INE)</span>
+                  <span className="vr-row-label">{t.fields.sellerId}</span>
                   <span className={`vr-status ${documents.ine.status === "uploaded" ? "s-ok" : "s-warn"}`}>
-                    {documents.ine.status === "uploaded" ? "Submitted" : "Not provided"}
+                    {documents.ine.status === "uploaded" ? t.status.submitted : t.status.notProvided}
                   </span>
                 </div>
                 <div className="vr-row">
-                  <span className="vr-row-label">Registration card</span>
+                  <span className="vr-row-label">{t.fields.registration}</span>
                   <span className={`vr-status ${documents.registration.status === "uploaded" ? "s-ok" : "s-warn"}`}>
-                    {documents.registration.status === "uploaded" ? "Submitted" : "Not provided"}
+                    {documents.registration.status === "uploaded" ? t.status.submitted : t.status.notProvided}
                   </span>
                 </div>
               </div>
 
               {/* Recommendation */}
               <div className={`vr-rec ${verifyRecVariant === "clear" ? "clear" : verifyRecVariant === "moderate" ? "moderate" : ""}`}>
-                <div className="vr-rec-label">Recommendation</div>
+                <div className="vr-rec-label">{t.reports.recommendation}</div>
                 <p className="vr-rec-text">{verifyRecText}</p>
               </div>
 
@@ -838,11 +847,11 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
           return (
             <div className="border border-green-400/20 bg-green-400/[0.06] rounded-lg px-4 py-5 mb-6">
               <p className="text-[11px] uppercase tracking-widest text-green-400 mb-3">
-                What changed after full verification
+                {t.warnings.whatChanged}
               </p>
               {issuesCleared && (
                 <p className="text-[15px] text-green-400 leading-relaxed mb-2">
-                  ✓ No remaining issues after full verification
+                  ✓ {t.reports.noRemaining}
                 </p>
               )}
               {newResolved.map((item) => (
@@ -856,28 +865,29 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
 
         {isDecisionMade ? (
           <p className="text-sm text-green-400 leading-relaxed">
-            ✓ Decision recorded.
+            ✓ {t.reports.decisionRecorded}
           </p>
         ) : verdictIsClean ? (
           <button
             onClick={handleDecision}
             className="w-full bg-[#B4531A] hover:opacity-85 text-white text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left shadow-[0_4px_16px_rgba(180,83,26,.28)]"
           >
-            Proceed to agreement
+            {t.cta.proceedAgreement}
           </button>
         ) : (
           <>
             <button
-              onClick={() => goToStep("upload")}
-              className="w-full bg-[#B4531A] hover:opacity-85 text-white text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left shadow-[0_4px_16px_rgba(180,83,26,.28)] mb-3"
+              onClick={handleUpsell}
+              disabled={upsellLoading}
+              className="w-full bg-[#B4531A] hover:opacity-85 text-white text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left shadow-[0_4px_16px_rgba(180,83,26,.28)] mb-3 disabled:opacity-60"
             >
-              Resolve issues before proceeding
+              {upsellLoading ? t.reports.redirecting : t.cta.resolveIssues}
             </button>
             <button
               onClick={handleDecision}
               className="text-[14px] text-[#666] hover:text-[var(--foreground)] transition-colors underline underline-offset-2"
             >
-              Continue anyway
+              {t.cta.continueAnyway}
             </button>
           </>
         )}
@@ -917,6 +927,9 @@ function timeAgo(isoString: string): string {
 }
 
 function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
+  const pathname = usePathname();
+  const lang = (pathname.startsWith('/es') ? 'es' : 'en') as 'en' | 'es';
+  const t = stepEngineCopy[lang];
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { transaction, generateContract, updateAgreementFields, addMaintenanceRecord, enableShare, revokeShare, sendForSignature, goToStep } = useTransaction();
   const { contract, share } = transaction;
@@ -1025,6 +1038,24 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
     const zip = new JSZip();
     const exportedAt = new Date().toISOString();
     const isoDate    = exportedAt.slice(0, 10);
+    const isEs = lang === "es";
+
+    // Language-aware folder/file names
+    const p = {
+      overview:      isEs ? "00_descripcion"              : "00_overview",
+      readme:        isEs ? "LEEME.txt"                   : "README.txt",
+      summary:       isEs ? "resumen_transaccion.json"    : "transaction_summary.json",
+      verification:  isEs ? "01_verificacion"             : "01_verification",
+      verJson:       isEs ? "verificacion.json"           : "verification.json",
+      agreement:     isEs ? "02_contrato"                 : "02_agreement",
+      agreementHtml: isEs ? "Contrato_Compraventa_Vehiculo.html" : "Vehicle_Purchase_Agreement.html",
+      documents:     isEs ? "03_documentos"               : "03_documents",
+      raw:           isEs ? "99_datos_crudos"             : "99_raw",
+      metadata:      isEs ? "metadatos.json"              : "metadata.json",
+    };
+    const docNames: Record<string, string> = isEs
+      ? { ine: "ine", registration: "tarjeta_circulacion", invoice: "factura" }
+      : { ine: "ine", registration: "registration",        invoice: "invoice" };
 
     // Track every path added — used to build INDEX.json at the end
     const fileIndex: string[] = [];
@@ -1033,8 +1064,58 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
       fileIndex.push(path);
     }
 
-    // ── 00_overview/README.txt ────────────────────────────────────────────────
-    const readme = [
+    // ── README ────────────────────────────────────────────────────────────────
+    const readme = isEs ? [
+      "Expediente de Transacción MexGuardian",
+      "======================================",
+      "",
+      "Este paquete contiene el registro verificado completo de una transacción de",
+      "vehículo procesada a través de MexGuardian. Está destinado al comprador,",
+      "vendedor y cualquier asesor o abogado involucrado en esta transacción.",
+      "",
+      `ID de Transacción : ${transaction.id}`,
+      `Generado          : ${exportedAt}`,
+      "",
+      "--------------------------------------------------------------------------",
+      "",
+      "CONTENIDO",
+      "---------",
+      "Los archivos están ordenados por prefijo (00, 01, 02…). Comienza por el más bajo.",
+      "",
+      `${p.overview}/`,
+      `  ${p.readme.padEnd(30)} Este archivo.`,
+      `  ${p.summary.padEnd(30)} Vehículo, partes, plan y estado actual.`,
+      "",
+      `${p.verification}/`,
+      `  ${p.verJson.padEnd(30)} Evaluación de riesgo: nivel, confianza, problemas,`,
+      "                                 señales positivas y recomendación.",
+      "",
+      `${p.agreement}/`,
+      `  ${p.agreementHtml}`,
+      "                                 Contrato de compraventa. Ábrelo en cualquier",
+      "                                 navegador para leer o imprimir.",
+      "",
+      `${p.documents}/`,
+      "  ine.{ext}                      Identificación del vendedor (INE o ID oficial).",
+      "  tarjeta_circulacion.{ext}      Tarjeta de circulación.",
+      "  factura.{ext}                  Factura del vehículo.",
+      "",
+      `${p.raw}/`,
+      `  ${p.metadata.padEnd(30)} Instantánea completa de la transacción.`,
+      "                                 Para auditoría, integración o registro.",
+      "",
+      "--------------------------------------------------------------------------",
+      "",
+      "Cómo usar este archivo:",
+      `1. Comienza con "${p.verification}" para entender el riesgo`,
+      `2. Revisa "${p.documents}" como evidencia de respaldo`,
+      `3. Revisa "${p.agreement}" antes de completar la transacción`,
+      "Este archivo puede compartirse con compradores, vendedores o asesores.",
+      "",
+      "--------------------------------------------------------------------------",
+      "",
+      "Generado por MexGuardian (mexguardian.com).",
+    ].join("\n") : [
       "MexGuardian Transaction Dossier",
       "================================",
       "",
@@ -1085,11 +1166,11 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
       "",
       "Generated by MexGuardian (mexguardian.com).",
     ].join("\n");
-    addFile("00_overview/README.txt", readme);
+    addFile(`${p.overview}/${p.readme}`, readme);
 
-    // ── 00_overview/transaction_summary.json ─────────────────────────────────
+    // ── summary ───────────────────────────────────────────────────────────────
     addFile(
-      "00_overview/transaction_summary.json",
+      `${p.overview}/${p.summary}`,
       JSON.stringify(
         {
           transaction_id: transaction.id,
@@ -1129,41 +1210,41 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
       )
     );
 
-    // ── 01_verification/verification.json ────────────────────────────────────
-    const riskLevelLabel =
-      risk.riskLevel === "HIGH"     ? "high"     :
-      risk.riskLevel === "MODERATE" ? "moderate" : "low";
-    const decisionGuidance =
-      risk.riskLevel === "HIGH"     ? "Do not proceed" :
-      risk.riskLevel === "MODERATE" ? "Proceed with caution" : "Proceed";
-    const recommendation =
-      risk.riskLevel === "HIGH"
-        ? "Do not proceed without resolving all flagged issues. Consult with a legal or automotive professional."
-        : risk.riskLevel === "MODERATE"
-        ? "Proceed with caution. Address flagged items with the seller before finalizing the transaction."
-        : "No significant issues detected. You may proceed with confidence.";
+    // ── verification ─────────────────────────────────────────────────────────
+    const riskLevelLabel = isEs
+      ? (risk.riskLevel === "HIGH" ? "alto" : risk.riskLevel === "MODERATE" ? "moderado" : "bajo")
+      : (risk.riskLevel === "HIGH" ? "high" : risk.riskLevel === "MODERATE" ? "moderate" : "low");
+    const decisionGuidance = isEs
+      ? (risk.riskLevel === "HIGH" ? "No proceder" : risk.riskLevel === "MODERATE" ? "Proceder con precaución" : "Proceder")
+      : (risk.riskLevel === "HIGH" ? "Do not proceed" : risk.riskLevel === "MODERATE" ? "Proceed with caution" : "Proceed");
+    const recommendation = isEs
+      ? (risk.riskLevel === "HIGH" ? t.decision.doNotProceed : risk.riskLevel === "MODERATE" ? t.decision.proceedCaution : t.decision.noSignificantIssues)
+      : (risk.riskLevel === "HIGH"
+          ? "Do not proceed without resolving all flagged issues. Consult with a legal or automotive professional."
+          : risk.riskLevel === "MODERATE"
+          ? "Proceed with caution. Address flagged items with the seller before finalizing the transaction."
+          : "No significant issues detected. You may proceed with confidence.");
     addFile(
-      "01_verification/verification.json",
+      `${p.verification}/${p.verJson}`,
       JSON.stringify(
         {
-          risk_level:       riskLevelLabel,
-          confidence_score: risk.confidence,
-          confidence_label: risk.confidenceLabel,
+          risk_level:        riskLevelLabel,
+          confidence_score:  risk.confidence,
+          confidence_label:  risk.confidenceLabel,
           decision_guidance: decisionGuidance,
           recommendation,
-          summary:          transaction.verification_results?.summary ?? null,
-          key_issues:       risk.issues,
-          positive_signals: risk.resolved,
-          generated_at:     exportedAt,
-          source:           "MexGuardian AI Verification System",
+          summary:           transaction.verification_results?.summary ?? null,
+          key_issues:        risk.issues,
+          positive_signals:  risk.resolved,
+          generated_at:      exportedAt,
+          source:            "MexGuardian AI Verification System",
         },
         null,
         2
       )
     );
 
-    // ── 02_agreement/Vehicle_Purchase_Agreement.html ─────────────────────────
-    // Included only when generated. Auto-print script stripped for clean open.
+    // ── agreement ────────────────────────────────────────────────────────────
     if (contract.status === "generated") {
       const agreementDate = new Date(exportedAt).toLocaleDateString("es-MX", {
         year: "numeric", month: "long", day: "numeric",
@@ -1179,10 +1260,10 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
         price:        transaction.price,
         location:     transaction.location,
       }).replace(/<script>[\s\S]*?<\/script>/g, "");
-      addFile("02_agreement/Vehicle_Purchase_Agreement.html", agreementHtml);
+      addFile(`${p.agreement}/${p.agreementHtml}`, agreementHtml);
     }
 
-    // ── 03_documents/ — parallel fetch from Supabase storage ─────────────────
+    // ── documents — parallel fetch from Supabase storage ─────────────────────
     await Promise.all(
       (Object.entries(transaction.documents) as [string, typeof transaction.documents.ine][]).map(
         async ([docType, doc]) => {
@@ -1191,7 +1272,8 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
             const res = await fetch(doc.file_url);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const ext  = doc.file_name.split(".").pop() ?? "bin";
-            const path = `03_documents/${docType}.${ext}`;
+            const name = docNames[docType] ?? docType;
+            const path = `${p.documents}/${name}.${ext}`;
             zip.file(path, await res.arrayBuffer());
             fileIndex.push(path);
           } catch {
@@ -1201,9 +1283,9 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
       )
     );
 
-    // ── 99_raw/metadata.json — full unfiltered snapshot, undefined → null ─────
+    // ── raw — full unfiltered snapshot, undefined → null ─────────────────────
     addFile(
-      "99_raw/metadata.json",
+      `${p.raw}/${p.metadata}`,
       JSON.stringify(transaction, (_k, v) => (v === undefined ? null : v), 2)
     );
 
@@ -1226,7 +1308,9 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
     const blob = await zip.generateAsync({ type: "blob" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `MexGuardian_Vehicle_Record_${isoDate}_${transaction.id}.zip`;
+    a.download = isEs
+      ? `MexGuardian_Expediente_Vehicular_${isoDate}_${transaction.id}.zip`
+      : `MexGuardian_Vehicle_Record_${isoDate}_${transaction.id}.zip`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1249,7 +1333,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
 
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
-      alert("Please allow popups to generate the document.");
+      alert(t.warnings.allowPopups);
       return;
     }
     printWindow.document.open();
@@ -1258,7 +1342,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
   }
 
   // Single source of truth for risk in complete step
-  const risk = computeRisk(transaction);
+  const risk = computeRisk(transaction, lang);
 
   const [recordType, setRecordType] = useState<MaintenanceRecordType>("service");
   const [title, setTitle] = useState("");
@@ -1280,13 +1364,13 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
   const hasIssues   = risk.issues.length > 0;
   const hasUnknowns = risk.unknowns.length > 0;
   const badgeClass  = verdictIsClean ? "clear" : "caution";
-  const badgeText   = verdictIsClean ? "Clear" : "Caution";
+  const badgeText   = verdictIsClean ? t.status.clear : t.status.caution;
   const recVariant  = hasIssues ? "risk" : hasUnknowns ? "moderate" : "clear";
   const recText     = hasIssues
-    ? "Do not proceed until these issues are resolved with the seller."
+    ? t.decision.resolveIssues
     : hasUnknowns
-    ? "Proceed only if you can verify the outstanding items with the seller."
-    : "No blocking issues found. You may proceed with confidence.";
+    ? t.decision.verifyItems
+    : t.decision.noBlockingIssues;
   const hasFindings = risk.issues.length > 0 || risk.resolved.length > 0;
 
   const { vehicle, documents } = transaction;
@@ -1295,55 +1379,56 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
     <section className="py-10">
       <div className="mb-6">
         <span className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)]">
-          Complete
+          {t.steps.complete}
         </span>
       </div>
 
       {/* ── Report card ──────────────────────────────────────────── */}
-      <div className="vr-card">
+      <div className="vr-wrap">
+        <div className={`vr-pill${badgeClass === "clear" ? "" : " warn"}`}>{badgeText}</div>
+        <div className="vr-card">
         <div className="vr-header">
-          <span className="vr-title">Verification Report</span>
-          <span className={`vr-badge ${badgeClass}`}>{badgeText}</span>
+          <span className="vr-title">{t.reports.verificationReport}</span>
         </div>
 
         <div className="vr-body">
 
           {/* Vehicle */}
           <div className="vr-section">
-            <div className="vr-k">Vehicle</div>
+            <div className="vr-k">{t.reports.vehicle}</div>
             <div className="vr-row">
-              <span className="vr-row-label">VIN</span>
+              <span className="vr-row-label">{t.fields.vin}</span>
               <span className={`vr-status ${vehicle.vin?.trim() ? "s-ok" : "s-warn"}`}>
-                {vehicle.vin?.trim() ? "Provided" : "Not provided"}
+                {vehicle.vin?.trim() ? t.status.provided : t.status.notProvided}
               </span>
             </div>
             <div className="vr-row">
-              <span className="vr-row-label">License plate</span>
+              <span className="vr-row-label">{t.fields.licensePlate}</span>
               <span className={`vr-status ${vehicle.plate?.trim() ? "s-ok" : "s-warn"}`}>
-                {vehicle.plate?.trim() ? "Provided" : "Not provided"}
+                {vehicle.plate?.trim() ? t.status.provided : t.status.notProvided}
               </span>
             </div>
           </div>
 
           {/* Documents */}
           <div className="vr-section">
-            <div className="vr-k">Documents</div>
+            <div className="vr-k">{t.reports.documents}</div>
             <div className="vr-row">
-              <span className="vr-row-label">Seller ID (INE)</span>
+              <span className="vr-row-label">{t.fields.sellerId}</span>
               <span className={`vr-status ${documents.ine.status === "uploaded" ? "s-ok" : "s-warn"}`}>
-                {documents.ine.status === "uploaded" ? "Submitted" : "Not provided"}
+                {documents.ine.status === "uploaded" ? t.status.submitted : t.status.notProvided}
               </span>
             </div>
             <div className="vr-row">
-              <span className="vr-row-label">Registration</span>
+              <span className="vr-row-label">{t.fields.registration}</span>
               <span className={`vr-status ${documents.registration.status === "uploaded" ? "s-ok" : "s-warn"}`}>
-                {documents.registration.status === "uploaded" ? "Submitted" : "Not provided"}
+                {documents.registration.status === "uploaded" ? t.status.submitted : t.status.notProvided}
               </span>
             </div>
             <div className="vr-row">
-              <span className="vr-row-label">Ownership invoice</span>
+              <span className="vr-row-label">{t.fields.ownershipInvoice}</span>
               <span className={`vr-status ${documents.invoice.status === "uploaded" ? "s-ok" : "s-warn"}`}>
-                {documents.invoice.status === "uploaded" ? "Submitted" : "Not provided"}
+                {documents.invoice.status === "uploaded" ? t.status.submitted : t.status.notProvided}
               </span>
             </div>
           </div>
@@ -1351,17 +1436,17 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
           {/* Findings — resolved + issues */}
           {hasFindings && (
             <div className="vr-section">
-              <div className="vr-k">Findings</div>
+              <div className="vr-k">{t.reports.findings}</div>
               {risk.resolved.map((item) => (
                 <div key={item} className="vr-row">
                   <span className="vr-row-label">{item}</span>
-                  <span className="vr-status s-ok">Verified</span>
+                  <span className="vr-status s-ok">{t.status.verified}</span>
                 </div>
               ))}
               {risk.issues.map((item) => (
                 <div key={item} className="vr-row">
                   <span className="vr-row-label">{item}</span>
-                  <span className="vr-status s-risk">Issue</span>
+                  <span className="vr-status s-risk">{t.status.issue}</span>
                 </div>
               ))}
             </div>
@@ -1370,11 +1455,11 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
           {/* Unverified */}
           {hasUnknowns && (
             <div className="vr-section">
-              <div className="vr-k">Unverified</div>
+              <div className="vr-k">{t.reports.unverified}</div>
               {risk.unknowns.map((item) => (
                 <div key={item} className="vr-row">
                   <span className="vr-row-label">{item}</span>
-                  <span className="vr-status s-warn">Unverified</span>
+                  <span className="vr-status s-warn">{t.status.unverified}</span>
                 </div>
               ))}
             </div>
@@ -1382,17 +1467,18 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
 
           {/* Recommendation */}
           <div className={`vr-rec ${recVariant === "clear" ? "clear" : recVariant === "moderate" ? "moderate" : ""}`}>
-            <div className="vr-rec-label">Recommendation</div>
+            <div className="vr-rec-label">{t.reports.recommendation}</div>
             <p className="vr-rec-text">{recText}</p>
           </div>
 
         </div>
       </div>
+      </div>
 
       {isBasic && (
         <div className="border border-amber-400/20 bg-amber-400/[0.06] rounded-lg px-4 py-4 mb-6">
           <p className="text-[13px] text-amber-400/80 leading-relaxed">
-            This report covers public records only. Expert review was not included.
+            {t.warnings.publicRecordsOnly}
           </p>
         </div>
       )}
@@ -1400,7 +1486,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
       {contract.status === "generated" ? (
         <>
           <p className="text-[15px] text-[#444] mb-5">
-            Purchase agreement generated
+            {t.reports.agreementGenerated}
           </p>
 
           {/* E-signature — primary action */}
@@ -1414,13 +1500,13 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
                   : "bg-[#B4531A] hover:opacity-85 text-white shadow-[0_4px_16px_rgba(180,83,26,.28)]"
               }`}
             >
-              {signingLoading ? "Opening…" : "Sign agreement now"}
+              {signingLoading ? t.reports.opening : t.cta.signAgreement}
             </button>
           )}
 
           {/* Download — secondary action */}
           <button onClick={handleDownload} className="text-[15px] text-[#666] hover:text-white transition-colors mb-6">
-            Download purchase agreement
+            {t.cta.downloadAgreement}
           </button>
 
           <div className="mb-6" />
@@ -1430,28 +1516,28 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
               onClick={handleShare}
               className="text-[15px] text-[var(--accent)] hover:text-blue-400 transition-colors"
             >
-              Share verified transaction
+              {t.cta.shareTransaction}
             </button>
             <p className="text-[15px] text-[#666] mt-1">
-              Anyone with this link can view the verification and contract
+              {t.fields.shareDescription}
             </p>
             {showShared && (
               <>
                 <p className="text-[15px] text-[var(--foreground-muted)] leading-relaxed mt-3">
-                  Link copied. You can now share this transaction.
+                  {t.fields.linkCopied}
                 </p>
                 <div className="flex gap-4 mt-2">
                   <button
                     onClick={() => window.open(shareUrl, "_blank")}
                     className="text-[15px] text-blue-400 underline"
                   >
-                    Open link
+                    {t.cta.openLink}
                   </button>
                   <button
                     onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(shareUrl)}`, "_blank")}
                     className="text-[15px] text-green-400 underline"
                   >
-                    Share via WhatsApp
+                    {t.cta.shareWhatsApp}
                   </button>
                 </div>
               </>
@@ -1461,21 +1547,21 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
       ) : (
         <div className="mb-8">
           <p className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)] mb-4">
-            Agreement details
+            {t.fields.agreementDetails}
           </p>
           <div className="flex flex-col gap-6 mb-6">
             <div>
-              <p className="text-base text-[#444] mb-2">Buyer full name</p>
+              <p className="text-base text-[#444] mb-2">{t.fields.buyerFullName}</p>
               <input
                 type="text"
                 value={buyerName}
                 onChange={(e) => setBuyerName(e.target.value)}
-                placeholder="Full legal name"
+                placeholder={t.fields.legalName}
                 className="w-full bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] text-sm rounded-lg px-3 py-2 placeholder:text-[var(--foreground-muted)]"
               />
             </div>
             <div>
-              <p className="text-base text-[#444] mb-2">Buyer email</p>
+              <p className="text-base text-[#444] mb-2">{t.fields.buyerEmail}</p>
               <input
                 type="email"
                 value={buyerEmail}
@@ -1485,7 +1571,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
               />
             </div>
             <div>
-              <p className="text-base text-[#444] mb-2">Seller full name</p>
+              <p className="text-base text-[#444] mb-2">{t.fields.sellerFullName}</p>
               <input
                 type="text"
                 value={sellerName}
@@ -1495,7 +1581,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
               />
             </div>
             <div>
-              <p className="text-base text-[#444] mb-2">Seller email</p>
+              <p className="text-base text-[#444] mb-2">{t.fields.sellerEmail}</p>
               <input
                 type="email"
                 value={sellerEmail}
@@ -1505,7 +1591,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
               />
             </div>
             <div>
-              <p className="text-base text-[#444] mb-2">Sale price (MXN)</p>
+              <p className="text-base text-[#444] mb-2">{t.fields.salePrice}</p>
               <input
                 type="text"
                 value={salePrice}
@@ -1515,7 +1601,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
               />
             </div>
             <div>
-              <p className="text-base text-[#444] mb-2">City / State</p>
+              <p className="text-base text-[#444] mb-2">{t.fields.cityState}</p>
               <input
                 type="text"
                 value={saleLocation}
@@ -1526,11 +1612,11 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
             </div>
           </div>
           <p className="text-[15px] text-[#666] leading-relaxed mb-4">
-            Both parties should review and confirm all details before signing.
+            {t.fields.reviewConfirm}
           </p>
           {(risk.confidence < 40 || transaction.documents.invoice.status !== "uploaded") && (
             <p className="text-[15px] text-amber-400/80 leading-relaxed mb-4">
-              You are generating an agreement based on incomplete verification data. Review carefully before signing.
+              {t.warnings.incompleteData}
             </p>
           )}
           {verdictIsClean ? (
@@ -1543,7 +1629,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
                   : "bg-[#B4531A] hover:opacity-85 text-white shadow-[0_4px_16px_rgba(180,83,26,.28)]"
               }`}
             >
-              Generate purchase agreement
+              {t.cta.generateAgreement}
             </button>
           ) : (
             <>
@@ -1551,7 +1637,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
                 onClick={() => goToStep("check")}
                 className="w-full bg-[#B4531A] hover:opacity-85 text-white shadow-[0_4px_16px_rgba(180,83,26,.28)] text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left"
               >
-                Resolve these risks before you proceed
+                {t.cta.resolveIssues}
               </button>
               <button
                 onClick={handleGenerate}
@@ -1562,7 +1648,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
                     : "border-[var(--border)] hover:border-white/30 text-[var(--foreground-muted)] hover:text-white"
                 }`}
               >
-                Continue anyway
+                {t.cta.continueAnyway}
               </button>
             </>
           )}
@@ -1574,30 +1660,30 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
           onClick={handleDownloadAll}
           className="text-[15px] text-[#666] hover:text-white transition-colors"
         >
-          Download full vehicle record (.zip)
+          {t.cta.downloadRecord}
         </button>
       </div>
 
       {showForm ? (
         <div>
           <p className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)] mb-4">
-            Add Maintenance
+            {t.fields.addMaintenance}
           </p>
           <div className="flex flex-col gap-4">
             <div>
-              <p className="text-base text-[#444] mb-2">Type</p>
+              <p className="text-base text-[#444] mb-2">{t.fields.type}</p>
               <select
                 value={recordType}
                 onChange={(e) => setRecordType(e.target.value as MaintenanceRecordType)}
                 className="w-full bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] text-sm rounded-lg px-3 py-2"
               >
-                <option value="service">Service</option>
-                <option value="repair">Repair</option>
-                <option value="inspection">Inspection</option>
+                <option value="service">{t.fields.service}</option>
+                <option value="repair">{t.fields.repair}</option>
+                <option value="inspection">{t.fields.inspection}</option>
               </select>
             </div>
             <div>
-              <p className="text-base text-[#444] mb-2">Title</p>
+              <p className="text-base text-[#444] mb-2">{t.fields.title}</p>
               <input
                 type="text"
                 value={title}
@@ -1607,7 +1693,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
               />
             </div>
             <div>
-              <p className="text-base text-[#444] mb-2">Date</p>
+              <p className="text-base text-[#444] mb-2">{t.fields.date}</p>
               <input
                 type="date"
                 value={date}
@@ -1632,14 +1718,14 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
         <>
           {showMaintenanceSaved && (
             <p className="text-[15px] text-[#666] leading-relaxed mb-3">
-              Maintenance record saved.
+              {t.reports.recordSaved}
             </p>
           )}
           <button
             onClick={() => { setShowForm(true); setShowMaintenanceSaved(false); }}
             className="text-[15px] text-[var(--accent)] hover:text-blue-400 transition-colors"
           >
-            Add maintenance record
+            {t.cta.addMaintenance}
           </button>
         </>
       )}
@@ -1650,6 +1736,10 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
 // ─── Main export ─────────────────────────────────────────────────────────────
 
 export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | null; dbStatus?: string }) {
+  const pathname = usePathname();
+  const lang = (pathname.startsWith('/es') ? 'es' : 'en') as 'en' | 'es';
+  const t = stepEngineCopy[lang];
+  const stepContent = getStepContent(lang);
   const { transaction, advanceStep, advanceToStep, goToStep, returnedToStep, updateVehicle, setStatus, isDecisionMade } = useTransaction();
   const { current_step } = transaction;
 
@@ -1674,7 +1764,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
         onClick={() => goToStep(prevStep.key)}
         className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors"
       >
-        ← Back to {prevStep.label}
+        ← {t.steps[prevStep.key as keyof typeof t.steps] ?? prevStep.label}
       </button>
     </div>
   ) : null;
@@ -1682,7 +1772,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
   const changesBanner = returnedToStep === current_step ? (
     <div className="mt-3 mb-1 rounded-lg border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3">
       <p className="text-xs text-amber-400 leading-relaxed">
-        Changes detected. Verification will restart from this step.
+        {t.warnings.changesDetected}
       </p>
     </div>
   ) : null;
@@ -1712,28 +1802,26 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
         <section className="py-10">
           <div className="mb-4">
             <span className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)]">
-              Upload
+              {t.steps.upload}
             </span>
           </div>
 
           <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
-            Start your vehicle check
+            {t.steps.uploadHeading}
           </h2>
 
           <p className="text-[18px] text-[#444] leading-relaxed mb-10">
-            We need basic vehicle details and the seller&apos;s documents to run
-            verification. The more complete your upload, the more accurate your
-            risk report.
+            {t.steps.uploadBody}
           </p>
 
           {/* Vehicle info */}
           <p className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)] mb-4">
-            Vehicle details
+            {t.fields.vehicleDetails}
           </p>
           <div className="flex flex-col gap-6 mb-6">
             <div className="flex gap-4">
               <div className="flex-1">
-                <p className="text-base text-[#444] mb-2">Make</p>
+                <p className="text-base text-[#444] mb-2">{t.fields.make}</p>
                 <input
                   type="text"
                   defaultValue={vehicle.make}
@@ -1743,7 +1831,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
                 />
               </div>
               <div className="flex-1">
-                <p className="text-base text-[#444] mb-2">Model</p>
+                <p className="text-base text-[#444] mb-2">{t.fields.model}</p>
                 <input
                   type="text"
                   defaultValue={vehicle.model}
@@ -1753,7 +1841,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
                 />
               </div>
               <div className="w-24">
-                <p className="text-base text-[#444] mb-2">Year</p>
+                <p className="text-base text-[#444] mb-2">{t.fields.year}</p>
                 <input
                   type="number"
                   defaultValue={vehicle.year || ""}
@@ -1772,9 +1860,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
             </div>
             <div className="flex gap-4">
               <div className="flex-1">
-                <p className="text-base text-[#444] mb-2">
-                  VIN <span className="normal-case text-[#666]">(recommended)</span>
-                </p>
+                <p className="text-base text-[#444] mb-2">{t.fields.vinRecommended}</p>
                 <input
                   type="text"
                   defaultValue={vehicle.vin ?? ""}
@@ -1784,9 +1870,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
                 />
               </div>
               <div className="flex-1">
-                <p className="text-base text-[#444] mb-2">
-                  Plate <span className="normal-case text-[#666]">(recommended)</span>
-                </p>
+                <p className="text-base text-[#444] mb-2">{t.fields.plateRecommended}</p>
                 <input
                   type="text"
                   defaultValue={vehicle.plate ?? ""}
@@ -1798,16 +1882,14 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
             </div>
           </div>
           <p className="text-[15px] text-[#666] leading-relaxed mb-10">
-            Adding a VIN or plate allows theft and registry checks. Without it,
-            your results will be limited.
+            {t.fields.vinBenefit}
           </p>
 
           {/* Document upload progress */}
           {uploadedDocs > 0 && !allUploaded && (
             <div className="border border-[var(--border)] rounded-lg px-4 py-4 mb-6">
               <p className="text-[15px] text-[#444] leading-relaxed">
-                {uploadedDocs} of 3 documents uploaded — missing documents will
-                appear as unknowns in your report.
+                {uploadedDocs} {t.panels.of} 3 {t.warnings.documentsPartialCount}
               </p>
             </div>
           )}
@@ -1816,8 +1898,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
           {hasDocs && !hasIdentifier && (
             <div className="border border-amber-400/20 bg-amber-400/[0.06] rounded-lg px-4 py-4 mb-4">
               <p className="text-[15px] text-amber-400 leading-relaxed">
-                Proceeding without a VIN or plate will reduce verification
-                accuracy. Registry and theft checks will not run.
+                {t.warnings.reduceAccuracy}
               </p>
             </div>
           )}
@@ -1826,7 +1907,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
           {!hasMinimumInput && (
             <div className="border border-[var(--border)] rounded-lg px-4 py-4 mb-4">
               <p className="text-[15px] text-[#444] leading-relaxed">
-                Add a VIN/plate or upload at least one document to continue.
+                {t.warnings.addVinOrDoc}
               </p>
             </div>
           )}
@@ -1846,15 +1927,15 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
             }`}
           >
             {!hasMinimumInput
-              ? "Add a VIN/plate or document to continue"
+              ? t.warnings.addVinOrDoc
               : !hasIdentifier
-              ? "Check this vehicle — registry checks limited without VIN/plate"
-              : "Check this vehicle"}
+              ? t.steps.uploadAction
+              : t.steps.uploadAction}
           </button>
 
           {vehicleComplete && !allUploaded && uploadedDocs > 0 && (
             <p className="text-[15px] text-[#666] leading-relaxed">
-              You can add more documents later to improve your results.
+              {t.warnings.addMoreDocuments}
             </p>
           )}
         </section>
@@ -1873,7 +1954,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
         <section className="py-10">
           <div className="mb-4">
             <span className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)]">
-              {planSteps[currentIndex]?.label}
+              {t.steps.check}
             </span>
           </div>
           <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
@@ -1885,8 +1966,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
           {!checkHasMinimumInput && (
             <div className="border border-amber-400/20 bg-amber-400/[0.06] rounded-lg px-4 py-4 mb-6">
               <p className="text-[15px] text-amber-400 leading-relaxed">
-                We need at least a VIN, plate, or one uploaded document to analyze
-                this vehicle.
+                {t.warnings.needMoreInfo}
               </p>
             </div>
           )}
@@ -1921,7 +2001,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
         <section className="py-8">
           <div className="mb-4">
             <span className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)]">
-              {planSteps[currentIndex]?.label}
+              {t.steps.analyze}
             </span>
           </div>
           <AnalyzePanel plan={plan} />
@@ -1938,7 +2018,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
         <section className="py-8">
           <div className="mb-4">
             <span className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)]">
-              Verify
+              {t.steps.verify}
             </span>
           </div>
           <VerifyInterface plan={plan} />

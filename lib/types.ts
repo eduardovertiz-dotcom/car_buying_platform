@@ -94,6 +94,8 @@ export type Transaction = {
   location?: string;
   // Transaction lifecycle status — DB-backed, absolute source of truth
   status?: string;
+  // Plan purchased — set by post-checkout, used to gate Pro features
+  plan?: "39" | "69" | null;
   // Decision audit fields — kept for analytics only, never used for control flow
   accepted_risk_level?: "LOW" | "MODERATE" | "HIGH";
   accepted_confidence?: number;

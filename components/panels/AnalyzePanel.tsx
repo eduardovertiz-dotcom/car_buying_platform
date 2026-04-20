@@ -1,18 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useTransaction } from "@/context/TransactionContext";
 import { computeRisk } from "@/lib/risk";
 import { track } from "@/lib/track";
 import { hasMinimumInput as computeHasMinimumInput } from "@/lib/guards";
+import { stepEngineCopy } from "@/lib/i18n/stepEngine";
 
 export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
+  const pathname = usePathname();
+  const lang = (pathname.startsWith('/es') ? 'es' : 'en') as 'en' | 'es';
+  const t = stepEngineCopy[lang];
   const { transaction, advanceStep, advanceToStep, goToStep, isDecisionMade } = useTransaction();
   const [upsellLoading, setUpsellLoading] = useState(false);
   const showUpgrade = plan === "39";
 
   const hasMinimumInput = computeHasMinimumInput(transaction);
-  const risk = computeRisk(transaction);
+  const risk = computeRisk(transaction, lang);
 
   useEffect(() => {
     if (!hasMinimumInput) return;
@@ -56,10 +61,10 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
     return (
       <div className="flex flex-col gap-5">
         <h2 className="text-2xl font-semibold text-[var(--foreground)] leading-snug">
-          We need more information.
+          {t.warnings.moreInformation}
         </h2>
         <p className="text-[18px] text-[#444] leading-relaxed">
-          Add a VIN or plate number, or upload at least one document to analyze this vehicle.
+          {t.warnings.needMoreInfoAnalyze}
         </p>
         <button
           onClick={() => goToStep("upload")}
@@ -75,14 +80,14 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
   const hasIssues   = risk.issues.length > 0;
   const hasUnknowns = risk.unknowns.length > 0;
 
-  const pillText = hasIssues ? "⚠ Issues detected" : hasUnknowns ? "Caution" : null;
+  const pillText = hasIssues ? t.reports.issuesDetected : hasUnknowns ? t.status.caution : null;
 
   const recVariant = hasIssues ? "risk" : hasUnknowns ? "moderate" : "clear";
   const recText    = hasIssues
-    ? "Do not proceed until these issues are resolved with the seller."
+    ? t.decision.resolveIssues
     : hasUnknowns
-    ? "Proceed only if you can verify the outstanding items with the seller."
-    : "No blocking issues found. You may proceed with confidence.";
+    ? t.decision.verifyItems
+    : t.decision.noBlockingIssues;
 
   return (
     <>
@@ -93,18 +98,18 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
         )}
         <div className="vr-card">
           <div className="vr-header">
-            <span className="vr-title">Verification Report</span>
+            <span className="vr-title">{t.reports.verificationReport}</span>
           </div>
           <div className="vr-body">
 
             {/* Outstanding issues — first when present */}
             {hasIssues && (
               <div className="vr-section">
-                <div className="vr-k">Outstanding issues</div>
+                <div className="vr-k">{t.reports.outstandingIssues}</div>
                 {risk.issues.map((item) => (
                   <div key={item} className="vr-row">
                     <span className="vr-row-label">{item}</span>
-                    <span className="vr-status s-risk">Issue</span>
+                    <span className="vr-status s-risk">{t.status.issue}</span>
                   </div>
                 ))}
               </div>
@@ -112,40 +117,40 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
 
             {/* Ownership */}
             <div className="vr-section">
-              <div className="vr-k">Ownership</div>
+              <div className="vr-k">{t.fields.ownership}</div>
               <div className="vr-row">
-                <span className="vr-row-label">Ownership invoice (factura)</span>
+                <span className="vr-row-label">{t.fields.ownershipInvoice}</span>
                 <span className={`vr-status ${documents.invoice.status === "uploaded" ? "s-ok" : "s-warn"}`}>
-                  {documents.invoice.status === "uploaded" ? "Submitted" : "Not provided"}
+                  {documents.invoice.status === "uploaded" ? t.status.submitted : t.status.notProvided}
                 </span>
               </div>
               <div className="vr-row">
-                <span className="vr-row-label">VIN</span>
+                <span className="vr-row-label">{t.fields.vin}</span>
                 <span className={`vr-status ${vehicle.vin?.trim() ? "s-ok" : "s-warn"}`}>
-                  {vehicle.vin?.trim() ? "Provided" : "Not provided"}
+                  {vehicle.vin?.trim() ? t.status.provided : t.status.notProvided}
                 </span>
               </div>
               <div className="vr-row">
-                <span className="vr-row-label">License plate</span>
+                <span className="vr-row-label">{t.fields.licensePlate}</span>
                 <span className={`vr-status ${vehicle.plate?.trim() ? "s-ok" : "s-warn"}`}>
-                  {vehicle.plate?.trim() || "Not provided"}
+                  {vehicle.plate?.trim() || t.status.notProvided}
                 </span>
               </div>
             </div>
 
             {/* Document integrity */}
             <div className="vr-section">
-              <div className="vr-k">Document integrity</div>
+              <div className="vr-k">{t.reports.documentIntegrity}</div>
               <div className="vr-row">
-                <span className="vr-row-label">Seller ID (INE)</span>
+                <span className="vr-row-label">{t.fields.sellerId}</span>
                 <span className={`vr-status ${documents.ine.status === "uploaded" ? "s-ok" : "s-warn"}`}>
-                  {documents.ine.status === "uploaded" ? "Submitted" : "Not provided"}
+                  {documents.ine.status === "uploaded" ? t.status.submitted : t.status.notProvided}
                 </span>
               </div>
               <div className="vr-row">
-                <span className="vr-row-label">Registration card</span>
+                <span className="vr-row-label">{t.fields.registration}</span>
                 <span className={`vr-status ${documents.registration.status === "uploaded" ? "s-ok" : "s-warn"}`}>
-                  {documents.registration.status === "uploaded" ? "Submitted" : "Not provided"}
+                  {documents.registration.status === "uploaded" ? t.status.submitted : t.status.notProvided}
                 </span>
               </div>
             </div>
@@ -153,11 +158,11 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
             {/* Unverified */}
             {hasUnknowns && (
               <div className="vr-section">
-                <div className="vr-k">Unverified</div>
+                <div className="vr-k">{t.reports.unverified}</div>
                 {risk.unknowns.map((item) => (
                   <div key={item} className="vr-row">
                     <span className="vr-row-label">{item}</span>
-                    <span className="vr-status s-warn">Unverified</span>
+                    <span className="vr-status s-warn">{t.status.unverified}</span>
                   </div>
                 ))}
               </div>
@@ -166,11 +171,11 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
             {/* Verified */}
             {risk.resolved.length > 0 && (
               <div className="vr-section">
-                <div className="vr-k">Verified</div>
+                <div className="vr-k">{t.reports.verified}</div>
                 {risk.resolved.map((item) => (
                   <div key={item} className="vr-row">
                     <span className="vr-row-label">{item}</span>
-                    <span className="vr-status s-ok">Verified</span>
+                    <span className="vr-status s-ok">{t.status.verified}</span>
                   </div>
                 ))}
               </div>
@@ -178,7 +183,7 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
 
             {/* Recommendation */}
             <div className={`vr-rec ${recVariant === "clear" ? "clear" : recVariant === "moderate" ? "moderate" : ""}`}>
-              <div className="vr-rec-label">Recommendation</div>
+              <div className="vr-rec-label">{t.reports.recommendation}</div>
               <p className="vr-rec-text">{recText}</p>
             </div>
 
@@ -190,17 +195,17 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
       {showUpgrade && (
         <div className="border border-[var(--border)] rounded-lg px-5 py-5 mb-6">
           <p className="text-[15px] font-semibold text-[var(--foreground)] mb-2">
-            Verify this deal before you commit
+            {t.fields.expertAvailable}
           </p>
           <p className="text-[14px] text-[#444] leading-relaxed mb-4">
-            Add expert review, identity validation, and deeper cross-checks across official records.
+            {t.warnings.automatedLimited}
           </p>
           <button
             onClick={handleUpgrade}
             disabled={upsellLoading}
             className="w-full bg-[#B4531A] hover:opacity-85 text-white text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left shadow-[0_4px_16px_rgba(180,83,26,.28)] disabled:opacity-60 disabled:shadow-none"
           >
-            {upsellLoading ? "Redirecting…" : "Verify these items before you commit"}
+            {upsellLoading ? t.reports.redirecting : t.cta.proceedVerification}
           </button>
         </div>
       )}
@@ -220,10 +225,10 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
         }`}
       >
         {showUpgrade
-          ? "Proceed without full verification"
+          ? t.cta.proceedWithoutFull
           : plan === "69"
-          ? "Proceed to verification"
-          : "Proceed to agreement"}
+          ? t.cta.proceedVerification
+          : t.cta.proceedAgreement}
       </button>
     </>
   );

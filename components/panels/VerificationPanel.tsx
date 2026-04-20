@@ -1,26 +1,30 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useTransaction } from "@/context/TransactionContext";
 import { Step } from "@/lib/types";
+import { stepEngineCopy } from "@/lib/i18n/stepEngine";
 
-function statusLabel(status: string, step: Step): string {
+function statusLabel(status: string, step: Step, p: typeof stepEngineCopy["en"]["panels"]): string {
   if (status !== "not_started") {
     const map: Record<string, string> = {
-      basic_processing:       "Running basic checks",
-      basic_complete:         "Basic complete",
-      professional_processing: "Professional review in progress",
-      professional_complete:  "Professional complete",
+      basic_processing:        p.runningBasicChecks,
+      basic_complete:          p.basicComplete,
+      professional_processing: p.professionalInProgress,
+      professional_complete:   p.professionalComplete,
     };
     return map[status] ?? status;
   }
-  // "not_started" — step-aware label
-  if (step === "upload" || step === "check") return "Not yet started";
-  if (step === "analyze")                    return "Ready to run";
-  if (step === "verify")                     return "Initializing";
-  return "Completed";
+  if (step === "upload" || step === "check") return p.notYetStarted;
+  if (step === "analyze")                    return p.readyToRun;
+  if (step === "verify")                     return p.initializingStatus;
+  return p.completed;
 }
 
 export default function VerificationPanel() {
+  const pathname = usePathname();
+  const lang = (pathname.startsWith('/es') ? 'es' : 'en') as 'en' | 'es';
+  const t = stepEngineCopy[lang];
   const { transaction } = useTransaction();
   const { verification_status, verification_results, current_step } = transaction;
 
@@ -31,13 +35,13 @@ export default function VerificationPanel() {
   return (
     <section className="border-t border-[var(--border)] py-6">
       <h3 className="text-xs uppercase tracking-widest text-[var(--foreground-muted)] mb-4">
-        Verification
+        {t.panels.verification}
       </h3>
 
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-white">Status</p>
+        <p className="text-sm text-white">{t.panels.statusLabel}</p>
         <p className="text-sm text-[var(--foreground-muted)]">
-          {statusLabel(verification_status, current_step)}
+          {statusLabel(verification_status, current_step, t.panels)}
         </p>
       </div>
 
@@ -46,8 +50,8 @@ export default function VerificationPanel() {
         <div className="border border-[var(--border)] rounded-lg px-4 py-3 mb-4">
           <p className="text-xs text-[var(--foreground-muted)]">
             {verification_status === "basic_processing"
-              ? "Basic verification is running. Results will appear here shortly."
-              : "Professional review is in progress. Results will appear here when complete."}
+              ? t.panels.basicRunning
+              : t.panels.professionalRunning}
           </p>
         </div>
       )}
@@ -57,7 +61,7 @@ export default function VerificationPanel() {
           {verification_results.findings.length > 0 && (
             <>
               <p className="text-xs text-[var(--foreground-muted)] mb-2">
-                FINDINGS
+                {t.reports.findings.toUpperCase()}
               </p>
               <ul className="flex flex-col gap-1.5 mb-4">
                 {verification_results.findings.map((finding, i) => (
@@ -70,7 +74,7 @@ export default function VerificationPanel() {
           )}
 
           <p className="text-xs text-[var(--foreground-muted)] mb-1">
-            CONFIDENCE
+            {t.panels.confidence.toUpperCase()}
           </p>
           <p className="text-sm text-white">
             {verification_results.confidence}%
@@ -80,7 +84,7 @@ export default function VerificationPanel() {
 
       {verification_status === "not_started" && (
         <p className="text-xs text-[var(--foreground-muted)]">
-          Verification runs when you reach the Verify step.
+          {t.panels.verificationRuns}
         </p>
       )}
     </section>

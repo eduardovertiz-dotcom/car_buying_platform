@@ -21,6 +21,7 @@ import {
   normalizeDocuments,
 } from "@/lib/types";
 import { mockTransactions } from "@/lib/mock";
+import { createClient } from "@/lib/supabase/client";
 
 // ─── Actions ────────────────────────────────────────────────────────────────
 
@@ -456,6 +457,28 @@ export function TransactionProvider({ transactionId, children }: Props) {
     }
     setHydrated(true);
   }, [transactionId]);
+
+  // Hydrate from Supabase DB — catches new purchases (never in localStorage)
+  // and plan upgrades (localStorage plan stale after Stripe redirect)
+  useEffect(() => {
+    if (!transactionId) return;
+    const supabase = createClient();
+    supabase
+      .from("transactions")
+      .select("*")
+      .eq("id", transactionId)
+      .single()
+      .then(({ data }) => {
+        if (!data) return;
+        const normalized = {
+          ...data,
+          documents: normalizeDocuments(data.documents),
+        };
+        if (!transaction.plan || data.plan !== transaction.plan) {
+          dispatch({ type: "HYDRATE", payload: normalized });
+        }
+      });
+  }, [transactionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Persist to localStorage — only after hydration is complete
   useEffect(() => {

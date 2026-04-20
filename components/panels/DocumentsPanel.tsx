@@ -1,14 +1,19 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useTransaction } from "@/context/TransactionContext";
 import { DocumentType, DOCUMENT_LABELS } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
+import { stepEngineCopy } from "@/lib/i18n/stepEngine";
 
 
 const DOCUMENT_TYPES: DocumentType[] = ["ine", "registration", "invoice"];
 
 export default function DocumentsPanel() {
+  const pathname = usePathname();
+  const lang = (pathname.startsWith('/es') ? 'es' : 'en') as 'en' | 'es';
+  const t = stepEngineCopy[lang];
   const { transaction, uploadDocument } = useTransaction();
   const { documents } = transaction;
   const [uploading, setUploading] = useState<Partial<Record<DocumentType, boolean>>>({});
@@ -100,25 +105,30 @@ export default function DocumentsPanel() {
   return (
     <section className="border-t border-[var(--border)] py-6">
       <h3 className="text-xs uppercase tracking-widest text-[var(--foreground-muted)] mb-4">
-        Required documents
+        {t.panels.requiredDocuments}
       </h3>
 
       <ul className="flex flex-col gap-4">
         {DOCUMENT_TYPES.map((docType) => {
           const doc = documents[docType];
           const isUploaded = doc.status === "uploaded";
+          const docLabelMap: Record<string, string> = {
+            ine: t.fields.sellerId,
+            registration: t.fields.registration,
+            invoice: t.fields.ownershipInvoice,
+          };
 
           return (
             <li key={docType} className="flex items-start justify-between gap-4">
               <div className="flex-1">
-                <p className="text-sm text-white">{DOCUMENT_LABELS[docType]}</p>
+                <p className="text-sm text-white">{docLabelMap[docType] ?? DOCUMENT_LABELS[docType]}</p>
                 {isUploaded && (
                   <div className="mt-0.5">
                     <p className="text-xs text-[var(--foreground-muted)] font-mono truncate max-w-[240px]">
                       {doc.file_name}
                     </p>
                     <p className="text-[10px] text-[var(--foreground-muted)] mt-0.5">
-                      Uploaded
+                      {t.panels.uploaded}
                     </p>
                   </div>
                 )}
@@ -133,20 +143,20 @@ export default function DocumentsPanel() {
                   onChange={(e) => handleFileChange(docType, e)}
                 />
                 {uploading[docType] ? (
-                  <span className="text-xs text-[var(--foreground-muted)]">Uploading…</span>
+                  <span className="text-xs text-[var(--foreground-muted)]">{t.panels.uploading}</span>
                 ) : isUploaded ? (
                   <button
                     onClick={() => inputRefs.current[docType]?.click()}
                     className="text-xs text-[var(--foreground-muted)] hover:text-white transition-colors"
                   >
-                    Replace
+                    {t.panels.replace}
                   </button>
                 ) : (
                   <button
                     onClick={() => inputRefs.current[docType]?.click()}
                     className="text-xs text-[var(--accent)] hover:text-blue-400 transition-colors"
                   >
-                    Upload document
+                    {t.panels.uploadDocument}
                   </button>
                 )}
               </div>
@@ -157,7 +167,7 @@ export default function DocumentsPanel() {
 
       {allUploaded && (
         <p className="text-xs text-[var(--foreground-muted)] mt-4">
-          All required documents uploaded.
+          {t.panels.allUploaded}
         </p>
       )}
 

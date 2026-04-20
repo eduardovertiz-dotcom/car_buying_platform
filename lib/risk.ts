@@ -1,4 +1,5 @@
 import type { Transaction } from "@/lib/types";
+import { stepEngineCopy } from "@/lib/i18n/stepEngine";
 
 export type RiskLevel = "LOW" | "MODERATE" | "HIGH";
 
@@ -32,8 +33,9 @@ export function statusToRiskLevel(status: "safe" | "review" | "high_risk"): Risk
 
 // ─── Core engine ──────────────────────────────────────────────────────────────
 
-export function computeRisk(transaction: Transaction): RiskOutput {
+export function computeRisk(transaction: Transaction, lang: 'en' | 'es' = 'en'): RiskOutput {
   const { documents, vehicle, verification_results } = transaction;
+  const r = stepEngineCopy[lang].risk;
 
   // ── Confidence ─────────────────────────────────────────────────────────────
   // Based purely on data completeness — what we can verify, not what we assume.
@@ -47,13 +49,13 @@ export function computeRisk(transaction: Transaction): RiskOutput {
   // ── Unknowns — gaps we cannot resolve without more data ───────────────────
   const unknowns: string[] = [];
   if (documents.invoice.status !== "uploaded")
-    unknowns.push("Ownership chain is unverified");
+    unknowns.push(r.ownershipUnverified);
   if (!vehicle.vin?.trim() && !vehicle.plate?.trim())
-    unknowns.push("Theft and registry checks were not performed");
+    unknowns.push(r.theftNotPerformed);
   if (documents.registration.status !== "uploaded")
-    unknowns.push("State registration is unverified");
+    unknowns.push(r.registrationUnverified);
   if (documents.ine.status !== "uploaded")
-    unknowns.push("Seller identity is unverified");
+    unknowns.push(r.sellerIdentityUnverified);
 
   // ── Issues + Resolved ──────────────────────────────────────────────────────
   const issues: string[] = [];
@@ -93,11 +95,11 @@ export function computeRisk(transaction: Transaction): RiskOutput {
   } else {
     // Pre-verification — derive risk from document presence alone
     if (documents.ine.status === "uploaded")
-      resolved.push("Seller ID submitted");
+      resolved.push(r.sellerIdSubmitted);
     if (documents.registration.status === "uploaded")
-      resolved.push("Vehicle registration submitted");
+      resolved.push(r.registrationSubmitted);
     if (documents.invoice.status === "uploaded")
-      resolved.push("Ownership invoice submitted");
+      resolved.push(r.invoiceSubmitted);
 
     // Any unknown = moderate; full data with no issues = low
     riskLevel = unknowns.length > 0 ? "MODERATE" : "LOW";
