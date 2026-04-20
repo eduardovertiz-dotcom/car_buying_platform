@@ -971,7 +971,7 @@ body {
   line-height: 1; margin-bottom: 5px;
 }
 .mg-page .hst-n span { color: var(--accent); }
-.mg-page .hst-l { font-size: 18px; color: var(--sub); line-height: 1.5; max-width: 160px; }
+.mg-page .hst-l { font-size: 18px; color: var(--sub); line-height: 1.5; max-width: 240px; }
 
 /* report preview card */
 .mg-page .hero-right { position: relative; }
@@ -1047,7 +1047,7 @@ body {
   color: var(--risk); margin-bottom: 4px;
 }
 .mg-page .rc-rec-text { font-size: 15px; color: #5F2120; line-height: 1.5; }
-.mg-page .report-label { text-align: center; margin-top: 12px; font-size: 15px; color: var(--sub); }
+.mg-page .report-label { text-align: center; margin-top: 12px; font-size: 15px; color: #555; font-weight: 500; }
 .mg-page .hero-pill {
   position: absolute;
   top: -14px; right: -14px;
@@ -1293,14 +1293,14 @@ body {
 .mg-page .sample-risk {
   margin-top: 14px;
   font-size: 15px;
-  color: var(--risk);
+  color: var(--accent);
   text-align: center;
 }
-.mg-page .sample-risk strong { font-weight: 700; }
+.mg-page .sample-risk strong { font-weight: 700; color: var(--accent); }
 .mg-page .sample-legal {
   margin-top: 6px;
   font-size: 14px;
-  color: var(--sub);
+  color: #555;
   text-align: center;
   font-style: italic;
 }
@@ -1346,8 +1346,8 @@ body {
 .mg-page .stats-sources {
   margin-top: 28px;
   text-align: center;
-  font-size: 13px;
-  color: rgba(255,255,255,.32);
+  font-size: 14px;
+  color: rgba(255,255,255,.55);
   letter-spacing: .02em;
 }
 
