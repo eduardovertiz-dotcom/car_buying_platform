@@ -8,7 +8,7 @@ import { Step, MaintenanceRecordType, getSteps } from "@/lib/types";
 import type { VerificationResult } from "@/lib/types";
 import AnalyzePanel from "@/components/panels/AnalyzePanel";
 import { generateAgreementHTML } from "@/lib/agreement";
-import { computeRisk, confidenceLabel, type RiskOutput } from "@/lib/risk";
+import { computeRisk, type RiskOutput } from "@/lib/risk";
 import { track } from "@/lib/track";
 import { hasMinimumInput as computeHasMinimumInput } from "@/lib/guards";
 import { stepEngineCopy } from "@/lib/i18n/stepEngine";
@@ -115,7 +115,6 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
   const pathname = usePathname();
   const lang = (pathname.startsWith('/es') ? 'es' : 'en') as 'en' | 'es';
   const t = stepEngineCopy[lang];
-  const stepContent = getStepContent(lang);
 
   const {
     transaction,
@@ -916,15 +915,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
 
 // ─── Complete ────────────────────────────────────────────────────────────────
 
-function timeAgo(isoString: string): string {
-  const diffMs = Date.now() - new Date(isoString).getTime();
-  const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 1)  return "just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24)  return `${diffHr}h ago`;
-  return `${Math.floor(diffHr / 24)}d ago`;
-}
+
 
 function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
   const pathname = usePathname();
