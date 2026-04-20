@@ -44,7 +44,8 @@ type Action =
   | { type: "UPDATE_VEHICLE"; payload: { make?: string; model?: string; year?: number; vin?: string; plate?: string } }
   | { type: "SEND_FOR_SIGNATURE"; payload: { documenso_document_id: string } }
   | { type: "RESET_VERIFICATION" }
-  | { type: "SET_STATUS"; payload: string };
+  | { type: "SET_STATUS"; payload: string }
+  | { type: "SET_PLAN"; payload: "39" | "69" };
 
 // ─── Reducer ────────────────────────────────────────────────────────────────
 
@@ -198,6 +199,10 @@ function reducer(state: Transaction, action: Action): Transaction {
 
     case "SET_STATUS": {
       return { ...state, status: action.payload };
+    }
+
+    case "SET_PLAN": {
+      return { ...state, plan: action.payload };
     }
 
     case "UPLOAD_DOCUMENT": {
@@ -458,25 +463,21 @@ export function TransactionProvider({ transactionId, children }: Props) {
     setHydrated(true);
   }, [transactionId]);
 
-  // Hydrate from Supabase DB — catches new purchases (never in localStorage)
-  // and plan upgrades (localStorage plan stale after Stripe redirect)
+  // Sync plan from DB — catches post-Stripe upgrades where localStorage
+  // still has the old plan. Only updates the plan field; never touches
+  // activity_log, documents, or other frontend-only state.
   useEffect(() => {
     if (!transactionId) return;
     const supabase = createClient();
     supabase
       .from("transactions")
-      .select("*")
+      .select("plan")
       .eq("id", transactionId)
-      .single()
+      .maybeSingle()
       .then(({ data }) => {
-        if (!data) return;
-        const normalized = {
-          ...data,
-          documents: normalizeDocuments(data.documents),
-        };
-        if (!transaction.plan || data.plan !== transaction.plan) {
-          dispatch({ type: "HYDRATE", payload: normalized });
-        }
+        if (!data?.plan) return;
+        const dbPlan = data.plan as "39" | "69";
+        dispatch({ type: "SET_PLAN", payload: dbPlan });
       });
   }, [transactionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
