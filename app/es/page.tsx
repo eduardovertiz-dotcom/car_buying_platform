@@ -42,12 +42,15 @@ function ShieldIcon({ width = 12, height = 14 }: { width?: number; height?: numb
   );
 }
 
-const usdPrices = { basic: 39, pro: 69 };
+const STRIPE_PRICES = {
+  USD: { basic: 39,  pro: 69   },
+  CAD: { basic: 54,  pro: 95   },
+  MXN: { basic: 680, pro: 1210 },
+};
 
 export default function HomeES() {
   const router = useRouter();
   const [currency, setCurrency] = useState<"USD" | "CAD" | "MXN">("USD");
-  const [rates, setRates] = useState({ CAD: 1.35, MXN: 17.5 });
   const [showStickyBar, setShowStickyBar] = useState(false);
   const heroCtaRef = useRef<HTMLDivElement | null>(null);
 
@@ -79,25 +82,7 @@ export default function HomeES() {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    fetch("https://api.exchangerate.host/latest?base=USD&symbols=CAD,MXN")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.rates) {
-          setRates({
-            CAD: data.rates.CAD ?? 1.35,
-            MXN: data.rates.MXN ?? 17.5,
-          });
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  const prices = {
-    USD: usdPrices,
-    CAD: { basic: Math.round(usdPrices.basic * rates.CAD), pro: Math.round(usdPrices.pro * rates.CAD) },
-    MXN: { basic: Math.round(usdPrices.basic * rates.MXN / 10) * 10, pro: Math.round(usdPrices.pro * rates.MXN / 10) * 10 },
-  };
+  const prices = STRIPE_PRICES;
 
   return (
     <div className={`mg-page ${dmSans.className}`}>
@@ -533,7 +518,7 @@ export default function HomeES() {
             </div>
           </div>
 
-          <p className="text-xs text-white/40 mt-4" style={{ marginTop: 16 }}>Precios en {currency}. {currency !== "USD" ? "Convertido desde USD usando tipos de cambio actuales, redondeado para mayor claridad." : "Equivalentes en CAD y MXN disponibles arriba."}</p>
+          <p className="text-xs text-white/40 mt-4" style={{ marginTop: 16 }}>Precios fijos en {currency}. Se te cobrará exactamente el monto mostrado.</p>
           <p className="p-urgency">La mayoría empieza con la revisión básica. Los compradores serios verifican todo antes de pagar.</p>
           <p className="p-guarantee">Si no podemos completar la verificación por un fallo en los registros, recibes un reembolso completo.</p>
         </div>
