@@ -14,7 +14,15 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
   const t = stepEngineCopy[lang];
   const { transaction, advanceStep, advanceToStep, goToStep, isDecisionMade } = useTransaction();
   const [upsellLoading, setUpsellLoading] = useState(false);
+  const [geoCurrency, setGeoCurrency] = useState("");
   const showUpgrade = plan === "39";
+
+  useEffect(() => {
+    fetch("/api/geo-currency")
+      .then((r) => r.json())
+      .then(({ currency }: { currency: string }) => setGeoCurrency(currency.toUpperCase()))
+      .catch(() => {});
+  }, []);
 
   const hasMinimumInput = computeHasMinimumInput(transaction);
   const risk = computeRisk(transaction, lang);
@@ -207,6 +215,12 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
           >
             {upsellLoading ? t.reports.redirecting : t.cta.proceedVerification}
           </button>
+          {geoCurrency && (
+            <p style={{ marginTop: 10, fontSize: 12, color: "#444", fontWeight: 400, lineHeight: 1.4 }}>
+              {lang === "es" ? `El cargo se realizará en ${geoCurrency}` : `You will be charged in ${geoCurrency}`}
+              {geoCurrency === "MXN" && <><br />{lang === "es" ? "Requerido para compatibilidad con bancos en México" : "Required for compatibility with Mexican banks"}</>}
+            </p>
+          )}
         </div>
       )}
 

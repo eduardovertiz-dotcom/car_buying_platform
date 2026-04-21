@@ -134,6 +134,13 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
   const identifier = vehicle.vin || vehicle.plate;
   const [showDocWarning, setShowDocWarning] = useState(false);
   const [upsellLoading, setUpsellLoading] = useState(false);
+  const [geoCurrency, setGeoCurrency] = useState("");
+  useEffect(() => {
+    fetch("/api/geo-currency")
+      .then((r) => r.json())
+      .then(({ currency }: { currency: string }) => setGeoCurrency(currency.toUpperCase()))
+      .catch(() => {});
+  }, []);
   const [verifyChecks, setVerifyChecks] = useState<VerifyChecks | null>(null);
   const [verifyMode, setVerifyMode] = useState<"manual" | "automated" | "mock" | null>(null);
   const [verifyState, setVerifyState] = useState<VerifyState>(() => {
@@ -675,6 +682,12 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
           >
             {upsellLoading ? t.reports.redirecting : t.cta.upgradeVerification}
           </button>
+          {geoCurrency && (
+            <p style={{ marginTop: 10, fontSize: 12, color: "#444", fontWeight: 400, lineHeight: 1.4 }}>
+              {lang === "es" ? `El cargo se realizará en ${geoCurrency}` : `You will be charged in ${geoCurrency}`}
+              {geoCurrency === "MXN" && <><br />{lang === "es" ? "Requerido para compatibilidad con bancos en México" : "Required for compatibility with Mexican banks"}</>}
+            </p>
+          )}
           {showDocWarning && (
             <p className="text-[13px] text-amber-400 leading-relaxed mt-3">
               {t.warnings.uploadDocs}
@@ -882,6 +895,12 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
             >
               {upsellLoading ? t.reports.redirecting : t.cta.resolveIssues}
             </button>
+            {geoCurrency && (
+              <p style={{ marginTop: -4, marginBottom: 12, fontSize: 12, color: "#444", fontWeight: 400, lineHeight: 1.4 }}>
+                {lang === "es" ? `El cargo se realizará en ${geoCurrency}` : `You will be charged in ${geoCurrency}`}
+                {geoCurrency === "MXN" && <><br />{lang === "es" ? "Requerido para compatibilidad con bancos en México" : "Required for compatibility with Mexican banks"}</>}
+              </p>
+            )}
             <button
               onClick={handleDecision}
               className="text-[14px] text-[#666] hover:text-[var(--foreground)] transition-colors underline underline-offset-2"

@@ -1473,6 +1473,12 @@ body {
 
 /* RESPONSIVE */
 @media (max-width: 900px) {
+  html { font-size: 16px; }
+  .mg-page h2 { font-size: 26px; }
+  .mg-page .pt-title { font-size: 19px; }
+  .mg-page .hero-incident p { font-size: 15px; }
+  .mg-page .fa { font-size: 16px; }
+
   /* ── NAV ── */
   .mg-page nav { padding: 0 20px; gap: 8px; }
   .mg-page nav ul { display: none; }
@@ -1488,14 +1494,14 @@ body {
   .mg-page h1 { font-size: clamp(44px, 9vw, 58px); line-height: 1.08; }
   .mg-page .section-h2 { font-size: 32px; margin-bottom: 32px; }
   .mg-page #process .section-h2 { margin-bottom: 36px; }
-  .mg-page .hero-sub { font-size: 21px; line-height: 1.55; }
+  .mg-page .hero-sub { font-size: 18px; line-height: 1.55; }
   .mg-page .hero-clarify { font-size: 19px; }
   .mg-page .step-t { font-size: 18px; }
   .mg-page .step-d { font-size: 16px; }
   .mg-page .prob-title { font-size: 20px; }
   .mg-page .prob-body { font-size: 17px; }
   .mg-page .p-price { font-size: 40px; }
-  .mg-page .p-list li { font-size: 17px; }
+  .mg-page .p-list li { font-size: 14px; }
   .mg-page .hst-l { font-size: 16px; }
 
   /* ── HERO LAYOUT ── */
@@ -1743,7 +1749,7 @@ body {
 
 /* ── STICKY MOBILE CTA BAR ── */
 .sticky-bar {
-  display: none;
+  display: none !important;
   position: fixed; bottom: 0; left: 0; right: 0;
   z-index: 200;
   background: var(--dark, #0F0F0F);
@@ -1778,6 +1784,6 @@ body {
 
 @media (max-width: 900px) {
   .mg-page ~ .sticky-bar,
-  .sticky-bar { display: flex; }
+  .sticky-bar { display: flex !important; }
   body:has(.mg-page) { padding-bottom: 76px; }
 }

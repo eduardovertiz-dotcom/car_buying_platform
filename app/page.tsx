@@ -8,7 +8,7 @@ import HeroCard from "@/components/HeroCard";
 
 const dmSans = DM_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
-const handleCheckout = async (plan: "39" | "69") => {
+const handleCheckout = async (plan: "39" | "69", currency: string) => {
   if (process.env.NODE_ENV === "development") {
     const res = await fetch("/api/transactions", {
       method: "POST",
@@ -23,7 +23,7 @@ const handleCheckout = async (plan: "39" | "69") => {
     const res = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify({ plan, currency }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Checkout failed");
@@ -68,6 +68,16 @@ export default function Home() {
       if (user) router.replace("/transactions");
     });
   }, [router]);
+
+  useEffect(() => {
+    fetch("/api/geo-currency")
+      .then((r) => r.json())
+      .then(({ currency: geo }: { currency: string }) => {
+        const up = geo.toUpperCase() as "USD" | "CAD" | "MXN";
+        setCurrency(up);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch("https://api.exchangerate.host/latest?base=USD&symbols=CAD,MXN")
@@ -462,7 +472,10 @@ export default function Home() {
                 <li>Document consistency review</li>
                 <li>Go / no-go recommendation</li>
               </ul>
-              <button onClick={() => handleCheckout("39")} className="btn-plan">Run basic check</button>
+              <button onClick={() => handleCheckout("39", currency.toLowerCase())} className="btn-plan">Run basic check</button>
+              <p style={{ marginTop: 10, fontSize: 12, color: "var(--sub)", fontWeight: 400, lineHeight: 1.4 }}>
+                Charged securely in {currency}{currency === "MXN" && <><br />Optimized for Mexican bank compatibility</>}
+              </p>
             </div>
 
             <div className="pcard feat">
@@ -480,7 +493,10 @@ export default function Home() {
                 <li>Priority fast-track delivery</li>
               </ul>
               <p className="p-desc" style={{ marginTop: 12, marginBottom: 16, color: "var(--risk)" }}><strong>One hidden issue can cost you $50,000+ MXN.</strong><br /><span style={{ color: "var(--sub)", fontWeight: 500 }}>This is the level buyers choose when they&apos;re serious about the purchase.</span></p>
-              <button onClick={() => handleCheckout("69")} className="btn-plan feat">Verify before buying →</button>
+              <button onClick={() => handleCheckout("69", currency.toLowerCase())} className="btn-plan feat">Verify before buying →</button>
+              <p style={{ marginTop: 10, fontSize: 12, color: "var(--sub)", fontWeight: 400, lineHeight: 1.4 }}>
+                Charged securely in {currency}{currency === "MXN" && <><br />Optimized for Mexican bank compatibility</>}
+              </p>
             </div>
           </div>
 
@@ -562,7 +578,7 @@ export default function Home() {
       <div className="sticky-bar" style={{ display: showStickyBar ? "flex" : "none" }}>
         <div className="sticky-bar-text">
           <strong>Verify before you pay</strong>
-          From $39 · Results in 24 hours
+          From $39 · Results in minutes
         </div>
         <a href="#pricing" className="btn-sticky">Start now →</a>
       </div>

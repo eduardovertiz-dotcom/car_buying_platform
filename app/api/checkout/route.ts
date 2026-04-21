@@ -1,13 +1,38 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
+import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  resolveCurrency,
+  toStripeCurrency,
+  type Currency,
+} from "@/lib/currency";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
+type Plan = "39" | "69";
+
+function priceIdFor(plan: Plan, currency: Currency): string | undefined {
+  if (plan === "39") {
+    if (currency === "USD") return process.env.STRIPE_PRICE_BASIC_USD;
+    if (currency === "CAD") return process.env.STRIPE_PRICE_BASIC_CAD;
+    if (currency === "MXN") return process.env.STRIPE_PRICE_BASIC_MXN;
+  }
+  if (plan === "69") {
+    if (currency === "USD") return process.env.STRIPE_PRICE_PRO_USD;
+    if (currency === "CAD") return process.env.STRIPE_PRICE_PRO_CAD;
+    if (currency === "MXN") return process.env.STRIPE_PRICE_PRO_MXN;
+  }
+  return undefined;
+}
+
 export async function POST(req: Request) {
   try {
-    const { plan, transaction_id } = await req.json();
-
-    console.log("[checkout]", { plan, transaction_id });
+    const body = await req.json();
+    const { plan, transaction_id, currency: bodyCurrency } = body as {
+      plan?: string;
+      transaction_id?: string;
+      currency?: string;
+    };
 
     if (plan !== "39" && plan !== "69") {
       throw new Error(`INVALID PLAN: ${plan}`);
@@ -17,52 +42,149 @@ export async function POST(req: Request) {
       throw new Error("UPGRADE REQUIRES TRANSACTION_ID");
     }
 
-    const validPlan = plan as "39" | "69";
+    const validPlan = plan as Plan;
 
-    const PRICE_MAP: Record<"39" | "69", number> = {
-      "39": 3900,
-      "69": 6900,
-    };
+    // ── Currency resolution ─────────────────────────────────────────────────
+    // For upgrades, ALWAYS inherit the currency of the original paid session.
+    // This guarantees the user cannot end up with a cross-currency transaction.
+    let currency: Currency;
+
+    if (validPlan === "69" && transaction_id) {
+      const inherited = await inheritCurrencyFromTransaction(transaction_id);
+      if (inherited) {
+        currency = inherited;
+      } else {
+        // First-time upgrade path with no prior Stripe session recorded
+        // (e.g. dev-mode transactions) — fall through to resolver.
+        currency = resolveCurrency(
+          bodyCurrency ?? null,
+          req.headers.get("x-vercel-ip-country")
+        );
+      }
+    } else {
+      currency = resolveCurrency(
+        bodyCurrency ?? null,
+        req.headers.get("x-vercel-ip-country")
+      );
+    }
+
+    const stripeCurrency = toStripeCurrency(currency);
+
+    // ── Price ID lookup ─────────────────────────────────────────────────────
+    const priceId = priceIdFor(validPlan, currency);
+    if (!priceId) {
+      throw new Error(
+        `MISSING STRIPE PRICE ID for plan=${validPlan} currency=${currency}`
+      );
+    }
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-
     if (!baseUrl || !baseUrl.startsWith("https://")) {
       throw new Error("INVALID NEXT_PUBLIC_BASE_URL");
     }
 
-    const metadata: Record<string, string> = { plan };
+    // ── Payment method composition ──────────────────────────────────────────
+    // OXXO and SPEI (customer_balance + mx_bank_transfer) are MXN-only on
+    // Stripe. Including them under any other currency triggers a Stripe error.
+    const isMx = stripeCurrency === "mxn";
+    const payment_method_types: Stripe.Checkout.SessionCreateParams.PaymentMethodType[] = isMx
+      ? ["card", "oxxo", "customer_balance"]
+      : ["card"];
+
+    const payment_method_options: Stripe.Checkout.SessionCreateParams.PaymentMethodOptions | undefined = isMx
+      ? {
+          oxxo: { expires_after_days: 3 },
+          customer_balance: {
+            funding_type: "bank_transfer",
+            bank_transfer: {
+              type: "mx_bank_transfer",
+            },
+          },
+        }
+      : undefined;
+
+    // ── Metadata (preserved for webhook + post-checkout) ────────────────────
+    const metadata: Record<string, string> = {
+      plan: validPlan,
+      currency: stripeCurrency,
+    };
     if (transaction_id) metadata.transaction_id = transaction_id;
 
-    const session = await stripe.checkout.sessions.create({
+    // ── Session params ──────────────────────────────────────────────────────
+    const params: Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
-      payment_method_types: ["card"],
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: validPlan === "69" ? "Full Protection" : "Basic Report",
-            },
-            unit_amount: PRICE_MAP[validPlan],
-          },
-          quantity: 1,
-        },
-      ],
+      payment_method_types,
+      line_items: [{ price: priceId, quantity: 1 }],
       metadata,
       success_url: `${baseUrl}/api/post-checkout?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: transaction_id
         ? `${baseUrl}/transaction/${transaction_id}`
         : `${baseUrl}/#pricing`,
-    });
+    };
 
-    console.log("STRIPE SESSION CREATED", session.id);
+    if (payment_method_options) {
+      params.payment_method_options = payment_method_options;
+    }
+
+    // customer_balance requires a customer on the session. `customer_creation:
+    // "always"` is only valid in "payment" mode without a pre-attached customer.
+    if (isMx) {
+      params.customer_creation = "always";
+    }
+
+    const session = await stripe.checkout.sessions.create(params);
+
+    console.log("[checkout] session created", {
+      id: session.id,
+      plan: validPlan,
+      currency: stripeCurrency,
+      transaction_id: transaction_id ?? null,
+      methods: payment_method_types,
+    });
 
     return NextResponse.json({ url: session.url });
   } catch (err) {
-    console.error("[checkout] EXCEPTION:", err instanceof Error ? err.message : err);
+    console.error(
+      "[checkout] EXCEPTION:",
+      err instanceof Error ? err.message : err
+    );
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Error creating checkout" },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * For upgrade sessions: look up the original paid Stripe session by id via the
+ * transactions row, and return its locked currency. Returns null if the row
+ * has no linked Stripe session (e.g. dev-mode transactions).
+ */
+async function inheritCurrencyFromTransaction(
+  transactionId: string
+): Promise<Currency | null> {
+  try {
+    const adminDb = createAdminClient();
+    const { data } = await adminDb
+      .from("transactions")
+      .select("stripe_session_id")
+      .eq("id", transactionId)
+      .maybeSingle();
+
+    const sid = data?.stripe_session_id as string | undefined;
+    if (!sid) return null;
+
+    const prior = await stripe.checkout.sessions.retrieve(sid);
+    const priorCurrency = (prior.currency ?? "").toUpperCase();
+    if (priorCurrency === "USD" || priorCurrency === "CAD" || priorCurrency === "MXN") {
+      return priorCurrency;
+    }
+    return null;
+  } catch (err) {
+    console.warn(
+      "[checkout] inheritCurrencyFromTransaction failed, falling through:",
+      err instanceof Error ? err.message : err
+    );
+    return null;
   }
 }
