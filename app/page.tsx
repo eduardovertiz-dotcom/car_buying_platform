@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { DM_Sans } from "next/font/google";
@@ -48,6 +48,19 @@ export default function Home() {
   const router = useRouter();
   const [currency, setCurrency] = useState<"USD" | "CAD" | "MXN">("USD");
   const [rates, setRates] = useState({ CAD: 1.35, MXN: 17.5 });
+  const [showStickyBar, setShowStickyBar] = useState(false);
+  const heroCtaRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = heroCtaRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setShowStickyBar(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();
@@ -112,7 +125,7 @@ export default function Home() {
               <p className="hero-sub">You could lose the car, the money, or both. Most fraud is discovered after you pay — and at that point, your money is gone.</p>
               <p className="hero-clarify">Most buyers don&apos;t get scammed by strangers. They get scammed by deals that look completely legitimate.</p>
 
-              <div className="hero-cta">
+              <div className="hero-cta" ref={heroCtaRef}>
                 <a href="#pricing" className="btn-primary">Start verification →</a>
                 <a href="#sample" className="btn-ghost">See sample report ↗</a>
               </div>
@@ -135,6 +148,30 @@ export default function Home() {
                 <div className="hst">
                   <div className="hst-n"><span>In Minutes</span></div>
                   <div className="hst-l">Clear risk results before you pay</div>
+                </div>
+              </div>
+
+              <div className="mobile-report">
+                <div className="mobile-report-inner">
+                  <div className="mr-header">
+                    <span className="mr-title">Sample report output</span>
+                    <span className="mr-badge">⚠ Issues found</span>
+                  </div>
+                  <div className="mr-row">
+                    <span className="mr-label">Ownership</span>
+                    <span className="mr-status mr-warn">Not confirmed</span>
+                  </div>
+                  <div className="mr-row">
+                    <span className="mr-label">Outstanding debt</span>
+                    <span className="mr-amount">$14,040 MXN</span>
+                  </div>
+                  <div className="mr-row">
+                    <span className="mr-label">REPUVE status</span>
+                    <span className="mr-status mr-ok">Clear</span>
+                  </div>
+                  <div className="mr-rec">
+                    Do not proceed until debt is resolved and ownership is confirmed.
+                  </div>
                 </div>
               </div>
             </div>
@@ -417,7 +454,7 @@ export default function Home() {
               <div className="p-name">Registry</div>
               <div className="p-price"><sup>$</sup>{prices[currency].basic}</div>
               <div className="p-note">{currency} · one-time</div>
-              <p className="p-desc">Covers the most common risks. <strong>Suitable for straightforward private sales.</strong></p>
+              <p className="p-desc">Covers the core registries. <strong>If the sale involves cross-state history, SAT debt, or imported documents, you&apos;ll need Full Verification.</strong></p>
               <ul className="p-list">
                 <li>Seller confirmed as legal owner</li>
                 <li>Outstanding fines &amp; TENENCIA</li>
@@ -521,6 +558,14 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      <div className="sticky-bar" style={{ display: showStickyBar ? "flex" : "none" }}>
+        <div className="sticky-bar-text">
+          <strong>Verify before you pay</strong>
+          From $39 · Results in 24 hours
+        </div>
+        <a href="#pricing" className="btn-sticky">Start now →</a>
+      </div>
 
     </div>
   );

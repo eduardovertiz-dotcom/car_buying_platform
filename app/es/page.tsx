@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { DM_Sans } from "next/font/google";
@@ -48,6 +48,19 @@ export default function HomeES() {
   const router = useRouter();
   const [currency, setCurrency] = useState<"USD" | "CAD" | "MXN">("USD");
   const [rates, setRates] = useState({ CAD: 1.35, MXN: 17.5 });
+  const [showStickyBar, setShowStickyBar] = useState(false);
+  const heroCtaRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = heroCtaRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setShowStickyBar(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();
@@ -112,7 +125,7 @@ export default function HomeES() {
               <p className="hero-sub">Puedes perder tu dinero, el auto, o ambos. Muchas ofertas que parecen buenas no lo son.</p>
               <p className="hero-clarify">La mayoría no cae en fraudes obvios. Cae en tratos que parecen completamente legítimos.</p>
 
-              <div className="hero-cta">
+              <div className="hero-cta" ref={heroCtaRef}>
                 <a href="#pricing" className="btn-primary">Iniciar verificación →</a>
                 <a href="#sample" className="btn-ghost">Ver reporte de ejemplo ↗</a>
               </div>
@@ -135,6 +148,30 @@ export default function HomeES() {
                 <div className="hst">
                   <div className="hst-n"><span>En minutos</span></div>
                   <div className="hst-l">Resultados claros antes de pagar</div>
+                </div>
+              </div>
+
+              <div className="mobile-report">
+                <div className="mobile-report-inner">
+                  <div className="mr-header">
+                    <span className="mr-title">Ejemplo de reporte</span>
+                    <span className="mr-badge">⚠ Problemas detectados</span>
+                  </div>
+                  <div className="mr-row">
+                    <span className="mr-label">Propiedad</span>
+                    <span className="mr-status mr-warn">Sin confirmar</span>
+                  </div>
+                  <div className="mr-row">
+                    <span className="mr-label">Adeudos pendientes</span>
+                    <span className="mr-amount">$14,040 MXN</span>
+                  </div>
+                  <div className="mr-row">
+                    <span className="mr-label">Estado REPUVE</span>
+                    <span className="mr-status mr-ok">Sin reportes</span>
+                  </div>
+                  <div className="mr-rec">
+                    No procedas hasta que el adeudo se resuelva y la propiedad quede confirmada.
+                  </div>
                 </div>
               </div>
             </div>
@@ -450,7 +487,7 @@ export default function HomeES() {
               <div className="p-name">Registro</div>
               <div className="p-price"><sup>$</sup>{prices[currency].basic}</div>
               <div className="p-note">{currency} · pago único</div>
-              <p className="p-desc">Cubre los riesgos más comunes. <strong>Ideal para ventas privadas sencillas.</strong></p>
+              <p className="p-desc">Cubre los registros principales. <strong>Si la venta implica historial entre estados, adeudos del SAT o documentos de importación, necesitarás Verificación Completa.</strong></p>
               <ul className="p-list">
                 <li>Vendedor confirmado como dueño legal</li>
                 <li>Multas pendientes y Tenencia</li>
@@ -558,6 +595,14 @@ export default function HomeES() {
           </div>
         </div>
       </footer>
+
+      <div className="sticky-bar" style={{ display: showStickyBar ? "flex" : "none" }}>
+        <div className="sticky-bar-text">
+          <strong>Verifica antes de pagar</strong>
+          Desde $39 · Resultados en 24 horas
+        </div>
+        <a href="#pricing" className="btn-sticky">Empezar →</a>
+      </div>
 
     </div>
   );
