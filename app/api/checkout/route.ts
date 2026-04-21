@@ -72,6 +72,12 @@ export async function POST(req: Request) {
 
     // ── Price ID lookup ─────────────────────────────────────────────────────
     const priceId = priceIdFor(validPlan, currency);
+    console.log("[checkout] price lookup", {
+      plan: validPlan,
+      currency,
+      priceId: priceId ?? "MISSING",
+      envKey: `STRIPE_PRICE_${validPlan === "39" ? "BASIC" : "PRO"}_${currency}`,
+    });
     if (!priceId) {
       throw new Error(
         `MISSING STRIPE PRICE ID for plan=${validPlan} currency=${currency}`
