@@ -87,18 +87,16 @@ export async function POST(req: Request) {
     // OXXO and SPEI (customer_balance + mx_bank_transfer) are MXN-only on
     // Stripe. Including them under any other currency triggers a Stripe error.
     const isMx = stripeCurrency === "mxn";
-    const payment_method_types: Stripe.Checkout.SessionCreateParams.PaymentMethodType[] = isMx
-      ? ["card", "oxxo", "customer_balance"]
-      : ["card"];
+    const payment_method_types = (
+      isMx ? ["card", "oxxo", "customer_balance"] : ["card"]
+    ) as ("card" | "oxxo" | "customer_balance")[];
 
-    const payment_method_options: Stripe.Checkout.SessionCreateParams.PaymentMethodOptions | undefined = isMx
+    const payment_method_options = isMx
       ? {
           oxxo: { expires_after_days: 3 },
           customer_balance: {
-            funding_type: "bank_transfer",
-            bank_transfer: {
-              type: "mx_bank_transfer",
-            },
+            funding_type: "bank_transfer" as const,
+            bank_transfer: { type: "mx_bank_transfer" as const },
           },
         }
       : undefined;
@@ -111,7 +109,7 @@ export async function POST(req: Request) {
     if (transaction_id) metadata.transaction_id = transaction_id;
 
     // ── Session params ──────────────────────────────────────────────────────
-    const params: Stripe.Checkout.SessionCreateParams = {
+    const params: Parameters<typeof stripe.checkout.sessions.create>[0] = {
       mode: "payment",
       payment_method_types,
       line_items: [{ price: priceId, quantity: 1 }],
