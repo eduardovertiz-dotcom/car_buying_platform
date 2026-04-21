@@ -129,11 +129,14 @@ export default function Home() {
                   <div className="hst-l">Of vehicles had at least one undisclosed issue</div>
                 </div>
                 <div className="hst">
-                  <div className="hst-n">Minutes</div>
+                  <div className="hst-n"><span>40%</span></div>
+                  <div className="hst-l">Of private car sales have irregularities</div>
+                </div>
+                <div className="hst">
+                  <div className="hst-n"><span>In Minutes</span></div>
                   <div className="hst-l">Clear risk results before you pay</div>
                 </div>
               </div>
-              <p className="hero-proof">Up to 40% of private car sales have issues<br /><span className="src">Based on data from Profeco and market reports</span></p>
             </div>
 
             <div className="hero-right">
