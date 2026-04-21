@@ -13,14 +13,14 @@ type Plan = "39" | "69";
 
 function priceIdFor(plan: Plan, currency: Currency): string | undefined {
   if (plan === "39") {
-    if (currency === "USD") return process.env.STRIPE_PRICE_BASIC_USD;
-    if (currency === "CAD") return process.env.STRIPE_PRICE_BASIC_CAD;
-    if (currency === "MXN") return process.env.STRIPE_PRICE_BASIC_MXN;
+    if (currency === "USD") return process.env.STRIPE_PRICE_BASIC_USD?.trim();
+    if (currency === "CAD") return process.env.STRIPE_PRICE_BASIC_CAD?.trim();
+    if (currency === "MXN") return process.env.STRIPE_PRICE_BASIC_MXN?.trim();
   }
   if (plan === "69") {
-    if (currency === "USD") return process.env.STRIPE_PRICE_PRO_USD;
-    if (currency === "CAD") return process.env.STRIPE_PRICE_PRO_CAD;
-    if (currency === "MXN") return process.env.STRIPE_PRICE_PRO_MXN;
+    if (currency === "USD") return process.env.STRIPE_PRICE_PRO_USD?.trim();
+    if (currency === "CAD") return process.env.STRIPE_PRICE_PRO_CAD?.trim();
+    if (currency === "MXN") return process.env.STRIPE_PRICE_PRO_MXN?.trim();
   }
   return undefined;
 }
@@ -36,10 +36,6 @@ export async function POST(req: Request) {
 
     if (plan !== "39" && plan !== "69") {
       throw new Error(`INVALID PLAN: ${plan}`);
-    }
-
-    if (plan === "69" && !transaction_id) {
-      throw new Error("UPGRADE REQUIRES TRANSACTION_ID");
     }
 
     const validPlan = plan as Plan;
@@ -94,17 +90,11 @@ export async function POST(req: Request) {
     // Stripe. Including them under any other currency triggers a Stripe error.
     const isMx = stripeCurrency === "mxn";
     const payment_method_types = (
-      isMx ? ["card", "oxxo", "customer_balance"] : ["card"]
-    ) as ("card" | "oxxo" | "customer_balance")[];
+      isMx ? ["card", "oxxo"] : ["card"]
+    ) as ("card" | "oxxo")[];
 
     const payment_method_options = isMx
-      ? {
-          oxxo: { expires_after_days: 3 },
-          customer_balance: {
-            funding_type: "bank_transfer" as const,
-            bank_transfer: { type: "mx_bank_transfer" as const },
-          },
-        }
+      ? { oxxo: { expires_after_days: 3 } }
       : undefined;
 
     // ── Metadata (preserved for webhook + post-checkout) ────────────────────
@@ -130,11 +120,6 @@ export async function POST(req: Request) {
       params.payment_method_options = payment_method_options;
     }
 
-    // customer_balance requires a customer on the session. `customer_creation:
-    // "always"` is only valid in "payment" mode without a pre-attached customer.
-    if (isMx) {
-      params.customer_creation = "always";
-    }
 
     const session = await stripe.checkout.sessions.create(params);
 
