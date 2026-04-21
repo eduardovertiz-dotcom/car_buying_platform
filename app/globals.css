@@ -1481,28 +1481,35 @@ body {
 
   /* ── LAYOUT ── */
   .mg-page .wrap, .mg-page .wrap-w { padding: 0 20px; }
-  .mg-page section { padding: 56px 0; }
+  .mg-page section { padding: 48px 0; }
   .mg-page #hero { padding: 36px 0 56px; }
 
   /* ── TYPOGRAPHY ── */
-  .mg-page h1 { font-size: 40px; }
+  .mg-page h1 { font-size: 34px; }
   .mg-page .section-h2 { font-size: 32px; margin-bottom: 32px; }
   .mg-page #process .section-h2 { margin-bottom: 36px; }
   .mg-page .hero-sub { font-size: 21px; line-height: 1.55; }
   .mg-page .hero-clarify { font-size: 19px; }
+  .mg-page .step-t { font-size: 18px; }
+  .mg-page .step-d { font-size: 16px; }
+  .mg-page .prob-title { font-size: 20px; }
+  .mg-page .prob-body { font-size: 17px; }
+  .mg-page .p-price { font-size: 40px; }
+  .mg-page .p-list li { font-size: 17px; }
+  .mg-page .hst-l { font-size: 16px; }
+  .mg-page .sb-n { font-size: 44px; }
 
   /* ── HERO LAYOUT ── */
   .mg-page #hero .wrap { max-width: 100%; }
   .mg-page .hero-wrap { flex-direction: column; align-items: flex-start; }
   .mg-page .hero-left { text-align: left; }
   .mg-page .hero-left * { text-align: left; }
-  .mg-page .hero-right { width: 100%; margin-top: 32px; padding-top: 0; }
-  .hero-phone { width: 100%; max-width: 320px; }
+  .mg-page .hero-right { display: none; }
 
   /* ── HERO CTA BUTTONS ── */
   .mg-page .hero-cta { flex-direction: column; align-items: stretch; gap: 12px; margin-bottom: 36px; }
   .mg-page .btn-primary { font-size: 17px; padding: 15px 24px; text-align: center; justify-content: center; white-space: nowrap; }
-  .mg-page .btn-ghost { font-size: 17px; text-align: center; padding: 12px 0; }
+  .mg-page .btn-ghost { font-size: 17px; text-align: center; padding: 12px 24px; }
 
   /* ── HERO STATS ── */
   .mg-page .hstats { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding-top: 28px; }
