@@ -119,10 +119,9 @@ export default function Home() {
               <h1>Don&apos;t get <span className="accent-word">scammed</span><br />buying a car in Mexico.</h1>
               <p className="hero-clarify">Everything looks fine — until the debt becomes yours.</p>
               <p className="hero-sub">Don&apos;t get scammed buying a car in Mexico. Most problems are discovered after you pay — and at that point, there is no reversal.<br /><br />This is how you check everything before you transfer the money.<br /><br />Once you transfer the money, the debt, the risk, and the consequences become yours.</p>
-              <p className="hero-clarify">Once you transfer the money, the debt, the risk, and the consequences become yours.</p>
               <p className="hero-clarify">Most buyers don&apos;t get scammed by strangers. They get scammed by deals that look completely legitimate.</p>
 
-              <div className="hero-cta" ref={heroCtaRef}>
+              <div className="hero-cta" ref={heroCtaRef} style={{ marginTop: 16 }}>
                 <a href="#pricing" className="btn-primary">Start verification →</a>
                 <a href="#sample" className="btn-ghost">See sample report ↗</a>
               </div>
@@ -135,7 +134,7 @@ export default function Home() {
                   <div className="hst-l">Verifications completed in Mexico</div>
                 </div>
                 <div className="hst">
-                  <div className="hst-n"><span>7 out of 10</span></div>
+                  <div className="hst-n"><span style={{ fontWeight: 700, fontSize: "110%", color: "#F9FAFB" }}>7 out of 10</span></div>
                   <div className="hst-l">vehicles we check have a hidden issue</div>
                 </div>
                 <div className="hst">
@@ -193,21 +192,21 @@ export default function Home() {
           <h2 className="section-h2">Three ways buyers lose money in Mexico.</h2>
           <div className="prob-grid">
 
-            <div className="prob-card">
+            <div className="prob-card" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
               <span className="pt-tag tag-r">Financial</span>
               <div className="prob-title">You inherit the debt — not the seller.</div>
               <div className="prob-body">→ This is where most buyers lose money.</div>
               <div className="prob-body">Debt transfers with the vehicle.</div>
             </div>
 
-            <div className="prob-card">
+            <div className="prob-card" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
               <span className="pt-tag tag-r">Legal</span>
               <div className="prob-title">The seller may not legally own the car.</div>
               <div className="prob-body">→ Debt follows the car, not the location.</div>
               <div className="prob-body">Invalid ownership can result in losing the vehicle.</div>
             </div>
 
-            <div className="prob-card">
+            <div className="prob-card" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
               <span className="pt-tag tag-r">Document</span>
               <div className="prob-title">One mismatch can void the entire deal.</div>
               <div className="prob-body">→ Documents don&apos;t prove validity. Registries do.</div>
@@ -365,7 +364,7 @@ export default function Home() {
           <p className="v-sub">Actual output format. Every verified item, every flag, every outstanding amount — specific to the vehicle you&apos;re buying.</p>
           <p style={{ fontSize: 12, fontWeight: 500, color: "var(--accent)", marginBottom: 6, letterSpacing: "0.02em" }}>This is what the seller will not show you.</p>
 
-          <div className="sample-card-wrap">
+          <div className="sample-card-wrap" style={{ border: "1px solid rgba(255,255,255,0.08)", padding: 16 }}>
             <div className="hero-pill">⚠ Issues detected</div>
             <div className="report-card">
               <div className="rc-header">
@@ -491,7 +490,7 @@ export default function Home() {
           </div>
 
           <div className="pgrid">
-            <div className="pcard">
+            <div className="pcard" style={{ opacity: 0.85 }}>
               <div className="p-name">Registry</div>
               <div className="p-price"><sup>$</sup>{prices[currency].basic}</div>
               <div className="p-note">{currency} · one-time</div>
@@ -555,35 +554,35 @@ export default function Home() {
           <div className="faq-list">
             <div className="faq-item">
               <div className="faq-q">Is everything provided in English?</div>
-              <div className="faq-a">Yes.<br />The full verification report is provided in English. The purchase agreement is generated in Spanish for legal validity, with a clear English reference translation included below.</div>
+              <div className="faq-a" style={{ lineHeight: 1.6 }}>Yes.<br />The full verification report is provided in English. The purchase agreement is generated in Spanish for legal validity, with a clear English reference translation included below.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q">Is this legally valid in Mexico?</div>
-              <div className="faq-a">Yes.<br />Verification uses official registries and documentation checks used in legal ownership validation.</div>
+              <div className="faq-a" style={{ lineHeight: 1.6 }}>Yes.<br />Verification uses official registries and documentation checks used in legal ownership validation.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q">What if the seller refuses to provide documents?</div>
-              <div className="faq-a">That is a major risk signal.<br />Verification helps identify missing or inconsistent ownership data.</div>
+              <div className="faq-a" style={{ lineHeight: 1.6 }}>That is a major risk signal.<br />Verification helps identify missing or inconsistent ownership data.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q">How fast is the verification?</div>
-              <div className="faq-a">Most checks are completed within minutes.<br />Full verification may take longer depending on document review.</div>
+              <div className="faq-a" style={{ lineHeight: 1.6 }}>Most checks are completed within minutes.<br />Full verification may take longer depending on document review.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q">I already checked REPUVE. Isn&apos;t that enough?</div>
-              <div className="faq-a">No.<br />REPUVE can take days or weeks to update. A vehicle can appear clean and still be stolen or flagged.</div>
+              <div className="faq-a" style={{ lineHeight: 1.6 }}>No.<br />REPUVE can take days or weeks to update. A vehicle can appear clean and still be stolen or flagged.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q">What if official databases like REPUVE are unavailable?</div>
-              <div className="faq-a">Some official registries, including REPUVE, may occasionally be temporarily unavailable.<br /><br />Our system is designed to give you a complete picture, even if one registry is temporarily unavailable, while clearly indicating any missing checks in your report.<br /><br />Every report includes a confidence level so you can make an informed decision based on the available information.</div>
+              <div className="faq-a" style={{ lineHeight: 1.6 }}>Some official registries, including REPUVE, may occasionally be temporarily unavailable.<br /><br />Our system is designed to give you a complete picture, even if one registry is temporarily unavailable, while clearly indicating any missing checks in your report.<br /><br />Every report includes a confidence level so you can make an informed decision based on the available information.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q">What happens if issues are found?</div>
-              <div className="faq-a">You receive a clear breakdown of risks.<br />You can decide whether to proceed or walk away.</div>
+              <div className="faq-a" style={{ lineHeight: 1.6 }}>You receive a clear breakdown of risks.<br />You can decide whether to proceed or walk away.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q">What happens after I pay the seller?</div>
-              <div className="faq-a">At that point, any undisclosed debt or legal issue becomes your responsibility.<br />There is no reversal.</div>
+              <div className="faq-a" style={{ lineHeight: 1.6 }}>At that point, any undisclosed debt or legal issue becomes your responsibility.<br />There is no reversal.</div>
             </div>
           </div>
         </div>
@@ -594,7 +593,7 @@ export default function Home() {
         <div className="lbl-cta">One decision</div>
         <h2>Verify before you pay.<br /><em>Because after you pay, it&apos;s your problem.</em></h2>
         <p>Once you pay, the risk becomes yours.</p>
-        <div className="cta-row">
+        <div className="cta-row" style={{ marginTop: 12 }}>
           <a href="#pricing" className="btn-cta">Start verification →</a>
           <a href="#sample" className="btn-cta-ghost">See sample report</a>
         </div>
