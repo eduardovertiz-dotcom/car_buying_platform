@@ -118,7 +118,7 @@ export default function Home() {
 
               <h1>Don&apos;t get <span className="accent-word">scammed</span><br />buying a car in Mexico.</h1>
               <p className="hero-clarify">Everything looks fine — until the debt becomes yours.</p>
-              <p className="hero-sub">Don&apos;t get scammed buying a car in Mexico. Most problems are discovered after you pay — and at that point, there is no reversal.</p>
+              <p className="hero-sub">Don&apos;t get scammed buying a car in Mexico. Most problems are discovered after you pay — and at that point, there is no reversal.<br /><br />This is how you check everything before you transfer the money.<br /><br />Once you transfer the money, the debt, the risk, and the consequences become yours.</p>
               <p className="hero-clarify">Once you transfer the money, the debt, the risk, and the consequences become yours.</p>
               <p className="hero-clarify">Most buyers don&apos;t get scammed by strangers. They get scammed by deals that look completely legitimate.</p>
 
@@ -197,21 +197,21 @@ export default function Home() {
               <span className="pt-tag tag-r">Financial</span>
               <div className="prob-title">You inherit the debt — not the seller.</div>
               <div className="prob-body">→ This is where most buyers lose money.</div>
-              <div className="prob-body">Hidden fines, loans, and tax debt transfer with the vehicle.</div>
+              <div className="prob-body">Debt transfers with the vehicle.</div>
             </div>
 
             <div className="prob-card">
               <span className="pt-tag tag-r">Legal</span>
               <div className="prob-title">The seller may not legally own the car.</div>
               <div className="prob-body">→ Debt follows the car, not the location.</div>
-              <div className="prob-body">If ownership is invalid, you can lose the vehicle entirely.</div>
+              <div className="prob-body">Invalid ownership can result in losing the vehicle.</div>
             </div>
 
             <div className="prob-card">
               <span className="pt-tag tag-r">Document</span>
               <div className="prob-title">One mismatch can void the entire deal.</div>
               <div className="prob-body">→ Documents don&apos;t prove validity. Registries do.</div>
-              <div className="prob-body">And you may have no legal way to recover your money.</div>
+              <div className="prob-body">You may have no legal recourse to recover your money.</div>
             </div>
 
           </div>
@@ -497,11 +497,11 @@ export default function Home() {
               <div className="p-note">{currency} · one-time</div>
               <p className="p-desc">Covers the core registries. <strong>If the sale involves cross-state history, SAT debt, or imported documents, you&apos;ll need Full Verification.</strong></p>
               <ul className="p-list">
-                <li>Seller confirmed as legal owner</li>
-                <li>Outstanding fines &amp; TENENCIA</li>
-                <li>REPUVE federal VIN check</li>
-                <li>Document consistency review</li>
-                <li>Go / no-go recommendation</li>
+                <li>Ownership check</li>
+                <li>Debt check</li>
+                <li>Registration status</li>
+                <li>Basic report summary</li>
+                <li>Confidence level</li>
               </ul>
               <button onClick={() => handleCheckout("39", currency.toLowerCase())} className="btn-plan">Run basic check</button>
               <p style={{ marginTop: 10, fontSize: 12, color: "var(--sub)", fontWeight: 400, lineHeight: 1.4 }}>
@@ -516,12 +516,11 @@ export default function Home() {
               <div className="p-note">{currency} · one-time</div>
               <p className="p-desc"><strong>Covers the issues most buyers don&apos;t know to check.</strong> Cross-state, SAT, and import history included.</p>
               <ul className="p-list">
-                <li>Everything in Registry</li>
-                <li>Multi-state debt check</li>
-                <li>SAT lien verification</li>
-                <li>Import document review</li>
-                <li>Extended ownership chain</li>
-                <li>Priority fast-track delivery</li>
+                <li>Ownership verification (multi-source)</li>
+                <li>Debt verification (cross-state)</li>
+                <li>Registration validation</li>
+                <li>Document integrity analysis</li>
+                <li>Expert-level verification review</li>
               </ul>
               <p className="p-desc" style={{ marginTop: 12, marginBottom: 16, color: "var(--risk)" }}><strong>One hidden issue can cost you $50,000+ MXN.</strong><br /><span style={{ color: "var(--sub)", fontWeight: 500 }}>This is the level buyers choose when they&apos;re serious about the purchase.</span></p>
               <button onClick={() => handleCheckout("69", currency.toLowerCase())} className="btn-plan feat">Verify before buying →</button>
@@ -556,23 +555,23 @@ export default function Home() {
           <div className="faq-list">
             <div className="faq-item">
               <div className="faq-q">Is everything provided in English?</div>
-              <div className="faq-a">Yes. The full verification report is provided in English. The purchase agreement is generated in Spanish for legal validity, with a clear English reference translation included below.</div>
+              <div className="faq-a">Yes.<br />The full verification report is provided in English. The purchase agreement is generated in Spanish for legal validity, with a clear English reference translation included below.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q">Is this legally valid in Mexico?</div>
-              <div className="faq-a">Yes. Verification uses official registries and documentation checks used in legal ownership validation.</div>
+              <div className="faq-a">Yes.<br />Verification uses official registries and documentation checks used in legal ownership validation.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q">What if the seller refuses to provide documents?</div>
-              <div className="faq-a">That is a major risk signal. Verification helps identify missing or inconsistent ownership data.</div>
+              <div className="faq-a">That is a major risk signal.<br />Verification helps identify missing or inconsistent ownership data.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q">How fast is the verification?</div>
-              <div className="faq-a">Most checks are completed within minutes. Full verification may take longer depending on document review.</div>
+              <div className="faq-a">Most checks are completed within minutes.<br />Full verification may take longer depending on document review.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q">I already checked REPUVE. Isn&apos;t that enough?</div>
-              <div className="faq-a">No. REPUVE can take days or weeks to update. A vehicle can appear clean and still be stolen or flagged.</div>
+              <div className="faq-a">No.<br />REPUVE can take days or weeks to update. A vehicle can appear clean and still be stolen or flagged.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q">What if official databases like REPUVE are unavailable?</div>
@@ -580,7 +579,7 @@ export default function Home() {
             </div>
             <div className="faq-item">
               <div className="faq-q">What happens if issues are found?</div>
-              <div className="faq-a">You receive a clear breakdown of risks so you can decide whether to proceed or walk away.</div>
+              <div className="faq-a">You receive a clear breakdown of risks.<br />You can decide whether to proceed or walk away.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q">What happens after I pay the seller?</div>
