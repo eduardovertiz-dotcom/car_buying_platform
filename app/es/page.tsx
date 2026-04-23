@@ -116,7 +116,7 @@ export default function HomeES() {
                 <p>Todo parecía en orden — hasta que aparecieron <strong>$14,000 MXN de adeudos ocultos.</strong></p>
               </div>
 
-              <h1>Evita <span className="accent-word">fraudes</span><br />al comprar un auto usado en México.</h1>
+              <h1>Evita <span className="accent-word">fraudes</span><br />al comprar un auto en México.</h1>
               <p className="hero-sub">La mayoría de los problemas aparecen después de pagar — y en ese punto, no hay forma de revertirlo.<br /><br />Así es como verificas todo antes de transferir el dinero.</p>
               <p className="hero-clarify">La mayoría no cae en fraudes obvios. Cae en tratos que parecen completamente legítimos.</p>
 
