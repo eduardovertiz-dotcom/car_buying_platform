@@ -117,7 +117,7 @@ export default function HomeES() {
               </div>
 
               <h1>Evita <span className="accent-word">fraudes</span><br />al comprar un auto usado en México.</h1>
-              <p className="hero-sub">Puedes perder tu dinero, el auto, o ambos. Muchas ofertas que parecen buenas no lo son.</p>
+              <p className="hero-sub">La mayoría de los problemas aparecen después de pagar — y en ese punto, no hay forma de revertirlo.<br /><br />Así es como verificas todo antes de transferir el dinero.</p>
               <p className="hero-clarify">La mayoría no cae en fraudes obvios. Cae en tratos que parecen completamente legítimos.</p>
 
               <div className="hero-cta" ref={heroCtaRef}>
@@ -188,19 +188,19 @@ export default function HomeES() {
             <div className="prob-card">
               <span className="pt-tag tag-r">Financiero</span>
               <div className="prob-title">La deuda se transfiere contigo, no se queda con el vendedor.</div>
-              <div className="prob-body">Multas, adeudos y créditos fiscales se transfieren con el vehículo.</div>
+              <div className="prob-body">Las deudas se transfieren con el vehículo.</div>
             </div>
 
             <div className="prob-card">
               <span className="pt-tag tag-r">Legal</span>
               <div className="prob-title">El vendedor podría no ser el dueño legal.</div>
-              <div className="prob-body">Si la propiedad no es válida, puedes perder el auto por completo.</div>
+              <div className="prob-body">Verificar en un solo estado no es suficiente.</div>
             </div>
 
             <div className="prob-card">
               <span className="pt-tag tag-r">Documentos</span>
               <div className="prob-title">Un error en los documentos puede anular toda la operación.</div>
-              <div className="prob-body">Y podrías no tener manera legal de recuperar tu dinero.</div>
+              <div className="prob-body">Los documentos no garantizan validez legal.</div>
             </div>
 
           </div>
@@ -482,13 +482,13 @@ export default function HomeES() {
               <div className="p-name">Registro</div>
               <div className="p-price"><sup>$</sup>{prices[currency].basic}</div>
               <div className="p-note">{currency} · pago único</div>
-              <p className="p-desc">Cubre los registros principales. <strong>Si la venta implica historial entre estados, adeudos del SAT o documentos de importación, necesitarás Verificación Completa.</strong></p>
-              <ul className="p-list">
-                <li>Vendedor confirmado como dueño legal</li>
-                <li>Multas pendientes y Tenencia</li>
-                <li>Consulta federal VIN en REPUVE</li>
-                <li>Revisión de consistencia documental</li>
-                <li>Recomendación: proceder o no</li>
+              <p className="p-desc">Cubre los registros principales. <strong style={{ opacity: 0.65 }}>Si la venta implica historial entre estados, adeudos del SAT o documentos de importación, necesitarás Verificación Completa.</strong></p>
+              <ul className="p-list" style={{ opacity: 0.8 }}>
+                <li>Verificación de propietario</li>
+                <li>Verificación de adeudos</li>
+                <li>Estado de registro</li>
+                <li>Resumen básico del reporte</li>
+                <li>Nivel de confianza</li>
               </ul>
               <button onClick={() => handleCheckout("39", currency.toLowerCase())} className="btn-plan">Hacer revisión básica</button>
               <p style={{ marginTop: 10, fontSize: 12, color: "var(--sub)", fontWeight: 400, lineHeight: 1.4 }}>
@@ -503,12 +503,11 @@ export default function HomeES() {
               <div className="p-note">{currency} · pago único</div>
               <p className="p-desc"><strong>Cubre lo que la mayoría no sabe revisar.</strong> Incluye multi-estado, SAT e historial de importación.</p>
               <ul className="p-list">
-                <li>Todo lo del plan Registro</li>
-                <li>Revisión de adeudos multi-estado</li>
-                <li>Verificación de gravámenes SAT</li>
-                <li>Revisión de documentos de importación</li>
-                <li>Cadena de propiedad extendida</li>
-                <li>Entrega prioritaria acelerada</li>
+                <li>Verificación de propietario (multi-fuente)</li>
+                <li>Verificación de adeudos (multi-estado)</li>
+                <li>Validación de registro</li>
+                <li>Análisis de integridad documental</li>
+                <li>Revisión de verificación a nivel experto</li>
               </ul>
               <p className="p-desc" style={{ marginTop: 12, marginBottom: 16, color: "var(--risk)" }}><strong>Un adeudo oculto puede costarte $50,000+ MXN.</strong><br /><span style={{ color: "var(--sub)", fontWeight: 500 }}>Este es el nivel que eligen los compradores serios.</span></p>
               <button onClick={() => handleCheckout("69", currency.toLowerCase())} className="btn-plan feat">Verificar antes de comprar →</button>
@@ -542,23 +541,23 @@ export default function HomeES() {
           <div className="faq-list">
             <div className="faq-item">
               <div className="faq-q">¿Recibo todo en español?</div>
-              <div className="faq-a">Sí. El reporte completo se entrega en español. El contrato se genera en español (formato legal), con una referencia clara en inglés debajo.</div>
+              <div className="faq-a" style={{ lineHeight: 1.6 }}>Sí. El reporte completo se entrega en español.<br />El contrato se genera en español (formato legal), con una referencia clara en inglés debajo.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q">¿Esto es válido legalmente en México?</div>
-              <div className="faq-a">Sí. La verificación usa registros oficiales y revisiones de documentos utilizados en la validación legal de propiedad.</div>
+              <div className="faq-a" style={{ lineHeight: 1.6 }}>Sí. La verificación usa registros oficiales.<br />Revisiones de documentos utilizados en la validación legal de propiedad.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q">¿Qué pasa si el vendedor se niega a dar documentos?</div>
-              <div className="faq-a">Eso es una señal de alerta mayor. La verificación ayuda a identificar datos de propiedad faltantes o inconsistentes.</div>
+              <div className="faq-a" style={{ lineHeight: 1.6 }}>Eso es una señal de alerta mayor.<br />La verificación ayuda a identificar datos de propiedad faltantes o inconsistentes.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q">¿Qué tan rápida es la verificación?</div>
-              <div className="faq-a">La mayoría de las consultas se completan en minutos. La verificación completa puede tardar más según la revisión de documentos.</div>
+              <div className="faq-a" style={{ lineHeight: 1.6 }}>La mayoría de las consultas se completan en minutos.<br />La verificación completa puede tardar más según la revisión de documentos.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q">Ya consulté el REPUVE. ¿No es suficiente?</div>
-              <div className="faq-a">No. El REPUVE puede tardar días o semanas en actualizarse. Un vehículo puede aparecer limpio y aun así estar reportado como robado.</div>
+              <div className="faq-a" style={{ lineHeight: 1.6 }}>No. El REPUVE puede tardar días o semanas en actualizarse.<br />Un vehículo puede aparecer limpio y aun así estar reportado como robado.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q">¿Qué pasa si bases de datos oficiales como REPUVE no están disponibles?</div>
@@ -566,7 +565,7 @@ export default function HomeES() {
             </div>
             <div className="faq-item">
               <div className="faq-q">¿Qué pasa si se encuentran problemas?</div>
-              <div className="faq-a">Recibes un desglose claro de riesgos para que puedas decidir si proceder o retirarte.</div>
+              <div className="faq-a" style={{ lineHeight: 1.6 }}>Recibes un desglose claro de riesgos.<br />Puedes decidir si proceder o retirarte.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q">¿Qué pasa después de pagar al vendedor?</div>
