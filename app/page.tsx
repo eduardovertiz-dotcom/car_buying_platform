@@ -495,7 +495,7 @@ export default function Home() {
               <div className="p-price"><sup>$</sup>{prices[currency].basic}</div>
               <div className="p-note">{currency} · one-time</div>
               <p className="p-desc">Covers the core registries. <strong style={{ opacity: 0.65 }}>If the sale involves cross-state history, SAT debt, or imported documents, you&apos;ll need Full Verification.</strong></p>
-              <ul className="p-list">
+              <ul className="p-list" style={{ opacity: 0.8 }}>
                 <li>Ownership check</li>
                 <li>Debt check</li>
                 <li>Registration status</li>
