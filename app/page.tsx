@@ -328,9 +328,9 @@ export default function Home() {
       </section>
 
       {/* ── 5. STATS BAND ────────────────────────────────────────────────── */}
-      <p style={{ textAlign: "center", fontSize: 14, color: "var(--sub)", padding: "24px 24px 0" }}>This is the risk you&apos;re walking into without verification.</p>
       <section id="stats">
         <div className="wrap-w">
+          <p style={{ fontSize: 15, fontWeight: 600, color: "rgba(255,255,255,0.85)", marginBottom: 14, textAlign: "center" }}>This is the risk you&apos;re walking into without verification.</p>
           <div className="stats-row">
             <div className="sb">
               <div className="sb-n"><span>40%</span></div>
@@ -345,17 +345,17 @@ export default function Home() {
               <div className="sb-d">MXN average loss per fraud case</div>
             </div>
           </div>
-          <p className="stats-sources">This is the risk you&apos;re walking into without verification.<br />Data sources: Profeco, AMIA, El Financiero, El Universal</p>
+          <p className="stats-sources">Data sources: Profeco, AMIA, El Financiero, El Universal</p>
         </div>
       </section>
 
       {/* ── 6. SAMPLE REPORT ─────────────────────────────────────────────── */}
-      <p style={{ textAlign: "center", fontSize: 14, color: "var(--sub)", padding: "24px 24px 0" }}>This is what the seller will not show you.</p>
       <section id="sample" className="b">
         <div className="wrap">
           <span className="lbl-accent">Sample report</span>
           <h2 className="section-h2">This is what you see before you decide to pay.</h2>
           <p className="v-sub">Actual output format. Every verified item, every flag, every outstanding amount — specific to the vehicle you&apos;re buying.</p>
+          <p style={{ fontSize: 12, fontWeight: 500, color: "var(--accent)", marginBottom: 6, letterSpacing: "0.02em" }}>This is what the seller will not show you.</p>
 
           <div className="sample-card-wrap">
             <div className="hero-pill">⚠ Issues detected</div>
