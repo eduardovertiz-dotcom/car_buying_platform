@@ -349,6 +349,14 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── PONR ─────────────────────────────────────────────────────────── */}
+      <section className="b">
+        <div className="wrap-w">
+          <p className="process-note">Once you transfer the money, there is no reversal.</p>
+          <p className="process-note" style={{ marginTop: 8 }}>This is exactly why a structured verification process exists before you pay.</p>
+        </div>
+      </section>
+
       {/* ── 6. SAMPLE REPORT ─────────────────────────────────────────────── */}
       <section id="sample" className="b">
         <div className="wrap">
