@@ -8,8 +8,8 @@ import HeroCard from "@/components/HeroCard";
 
 const dmSans = DM_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
-const handleCheckout = async (plan: "39" | "69", currency: string) => {
-  if (process.env.NODE_ENV === "development") {
+const handleCheckout = async (plan: "39" | "69" | "test", currency: string) => {
+  if (process.env.NODE_ENV === "development" && plan !== "test") {
     const res = await fetch("/api/transactions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -518,6 +518,16 @@ export default function HomeES() {
             </div>
           </div>
 
+          {process.env.NODE_ENV === "development" && (
+            <div style={{ marginTop: 24, textAlign: "center" }}>
+              <button
+                onClick={() => handleCheckout("test", "mxn")}
+                style={{ fontSize: 12, color: "#888", border: "1px dashed #555", borderRadius: 6, padding: "6px 14px", background: "transparent", cursor: "pointer" }}
+              >
+                [DEV] Test Payment ($10 MXN)
+              </button>
+            </div>
+          )}
           <p className="text-xs text-white/40 mt-4" style={{ marginTop: 16 }}>Precios fijos en {currency}. Se te cobrará exactamente el monto mostrado.</p>
           <p className="p-urgency">La mayoría empieza con la revisión básica. Los compradores serios verifican todo antes de pagar.</p>
           <p className="p-guarantee">Si no podemos completar la verificación por un fallo en los registros, recibes un reembolso completo.</p>
@@ -551,8 +561,16 @@ export default function HomeES() {
               <div className="faq-a">No. El REPUVE puede tardar días o semanas en actualizarse. Un vehículo puede aparecer limpio y aun así estar reportado como robado.</div>
             </div>
             <div className="faq-item">
+              <div className="faq-q">¿Qué pasa si bases de datos oficiales como REPUVE no están disponibles?</div>
+              <div className="faq-a">Algunos registros oficiales, como REPUVE, pueden no estar disponibles temporalmente en ciertos momentos.<br /><br />Nuestro sistema está diseñado para darte una visión completa, incluso si una fuente oficial no está disponible temporalmente, indicando claramente cualquier información faltante en el reporte.<br /><br />Cada reporte incluye un nivel de confianza para que puedas tomar una decisión informada con la información disponible.</div>
+            </div>
+            <div className="faq-item">
               <div className="faq-q">¿Qué pasa si se encuentran problemas?</div>
               <div className="faq-a">Recibes un desglose claro de riesgos para que puedas decidir si proceder o retirarte.</div>
+            </div>
+            <div className="faq-item">
+              <div className="faq-q">¿Qué pasa después de pagar al vendedor?</div>
+              <div className="faq-a">En ese momento, cualquier deuda o problema legal no revelado pasa a ser tu responsabilidad.<br />No hay reversa.</div>
             </div>
           </div>
         </div>

@@ -8,8 +8,8 @@ import HeroCard from "@/components/HeroCard";
 
 const dmSans = DM_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
-const handleCheckout = async (plan: "39" | "69", currency: string) => {
-  if (process.env.NODE_ENV === "development") {
+const handleCheckout = async (plan: "39" | "69" | "test", currency: string) => {
+  if (process.env.NODE_ENV === "development" && plan !== "test") {
     const res = await fetch("/api/transactions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -117,7 +117,9 @@ export default function Home() {
               </div>
 
               <h1>Don&apos;t get <span className="accent-word">scammed</span><br />buying a car in Mexico.</h1>
-              <p className="hero-sub">You could lose the car, the money, or both. Most fraud is discovered after you pay — and at that point, your money is gone.</p>
+              <p className="hero-clarify">Everything looks fine — until the debt becomes yours.</p>
+              <p className="hero-sub">Don&apos;t get scammed buying a car in Mexico. Most problems are discovered after you pay — and at that point, there is no reversal.</p>
+              <p className="hero-clarify">Once you transfer the money, the debt, the risk, and the consequences become yours.</p>
               <p className="hero-clarify">Most buyers don&apos;t get scammed by strangers. They get scammed by deals that look completely legitimate.</p>
 
               <div className="hero-cta" ref={heroCtaRef}>
@@ -133,17 +135,23 @@ export default function Home() {
                   <div className="hst-l">Verifications completed in Mexico</div>
                 </div>
                 <div className="hst">
-                  <div className="hst-n"><span>71%</span></div>
-                  <div className="hst-l">Of vehicles had at least one undisclosed issue</div>
+                  <div className="hst-n"><span>7 out of 10</span></div>
+                  <div className="hst-l">vehicles we check have a hidden issue</div>
                 </div>
                 <div className="hst">
-                  <div className="hst-n"><span>40%</span></div>
-                  <div className="hst-l">Of private car sales have irregularities</div>
+                  <div className="hst-n"><span>Nearly half</span></div>
+                  <div className="hst-l">of private car sales have irregularities</div>
                 </div>
                 <div className="hst">
                   <div className="hst-n"><span>In Minutes</span></div>
                   <div className="hst-l">Clear risk results before you pay</div>
                 </div>
+              </div>
+
+              <div className="hero-clarify" style={{ marginTop: 24, marginBottom: 8 }}>
+                <p>Once you transfer the money, there is no reversal.</p>
+                <p>The debt transfers with the vehicle.<br />The seller disappears.<br />The responsibility becomes yours.</p>
+                <p>This is exactly why a structured verification process exists.</p>
               </div>
 
               <div className="mobile-report">
@@ -188,22 +196,26 @@ export default function Home() {
             <div className="prob-card">
               <span className="pt-tag tag-r">Financial</span>
               <div className="prob-title">You inherit the debt — not the seller.</div>
+              <div className="prob-body">→ This is where most buyers lose money.</div>
               <div className="prob-body">Hidden fines, loans, and tax debt transfer with the vehicle.</div>
             </div>
 
             <div className="prob-card">
               <span className="pt-tag tag-r">Legal</span>
               <div className="prob-title">The seller may not legally own the car.</div>
+              <div className="prob-body">→ Debt follows the car, not the location.</div>
               <div className="prob-body">If ownership is invalid, you can lose the vehicle entirely.</div>
             </div>
 
             <div className="prob-card">
               <span className="pt-tag tag-r">Document</span>
               <div className="prob-title">One mismatch can void the entire deal.</div>
+              <div className="prob-body">→ Documents don&apos;t prove validity. Registries do.</div>
               <div className="prob-body">And you may have no legal way to recover your money.</div>
             </div>
 
           </div>
+          <p className="process-note" style={{ marginTop: 24 }}>None of these problems are visible during a normal inspection.</p>
         </div>
       </section>
 
@@ -212,6 +224,7 @@ export default function Home() {
         <div className="wrap-w">
           <span className="lbl-accent">Who this is for</span>
           <h2 className="section-h2">If you&apos;re buying directly from a seller, this is where most risks happen.</h2>
+          <p className="hero-clarify">This is where most fraud happens.</p>
           <ul className="who-list">
             <li>Buying from Facebook Marketplace or private listings</li>
             <li>Meeting a seller in person or via WhatsApp</li>
@@ -225,7 +238,7 @@ export default function Home() {
       <section id="process" className="b">
         <div className="wrap-w">
           <span className="lbl-accent">The process</span>
-          <h2 className="section-h2">Five steps. One clear answer.</h2>
+          <h2 className="section-h2">Five checks. One decision: proceed or walk away.</h2>
           <div className="steps steps-5">
             <div className="step">
               <div className="step-n">01</div>
@@ -234,7 +247,7 @@ export default function Home() {
             </div>
             <div className="step">
               <div className="step-n">02</div>
-              <div className="step-t">Check</div>
+              <div className="step-t">Cross-check</div>
               <div className="step-d">Cross-check REPUVE, SAT, and state registries for debt and legal status.</div>
             </div>
             <div className="step">
@@ -249,10 +262,19 @@ export default function Home() {
             </div>
             <div className="step">
               <div className="step-n">05</div>
-              <div className="step-t">Complete</div>
-              <div className="step-d">Clear go / no-go with exact figures before you pay.</div>
+              <div className="step-t">Complete Purchase</div>
+              <div className="step-d">
+                Clear go / no-go with exact figures before you pay.
+                <ul style={{ marginTop: 8, paddingLeft: 16, listStyleType: "disc", fontSize: 13, color: "var(--sub)", lineHeight: 1.6 }}>
+                  <li>Spanish legal contract (with English reference)</li>
+                  <li>Send via email or WhatsApp</li>
+                  <li>Sign digitally</li>
+                  <li>Record of transaction for both parties</li>
+                </ul>
+              </div>
             </div>
           </div>
+          <p className="process-note" style={{ marginTop: 20 }}>Verification tells you if the deal is safe.<br />Completion ensures the transaction is done correctly.</p>
           <p className="process-note">This is the same process used to detect fraud before it becomes your problem.<br /><span className="src">Public databases like REPUVE can take up to 30 days to reflect a stolen vehicle. Source: Chamber of Deputies.</span></p>
         </div>
       </section>
@@ -292,7 +314,21 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── NO-VERIFY RISK ───────────────────────────────────────────────────── */}
+      <section className="b">
+        <div className="wrap">
+          <h2 className="section-h2">What happens if you don&apos;t verify</h2>
+          <ul className="who-list">
+            <li>You inherit the debt</li>
+            <li>You cannot reverse the payment</li>
+            <li>You may lose the vehicle</li>
+            <li>You have no legal recourse</li>
+          </ul>
+        </div>
+      </section>
+
       {/* ── 5. STATS BAND ────────────────────────────────────────────────── */}
+      <p style={{ textAlign: "center", fontSize: 14, color: "var(--sub)", padding: "24px 24px 0" }}>This is the risk you&apos;re walking into without verification.</p>
       <section id="stats">
         <div className="wrap-w">
           <div className="stats-row">
@@ -314,6 +350,7 @@ export default function Home() {
       </section>
 
       {/* ── 6. SAMPLE REPORT ─────────────────────────────────────────────── */}
+      <p style={{ textAlign: "center", fontSize: 14, color: "var(--sub)", padding: "24px 24px 0" }}>This is what the seller will not show you.</p>
       <section id="sample" className="b">
         <div className="wrap">
           <span className="lbl-accent">Sample report</span>
@@ -416,6 +453,7 @@ export default function Home() {
       {/* ── 7. PRICING ───────────────────────────────────────────────────── */}
       <section id="pricing" className="b">
         <div className="wrap">
+          <p className="national-risk">The average fraud loss is $250,000 MXN.<br />Verification costs less than 0.03% of that.</p>
           <p className="national-risk">92.9% of crimes in Mexico go unreported<br /><span className="src">(INEGI)</span></p>
           <span className="lbl-accent">Pricing</span>
           <h2 className="section-h2">One-time. Before you commit.</h2>
@@ -485,9 +523,20 @@ export default function Home() {
             </div>
           </div>
 
+          {process.env.NODE_ENV === "development" && (
+            <div style={{ marginTop: 24, textAlign: "center" }}>
+              <button
+                onClick={() => handleCheckout("test", "mxn")}
+                style={{ fontSize: 12, color: "#888", border: "1px dashed #555", borderRadius: 6, padding: "6px 14px", background: "transparent", cursor: "pointer" }}
+              >
+                [DEV] Test Payment ($10 MXN)
+              </button>
+            </div>
+          )}
           <p className="text-xs text-white/40 mt-4" style={{ marginTop: 16 }}>Prices are fixed in {currency}. You will be charged exactly the amount shown.</p>
           <p className="p-urgency">Most buyers start with a basic check. Serious buyers verify everything before paying.</p>
           <p className="p-guarantee">If we can&apos;t complete verification due to a registry outage, you receive a full refund.</p>
+          <p className="p-urgency">This is the last decision you make before money leaves your account.</p>
         </div>
       </section>
 
@@ -518,8 +567,16 @@ export default function Home() {
               <div className="faq-a">No. REPUVE can take days or weeks to update. A vehicle can appear clean and still be stolen or flagged.</div>
             </div>
             <div className="faq-item">
+              <div className="faq-q">What if official databases like REPUVE are unavailable?</div>
+              <div className="faq-a">Some official registries, including REPUVE, may occasionally be temporarily unavailable.<br /><br />Our system is designed to give you a complete picture, even if one registry is temporarily unavailable, while clearly indicating any missing checks in your report.<br /><br />Every report includes a confidence level so you can make an informed decision based on the available information.</div>
+            </div>
+            <div className="faq-item">
               <div className="faq-q">What happens if issues are found?</div>
               <div className="faq-a">You receive a clear breakdown of risks so you can decide whether to proceed or walk away.</div>
+            </div>
+            <div className="faq-item">
+              <div className="faq-q">What happens after I pay the seller?</div>
+              <div className="faq-a">At that point, any undisclosed debt or legal issue becomes your responsibility.<br />There is no reversal.</div>
             </div>
           </div>
         </div>
@@ -528,7 +585,7 @@ export default function Home() {
       {/* ── 8. FINAL CTA ─────────────────────────────────────────────────── */}
       <section id="cta">
         <div className="lbl-cta">One decision</div>
-        <h2>Verify before you pay.<br /><em>Or deal with the consequences later.</em></h2>
+        <h2>Verify before you pay.<br /><em>Because after you pay, it&apos;s your problem.</em></h2>
         <p>Once you pay, the risk becomes yours.</p>
         <div className="cta-row">
           <a href="#pricing" className="btn-cta">Start verification →</a>

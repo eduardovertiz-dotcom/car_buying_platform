@@ -222,6 +222,13 @@ export const stepEngineCopy = {
       saved: "Saved. You can now access this from any device.",
       differentEmail: "This transaction is linked to a different email. Please sign in with the email used at checkout.",
     },
+    repuveUnavailable: {
+      title: "REPUVE registry\nTemporarily unavailable",
+      message: "This official registry is currently offline. Verification continues using all other available sources.",
+      note: "Results reflect all currently available official sources.",
+      button: "Retry check",
+      confidence: (level: string) => `Confidence: ${level} | Reason: 1 official source unavailable`,
+    },
   },
   es: {
     steps: {
@@ -445,6 +452,13 @@ export const stepEngineCopy = {
       saving: "Guardando…",
       saved: "Guardado. Puedes acceder desde cualquier dispositivo.",
       differentEmail: "Esta transacción está vinculada a otro correo. Inicia sesión con el correo usado al pagar.",
+    },
+    repuveUnavailable: {
+      title: "Registro REPUVE\nTemporalmente no disponible",
+      message: "Este registro oficial se encuentra temporalmente fuera de servicio. La verificación continúa utilizando todas las demás fuentes disponibles.",
+      note: "Los resultados reflejan todas las fuentes oficiales disponibles en este momento.",
+      button: "Reintentar verificación",
+      confidence: (level: string) => `Confianza: ${level} | Razón: 1 fuente oficial no disponible`,
     },
   }
 }

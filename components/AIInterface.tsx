@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import JSZip from "jszip";
 import { useTransaction } from "@/context/TransactionContext";
+import { createClient } from "@/lib/supabase/client";
 import { Step, MaintenanceRecordType, getSteps } from "@/lib/types";
 import type { VerificationResult } from "@/lib/types";
 import AnalyzePanel from "@/components/panels/AnalyzePanel";
@@ -47,74 +48,11 @@ function getStepContent(lang: 'en' | 'es'): Record<Step, StepContent> {
 
 type VerifyState = "idle" | "processing" | "error" | "complete";
 
-// ── Verification result types (local, mirrors backend shape) ─────────────────
-
-type RepuveCheck = {
-  ok: boolean;
-  data?: { theft: boolean; status: string };
-  error?: string;
-};
-
-type FacturaCheck = {
-  ok: boolean;
-  data?: { valid: boolean; status: string };
-  error?: string;
-};
-
-type VerifyChecks = {
-  repuve: RepuveCheck;
-  factura: FacturaCheck;
-};
-
-type MappedCheck = { status: "success" | "warning" | "unavailable"; text: string };
-
-function mapRepuve(check: RepuveCheck, lang: 'en' | 'es' = 'en'): MappedCheck {
-  const t = stepEngineCopy[lang];
-  if (!check.ok) return { status: "unavailable", text: t.status.registryUnavailable };
-  if (check.data?.theft) return { status: "warning", text: t.status.theftDetected };
-  return { status: "success", text: t.status.noTheft };
-}
-
-function mapFactura(check: FacturaCheck, lang: 'en' | 'es' = 'en'): MappedCheck | null {
-  const t = stepEngineCopy[lang];
-  if (check.error === "not_provided") return null;
-  if (!check.ok) return { status: "unavailable", text: t.status.invoiceUnavailable };
-  if (!check.data?.valid) return { status: "warning", text: t.status.invoiceInvalid };
-  return { status: "success", text: t.status.invoiceValid };
-}
-
-function checksToVerificationResult(checks: VerifyChecks, lang: 'en' | 'es' = 'en'): VerificationResult {
-  const t = stepEngineCopy[lang];
-  const theft = checks.repuve.ok && checks.repuve.data?.theft === true;
-  const facturaInvalid = checks.factura.ok && checks.factura.data?.valid === false;
-  const findings: string[] = [];
-
-  if (!checks.repuve.ok) findings.push("REPUVE check could not be completed");
-  else if (theft) findings.push("Theft record detected in REPUVE");
-  else findings.push("No theft record found in REPUVE");
-
-  if (checks.factura.error !== "not_provided") {
-    if (!checks.factura.ok) findings.push("Factura validation could not be completed");
-    else if (facturaInvalid) findings.push("Invoice validation failed");
-    else findings.push("Invoice validated successfully");
-  }
-
-  return {
-    status: theft ? "high_risk" : facturaInvalid ? "review" : "safe",
-    summary: theft
-      ? t.decision.theftDetected
-      : facturaInvalid
-      ? t.decision.invoiceConcern
-      : t.decision.noIssues,
-    findings,
-    confidence: theft ? 90 : facturaInvalid ? 72 : 85,
-  };
-}
-
 function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
   const pathname = usePathname();
   const lang = (pathname.startsWith('/es') ? 'es' : 'en') as 'en' | 'es';
   const t = stepEngineCopy[lang];
+  const levelToUI = { safe: "Clear", review: "Caution", high_risk: "Do not proceed" } as const;
 
   const {
     transaction,
@@ -141,8 +79,16 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
       .then(({ currency }: { currency: string }) => setGeoCurrency(currency.toUpperCase()))
       .catch(() => {});
   }, []);
-  const [verifyChecks, setVerifyChecks] = useState<VerifyChecks | null>(null);
-  const [verifyMode, setVerifyMode] = useState<"manual" | "automated" | "mock" | null>(null);
+  // Server-computed risk output — single source of truth for score/level/checks
+  const [riskOutput, setRiskOutput] = useState<{
+    score: number;
+    level: "safe" | "review" | "high_risk";
+    flags: string[];
+    explanations: string[];
+    checks: Array<{ label: string; status: "ok" | "warning" | "error"; message: string }>;
+    recommendation: string;
+    confidence: "high" | "medium" | "low";
+  } | null>(null);
   const [verifyState, setVerifyState] = useState<VerifyState>(() => {
     if (verification_status === "basic_complete" || verification_status === "professional_complete") return "complete";
     if (verification_status === "basic_processing" || verification_status === "professional_processing") return "processing";
@@ -150,6 +96,9 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
   });
   // Upgrade delta: snapshot of risk at the moment the user clicks upgrade
   const [previousRisk, setPreviousRisk] = useState<RiskOutput | null>(null);
+
+  // REPUVE unavailable: track single retry
+  const [repuveRetried, setRepuveRetried] = useState(false);
 
   // isDecisionMade comes from context — driven by transaction.status === "decision_made"
 
@@ -175,7 +124,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
   }, [verifyState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-trigger: fires only when idle + identifier present.
-  // Docs-only path uses startDocVerification (manual CTA) instead.
+  // Polls DB for verifications JSONB — single source of truth.
   // Error state does NOT auto-retrigger — user must click Retry.
   // Decision lock: once accepted, never re-trigger.
   useEffect(() => {
@@ -195,52 +144,71 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
     else requestBasicVerification();
     setVerifyState("processing");
 
-    fetch("/api/verify", {
+    // Poll DB until verification_status is "complete" — single source of truth
+    const supabase = createClient();
+    let polls = 0;
+    const MAX_POLLS = 20; // 30s at 1.5s intervals
+    let active = true;
+
+    const timer = setInterval(async () => {
+      if (!active) return;
+      if (++polls > MAX_POLLS) {
+        clearInterval(timer);
+        active = false;
+        setVerifyState("error");
+        return;
+      }
+      const { data: row } = await supabase
+        .from("transactions")
+        .select("verifications, verification_status, risk_output")
+        .eq("id", transaction.id)
+        .single();
+      const vStatus = row?.verification_status as string | null;
+      if (vStatus !== "complete") return;
+
+      clearInterval(timer);
+      active = false;
+      const risk_out = row?.risk_output as typeof riskOutput ?? null;
+      setRiskOutput(risk_out);
+      const result: VerificationResult = {
+        status: (risk_out?.level ?? "review") as "safe" | "review" | "high_risk",
+        summary: risk_out?.recommendation ?? "",
+        findings: risk_out?.explanations ?? [],
+        confidence: risk_out?.score ?? 50,
+      };
+      if (shouldRunProfessional) completeProfessionalVerification(result);
+      else completeBasicVerification(result);
+      setVerifyState("complete");
+    }, 1500);
+
+    // Trigger orchestrator — 5xx means failure, stop polling immediately
+    fetch(`/api/transactions/${transaction.id}/verify`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plate: identifier }),
+      body: JSON.stringify({
+        plate: transaction.vehicle.plate ?? undefined,
+        vin: transaction.vehicle.vin ?? undefined,
+      }),
     })
       .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data: { success?: boolean; status?: string; mode?: string; checks?: VerifyChecks }) => {
-        if (data.status === "mock_complete") {
-          setVerifyMode("mock");
-          const mockResult: VerificationResult = {
-            status: "review",
-            summary: "Verification not yet available. Using preliminary analysis.",
-            findings: [],
-            confidence: 40,
-          };
-          if (shouldRunProfessional) completeProfessionalVerification(mockResult);
-          else completeBasicVerification(mockResult);
-          setVerifyState("complete");
-          return;
+        if (!res.ok && active) {
+          clearInterval(timer);
+          active = false;
+          setVerifyState("error");
         }
-        const mode = data.mode === "manual" ? "manual" : "automated";
-        setVerifyMode(mode);
-        if (mode === "manual") {
-          const manualResult: VerificationResult = {
-            status: "review",
-            summary: "Manual verification in progress.",
-            findings: [],
-            confidence: 0,
-          };
-          if (shouldRunProfessional) completeProfessionalVerification(manualResult);
-          else completeBasicVerification(manualResult);
-        } else {
-          const checks = data.checks!;
-          setVerifyChecks(checks);
-          const result = checksToVerificationResult(checks, lang);
-          if (shouldRunProfessional) completeProfessionalVerification(result);
-          else completeBasicVerification(result);
-        }
-        setVerifyState("complete");
       })
       .catch(() => {
-        setVerifyState("error");
+        if (active) {
+          clearInterval(timer);
+          active = false;
+          setVerifyState("error");
+        }
       });
+
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
   }, [verifyState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll to top once when verification reaches a decision state.
@@ -310,67 +278,6 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
     }
   }
 
-  // Docs-only verification — called manually via CTA when hasDocs && !hasIdentifier
-  async function startDocVerification() {
-    if (!plan) return;
-    if (isDecisionMade) return;
-    const shouldRunProfessional =
-      plan === "69" &&
-      (verification_status === "not_started" || verification_status === "basic_complete");
-    const shouldRunBasic = plan === "39" && verification_status === "not_started";
-    if (!shouldRunProfessional && !shouldRunBasic) return;
-
-    if (shouldRunProfessional) requestProfessionalVerification();
-    else requestBasicVerification();
-    setVerifyState("processing");
-
-    fetch("/api/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ hasDocuments: true }),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data: { success?: boolean; status?: string; mode?: string; checks?: VerifyChecks }) => {
-        if (data.status === "mock_complete") {
-          setVerifyMode("mock");
-          const mockResult: VerificationResult = {
-            status: "review",
-            summary: "Verification not yet available. Using preliminary analysis.",
-            findings: [],
-            confidence: 40,
-          };
-          if (shouldRunProfessional) completeProfessionalVerification(mockResult);
-          else completeBasicVerification(mockResult);
-          setVerifyState("complete");
-          return;
-        }
-        const mode = data.mode === "manual" ? "manual" : "automated";
-        setVerifyMode(mode);
-        if (mode === "manual") {
-          const manualResult: VerificationResult = {
-            status: "review",
-            summary: "Manual verification in progress.",
-            findings: [],
-            confidence: 0,
-          };
-          if (shouldRunProfessional) completeProfessionalVerification(manualResult);
-          else completeBasicVerification(manualResult);
-        } else {
-          const checks = data.checks!;
-          setVerifyChecks(checks);
-          const result = checksToVerificationResult(checks, lang);
-          if (shouldRunProfessional) completeProfessionalVerification(result);
-          else completeBasicVerification(result);
-        }
-        setVerifyState("complete");
-      })
-      .catch(() => {
-        setVerifyState("error");
-      });
-  }
 
   // ── No plan — should not happen in normal flow ───────────────────────────
   if (!plan) {
@@ -463,26 +370,19 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
     );
   }
 
-  // ── Docs only, not started — manual CTA (no identifier for registry lookup) ─
+  // ── Docs only, not started — plate required for registry checks ─────────
   if (!hasIdentifier && hasDocs && verification_status === "not_started") {
     return (
       <>
         <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
-          Ready to verify your documents.
+          Add a plate number to continue.
         </h2>
         <p className="text-[18px] text-[#444] leading-relaxed mb-8">
-          We&apos;ll verify using your uploaded documents. Adding a VIN or plate
-          number improves accuracy and enables registry checks.
+          A plate number or VIN is required to run official registry checks.
         </p>
         <button
-          onClick={startDocVerification}
-          className="w-full bg-[#B4531A] hover:opacity-85 text-white text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left shadow-[0_4px_16px_rgba(180,83,26,.28)] mb-3"
-        >
-          Start verification
-        </button>
-        <button
           onClick={() => goToStep("upload")}
-          className="text-[15px] text-[#666] hover:text-white transition-colors underline underline-offset-2"
+          className="w-full bg-[#B4531A] hover:opacity-85 text-white text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left shadow-[0_4px_16px_rgba(180,83,26,.28)]"
         >
           ← Back to Upload to add VIN/plate
         </button>
@@ -535,102 +435,101 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
 
   // ── Basic complete — show results + upsell ($49 users only) ─────────────
   if (verification_status === "basic_complete") {
-    const repuveResult = verifyChecks ? mapRepuve(verifyChecks.repuve, lang) : null;
-    const facturaResult = verifyChecks ? mapFactura(verifyChecks.factura, lang) : null;
-    const allUnavailable =
-      (!repuveResult || repuveResult.status === "unavailable") &&
-      (!facturaResult || facturaResult.status === "unavailable");
-    const hasVerifyIssues =
-      repuveResult?.status === "warning" || facturaResult?.status === "warning";
-    const verifyPillText = hasVerifyIssues
-      ? t.reports.issuesDetected
-      : allUnavailable || verifyMode === "manual"
-      ? t.status.caution
-      : null;
-    const verifyRecVariant = hasVerifyIssues ? "risk"
-      : allUnavailable || verifyMode === "manual" ? "moderate"
-      : "clear";
-    const verifyRecText = verifyMode === "manual"
-      ? t.decision.expertInProgress
-      : hasVerifyIssues
-      ? t.decision.resolveIssues
-      : allUnavailable
-      ? t.decision.registryUnavailable
-      : t.decision.registryPassed;
+    const repuveUnavailable = riskOutput?.checks.some(
+      (c) => c.label === "REPUVE" && c.status === "warning"
+    ) ?? false;
+
+    if (!riskOutput) return (
+      <div className="border border-[var(--border)] rounded-lg px-5 py-4">
+        <p className="text-[15px] text-[var(--foreground-muted)]">
+          Loading verification results…
+        </p>
+      </div>
+    );
+    const badge = levelToUI[riskOutput.level];
+    const pillIsRisk = riskOutput.level === "high_risk";
+    const verifyRecVariant = riskOutput.level === "safe" ? "clear" : riskOutput.level === "review" ? "moderate" : "";
+    const verifyRecText = riskOutput.recommendation;
 
     return (
       <>
         {/* ── Report card ─────────────────────────────────────────── */}
         <div className="vr-wrap">
-          {verifyPillText && (
-            <div className={`vr-pill${hasVerifyIssues ? "" : " warn"}`}>{verifyPillText}</div>
-          )}
+          <div className={`vr-pill${pillIsRisk ? "" : " warn"}`}>{badge}</div>
           <div className="vr-card">
             <div className="vr-header">
               <span className="vr-title">{t.reports.verificationReport}</span>
             </div>
             <div className="vr-body">
 
-              {/* Outstanding issues — first */}
-              {hasVerifyIssues && (
+              {/* Score bar — server-computed, deterministic */}
+              {riskOutput && (
+                <div className="vr-section">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <span className="vr-k" style={{ marginBottom: 0 }}>Puntuación de riesgo</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: riskOutput.level === "safe" ? "#22c55e" : riskOutput.level === "high_risk" ? "#ef4444" : "#eab308" }}>
+                      {riskOutput.score}/100
+                    </span>
+                  </div>
+                  <div style={{ background: "var(--border)", borderRadius: 4, height: 6, overflow: "hidden" }}>
+                    <div style={{ width: `${riskOutput.score}%`, height: "100%", background: riskOutput.level === "safe" ? "#22c55e" : riskOutput.level === "high_risk" ? "#ef4444" : "#eab308" }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Explanations */}
+              {riskOutput && riskOutput.explanations.length > 0 && (
                 <div className="vr-section">
                   <div className="vr-k">{t.reports.outstandingIssues}</div>
-                  {repuveResult?.status === "warning" && (
-                    <div className="vr-row">
-                      <span className="vr-row-label">Theft record detected in REPUVE</span>
-                      <span className="vr-status s-risk">Theft</span>
+                  {riskOutput.explanations.map((exp, i) => (
+                    <div key={i} className="vr-row">
+                      <span className="vr-row-label">{exp}</span>
                     </div>
-                  )}
-                  {facturaResult?.status === "warning" && (
-                    <div className="vr-row">
-                      <span className="vr-row-label">Ownership invoice failed SAT validation</span>
-                      <span className="vr-status s-risk">Invalid</span>
-                    </div>
-                  )}
+                  ))}
                 </div>
               )}
 
               {/* Registry checks */}
               <div className="vr-section">
                 <div className="vr-k">{t.reports.registryChecks}</div>
-                {verifyMode === "manual" ? (
-                  <div className="vr-row">
-                    <span className="vr-row-label">Expert review</span>
-                    <span className="vr-status s-warn">{t.status.inProgress}</span>
-                  </div>
+                {riskOutput ? (
+                  riskOutput.checks.map((check, i) => (
+                    <div key={i} className="vr-row">
+                      <span className="vr-row-label">{check.label}</span>
+                      <span className={`vr-status ${check.status === "ok" ? "s-ok" : check.status === "error" ? "s-risk" : "s-warn"}`}>
+                        {check.message}
+                      </span>
+                    </div>
+                  ))
                 ) : (
-                  <>
-                    {repuveResult && (
-                      <div className="vr-row">
-                        <span className="vr-row-label">Theft registry (REPUVE)</span>
-                        <span className={`vr-status ${
-                          repuveResult.status === "success" ? "s-ok"
-                          : repuveResult.status === "warning" ? "s-risk" : "s-warn"
-                        }`}>
-                          {repuveResult.status === "success" ? t.status.clear
-                          : repuveResult.status === "warning" ? t.status.theftRecord : t.status.unavailable}
-                        </span>
-                      </div>
+                  <div className="vr-row">
+                    <span className="vr-row-label">Registry checks</span>
+                    <span className="vr-status s-warn">Loading…</span>
+                  </div>
+                )}
+                {repuveUnavailable && (
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(148,163,184,0.15)" }}>
+                    <p className="text-[13px] font-semibold text-slate-400 mb-1" style={{ whiteSpace: "pre-line" }}>
+                      {t.repuveUnavailable.title}
+                    </p>
+                    <p className="text-[13px] text-slate-500 leading-relaxed mb-2">
+                      {t.repuveUnavailable.message}
+                    </p>
+                    <p className="text-[12px] text-slate-500 leading-relaxed mb-2">
+                      {t.repuveUnavailable.note}
+                    </p>
+                    <p className="text-[13px] font-medium text-slate-400 mb-2">
+                      {t.repuveUnavailable.confidence(riskOutput.confidence)}
+                    </p>
+                    {!repuveRetried && (
+                      <button
+                        onClick={() => { setRepuveRetried(true); handleRetry(); }}
+                        className="text-[13px] text-slate-400 hover:text-white transition-colors underline underline-offset-2"
+                      >
+                        {t.repuveUnavailable.button}
+                      </button>
                     )}
-                    {facturaResult && (
-                      <div className="vr-row">
-                        <span className="vr-row-label">Ownership invoice (SAT)</span>
-                        <span className={`vr-status ${
-                          facturaResult.status === "success" ? "s-ok"
-                          : facturaResult.status === "warning" ? "s-risk" : "s-warn"
-                        }`}>
-                          {facturaResult.status === "success" ? t.status.valid
-                          : facturaResult.status === "warning" ? t.status.invalid : t.status.unavailable}
-                        </span>
-                      </div>
-                    )}
-                    {!repuveResult && !facturaResult && (
-                      <div className="vr-row">
-                        <span className="vr-row-label">Registry checks</span>
-                        <span className="vr-status s-warn">{t.status.notAvailable}</span>
-                      </div>
-                    )}
-                  </>
+                  </div>
                 )}
               </div>
 
@@ -720,31 +619,28 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
 
   // ── Professional complete ────────────────────────────────────────────────
   if (verification_status === "professional_complete") {
-    const repuveResult = verifyChecks ? mapRepuve(verifyChecks.repuve, lang) : null;
-    const facturaResult = verifyChecks ? mapFactura(verifyChecks.factura, lang) : null;
-    const allUnavailable =
-      (!repuveResult || repuveResult.status === "unavailable") &&
-      (!facturaResult || facturaResult.status === "unavailable");
+    const repuveUnavailable = riskOutput?.checks.some(
+      (c) => c.label === "REPUVE" && c.status === "warning"
+    ) ?? false;
 
-    const hasVerifyIssues = repuveResult?.status === "warning" || facturaResult?.status === "warning";
-    const verifyPillText = hasVerifyIssues ? t.reports.issuesDetected
-      : allUnavailable || verifyMode === "manual" ? t.status.caution : null;
-    const verifyRecVariant = hasVerifyIssues ? "risk"
-      : allUnavailable || verifyMode === "manual" ? "moderate" : "clear";
-    const verifyRecText = verifyMode === "manual"
-      ? t.decision.expertInProgress
-      : hasVerifyIssues
-      ? t.decision.resolveIssues
-      : allUnavailable
-      ? t.decision.registryUnavailable
-      : t.decision.registryPassed;
+    if (!riskOutput) return (
+      <div className="border border-[var(--border)] rounded-lg px-5 py-4">
+        <p className="text-[15px] text-[var(--foreground-muted)]">
+          Loading verification results…
+        </p>
+      </div>
+    );
+    const badge = levelToUI[riskOutput.level];
+    const pillIsRisk = riskOutput.level === "high_risk";
+    const verifyRecVariant = riskOutput.level === "safe" ? "clear" : riskOutput.level === "review" ? "moderate" : "";
+    const verifyRecText = riskOutput.recommendation;
 
     return (
       <>
         {/* Report card */}
         <div className="vr-wrap">
-          {verifyPillText && (
-            <div className={`vr-pill${hasVerifyIssues ? "" : " warn"}`}>{verifyPillText}</div>
+          {badge && (
+            <div className={`vr-pill${pillIsRisk ? "" : " warn"}`}>{badge}</div>
           )}
           <div className="vr-card">
             <div className="vr-header">
@@ -752,66 +648,74 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
             </div>
             <div className="vr-body">
 
-              {/* Outstanding issues — first when present */}
-              {hasVerifyIssues && (
+              {/* Score bar — server-computed, deterministic */}
+              {riskOutput && (
+                <div className="vr-section">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <span className="vr-k" style={{ marginBottom: 0 }}>Puntuación de riesgo</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: riskOutput.level === "safe" ? "#22c55e" : riskOutput.level === "high_risk" ? "#ef4444" : "#eab308" }}>
+                      {riskOutput.score}/100
+                    </span>
+                  </div>
+                  <div style={{ background: "var(--border)", borderRadius: 4, height: 6, overflow: "hidden" }}>
+                    <div style={{ width: `${riskOutput.score}%`, height: "100%", background: riskOutput.level === "safe" ? "#22c55e" : riskOutput.level === "high_risk" ? "#ef4444" : "#eab308" }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Explanations */}
+              {riskOutput && riskOutput.explanations.length > 0 && (
                 <div className="vr-section">
                   <div className="vr-k">{t.reports.outstandingIssues}</div>
-                  {repuveResult?.status === "warning" && (
-                    <div className="vr-row">
-                      <span className="vr-row-label">{t.reports.theftDetectedRepuve}</span>
-                      <span className="vr-status s-risk">{t.status.theftRecord}</span>
+                  {riskOutput.explanations.map((exp, i) => (
+                    <div key={i} className="vr-row">
+                      <span className="vr-row-label">{exp}</span>
                     </div>
-                  )}
-                  {facturaResult?.status === "warning" && (
-                    <div className="vr-row">
-                      <span className="vr-row-label">{t.reports.invoiceFailedSAT}</span>
-                      <span className="vr-status s-risk">{t.status.invalid}</span>
-                    </div>
-                  )}
+                  ))}
                 </div>
               )}
 
               {/* Registry checks */}
               <div className="vr-section">
                 <div className="vr-k">{t.reports.registryChecks}</div>
-                {verifyMode === "manual" ? (
-                  <div className="vr-row">
-                    <span className="vr-row-label">{t.reports.expertReview}</span>
-                    <span className="vr-status s-warn">{t.status.inProgress}</span>
-                  </div>
+                {riskOutput ? (
+                  riskOutput.checks.map((check, i) => (
+                    <div key={i} className="vr-row">
+                      <span className="vr-row-label">{check.label}</span>
+                      <span className={`vr-status ${check.status === "ok" ? "s-ok" : check.status === "error" ? "s-risk" : "s-warn"}`}>
+                        {check.message}
+                      </span>
+                    </div>
+                  ))
                 ) : (
-                  <>
-                    {repuveResult && (
-                      <div className="vr-row">
-                        <span className="vr-row-label">{t.reports.theftRegistry}</span>
-                        <span className={`vr-status ${
-                          repuveResult.status === "success" ? "s-ok"
-                          : repuveResult.status === "warning" ? "s-risk" : "s-warn"
-                        }`}>
-                          {repuveResult.status === "success" ? t.status.clear
-                          : repuveResult.status === "warning" ? t.status.theftRecord : t.status.unavailable}
-                        </span>
-                      </div>
+                  <div className="vr-row">
+                    <span className="vr-row-label">Registry checks</span>
+                    <span className="vr-status s-warn">Loading…</span>
+                  </div>
+                )}
+                {repuveUnavailable && (
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(148,163,184,0.15)" }}>
+                    <p className="text-[13px] font-semibold text-slate-400 mb-1" style={{ whiteSpace: "pre-line" }}>
+                      {t.repuveUnavailable.title}
+                    </p>
+                    <p className="text-[13px] text-slate-500 leading-relaxed mb-2">
+                      {t.repuveUnavailable.message}
+                    </p>
+                    <p className="text-[12px] text-slate-500 leading-relaxed mb-2">
+                      {t.repuveUnavailable.note}
+                    </p>
+                    <p className="text-[13px] font-medium text-slate-400 mb-2">
+                      {t.repuveUnavailable.confidence(riskOutput.confidence)}
+                    </p>
+                    {!repuveRetried && (
+                      <button
+                        onClick={() => { setRepuveRetried(true); handleRetry(); }}
+                        className="text-[13px] text-slate-400 hover:text-white transition-colors underline underline-offset-2"
+                      >
+                        {t.repuveUnavailable.button}
+                      </button>
                     )}
-                    {facturaResult && (
-                      <div className="vr-row">
-                        <span className="vr-row-label">{t.reports.ownershipSAT}</span>
-                        <span className={`vr-status ${
-                          facturaResult.status === "success" ? "s-ok"
-                          : facturaResult.status === "warning" ? "s-risk" : "s-warn"
-                        }`}>
-                          {facturaResult.status === "success" ? t.status.valid
-                          : facturaResult.status === "warning" ? t.status.invalid : t.status.unavailable}
-                        </span>
-                      </div>
-                    )}
-                    {!repuveResult && !facturaResult && (
-                      <div className="vr-row">
-                        <span className="vr-row-label">{t.reports.registryChecks}</span>
-                        <span className="vr-status s-warn">{t.status.notAvailable}</span>
-                      </div>
-                    )}
-                  </>
+                  </div>
                 )}
               </div>
 
