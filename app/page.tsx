@@ -118,7 +118,7 @@ export default function Home() {
 
               <h1>Don&apos;t get <span className="accent-word">scammed</span><br />buying a car in Mexico.</h1>
               <p className="hero-clarify">Everything looks fine — until the debt becomes yours.</p>
-              <p className="hero-sub">Don&apos;t get scammed buying a car in Mexico. Most problems are discovered after you pay — and at that point, there is no reversal.<br /><br />This is how you check everything before you transfer the money.<br /><br />Once you transfer the money, the debt, the risk, and the consequences become yours.</p>
+              <p className="hero-sub">Most problems are discovered after you pay — and at that point, there is no reversal.<br /><br />This is how you check everything before you transfer the money.</p>
               <p className="hero-clarify">Most buyers don&apos;t get scammed by strangers. They get scammed by deals that look completely legitimate.</p>
 
               <div className="hero-cta" ref={heroCtaRef} style={{ marginTop: 16 }}>
@@ -494,7 +494,7 @@ export default function Home() {
               <div className="p-name">Registry</div>
               <div className="p-price"><sup>$</sup>{prices[currency].basic}</div>
               <div className="p-note">{currency} · one-time</div>
-              <p className="p-desc">Covers the core registries. <strong>If the sale involves cross-state history, SAT debt, or imported documents, you&apos;ll need Full Verification.</strong></p>
+              <p className="p-desc">Covers the core registries. <strong style={{ opacity: 0.65 }}>If the sale involves cross-state history, SAT debt, or imported documents, you&apos;ll need Full Verification.</strong></p>
               <ul className="p-list">
                 <li>Ownership check</li>
                 <li>Debt check</li>
