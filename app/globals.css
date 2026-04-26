@@ -1482,26 +1482,26 @@ body {
   /* ── TYPOGRAPHY ── */
   .mg-page h1 { font-size: clamp(30px, 8vw, 52px); line-height: 1.1; }
   .mg-page h2 { font-size: 26px; }
-  .mg-page .section-h2 { font-size: 28px; line-height: 1.2; margin-bottom: 28px; }
-  .mg-page #process .section-h2 { margin-bottom: 32px; }
-  .mg-page .pt-title { font-size: 19px; }
+  .mg-page .section-h2 { font-size: 24px; line-height: 1.2; margin-bottom: 24px; }
+  .mg-page #process .section-h2 { margin-bottom: 28px; }
+  .mg-page .pt-title { font-size: 18px; }
   .mg-page .hero-incident p { font-size: 15px; }
   .mg-page .fa { font-size: 16px; }
   .mg-page .hero-sub { font-size: 18px; line-height: 1.55; max-width: 100%; }
-  .mg-page .hero-clarify { font-size: 17px; margin-bottom: 24px; max-width: 100%; }
-  .mg-page .step-t { font-size: 18px; }
-  .mg-page .step-d { font-size: 16px; }
-  .mg-page .prob-title { font-size: 20px; }
-  .mg-page .prob-body { font-size: 17px; }
+  .mg-page .hero-clarify { font-size: 16px; margin-bottom: 24px; max-width: 100%; }
+  .mg-page .step-t { font-size: 16px; }
+  .mg-page .step-d { font-size: 15px; }
+  .mg-page .prob-title { font-size: 18px; }
+  .mg-page .prob-body { font-size: 15px; }
   .mg-page .p-price { font-size: 40px; }
   .mg-page .p-list li { font-size: 15px; }
-  .mg-page .hst-l { font-size: 15px; }
+  .mg-page .hst-l { font-size: 14px; }
   .mg-page .who-list li,
-  .mg-page .outcome-list li { font-size: 17px; }
-  .mg-page .faq-q { font-size: 18px; }
+  .mg-page .outcome-list li { font-size: 16px; }
+  .mg-page .faq-q { font-size: 16px; }
   .mg-page .faq-a { font-size: 16px; }
-  .mg-page .mk-title { font-size: 19px; }
-  .mg-page .mk-body { font-size: 16px; }
+  .mg-page .mk-title { font-size: 17px; }
+  .mg-page .mk-body { font-size: 15px; }
   .mg-page .p-sub { font-size: 17px; margin-bottom: 28px; }
   .mg-page .p-desc { font-size: 16px; }
   .mg-page .v-sub { font-size: 17px; }
