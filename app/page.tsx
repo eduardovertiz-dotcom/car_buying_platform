@@ -628,7 +628,7 @@ export default function Home() {
           <strong>Verify before you pay</strong>
           <span className="sticky-sub">From $39 · Results in minutes</span>
         </div>
-        <a href="#pricing" className="btn-sticky">Start now →</a>
+        <a href="#pricing" className="btn-sticky">Start →</a>
       </div>
 
     </div>
