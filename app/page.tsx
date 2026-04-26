@@ -134,7 +134,7 @@ export default function Home() {
                   <div className="hst-l">Verifications completed in Mexico</div>
                 </div>
                 <div className="hst">
-                  <div className="hst-n"><span style={{ fontWeight: 700, fontSize: "110%", color: "#F9FAFB" }}>7 out of 10</span></div>
+                  <div className="hst-n"><span style={{ fontWeight: 700, fontSize: "110%" }}>7 out of 10</span></div>
                   <div className="hst-l">vehicles we check have a hidden issue</div>
                 </div>
                 <div className="hst">
@@ -623,7 +623,7 @@ export default function Home() {
         </div>
       </footer>
 
-      <div className="sticky-bar" style={{ display: showStickyBar ? "flex" : "none" }}>
+      <div className={`sticky-bar${showStickyBar ? " sticky-bar--visible" : ""}`}>
         <div className="sticky-bar-text">
           <strong>Verify before you pay</strong>
           From $39 · Results in minutes

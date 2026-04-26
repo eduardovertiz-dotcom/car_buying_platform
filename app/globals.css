@@ -825,6 +825,7 @@ body {
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   line-height: 1.55;
+  overflow-x: hidden;
 }
 
 /* NAV */
@@ -1474,52 +1475,70 @@ body {
 /* RESPONSIVE */
 @media (max-width: 900px) {
   html { font-size: 16px; }
+
+  /* ── GLOBAL ── */
+  .mg-page { overflow-x: hidden; }
+
+  /* ── TYPOGRAPHY ── */
+  .mg-page h1 { font-size: clamp(30px, 8vw, 52px); line-height: 1.1; }
   .mg-page h2 { font-size: 26px; }
+  .mg-page .section-h2 { font-size: 28px; line-height: 1.2; margin-bottom: 28px; }
+  .mg-page #process .section-h2 { margin-bottom: 32px; }
   .mg-page .pt-title { font-size: 19px; }
   .mg-page .hero-incident p { font-size: 15px; }
   .mg-page .fa { font-size: 16px; }
-
-  /* ── NAV ── */
-  .mg-page nav { padding: 0 20px; gap: 8px; }
-  .mg-page nav ul { display: none; }
-  .mg-page .logo { font-size: 16px; }
-  .mg-page .btn-nav { font-size: 15px; padding: 9px 16px; white-space: nowrap; }
-
-  /* ── LAYOUT ── */
-  .mg-page .wrap, .mg-page .wrap-w { padding: 0 20px; }
-  .mg-page section { padding: 48px 0; }
-  .mg-page #hero { padding: 36px 0 56px; }
-
-  /* ── TYPOGRAPHY ── */
-  .mg-page h1 { font-size: clamp(44px, 9vw, 58px); line-height: 1.08; }
-  .mg-page .section-h2 { font-size: 32px; margin-bottom: 32px; }
-  .mg-page #process .section-h2 { margin-bottom: 36px; }
-  .mg-page .hero-sub { font-size: 18px; line-height: 1.55; }
-  .mg-page .hero-clarify { font-size: 19px; }
+  .mg-page .hero-sub { font-size: 18px; line-height: 1.55; max-width: 100%; }
+  .mg-page .hero-clarify { font-size: 17px; margin-bottom: 24px; max-width: 100%; }
   .mg-page .step-t { font-size: 18px; }
   .mg-page .step-d { font-size: 16px; }
   .mg-page .prob-title { font-size: 20px; }
   .mg-page .prob-body { font-size: 17px; }
   .mg-page .p-price { font-size: 40px; }
-  .mg-page .p-list li { font-size: 14px; }
-  .mg-page .hst-l { font-size: 16px; }
+  .mg-page .p-list li { font-size: 15px; }
+  .mg-page .hst-l { font-size: 15px; }
+  .mg-page .who-list li,
+  .mg-page .outcome-list li { font-size: 17px; }
+  .mg-page .faq-q { font-size: 18px; }
+  .mg-page .faq-a { font-size: 16px; }
+  .mg-page .mk-title { font-size: 19px; }
+  .mg-page .mk-body { font-size: 16px; }
+  .mg-page .p-sub { font-size: 17px; margin-bottom: 28px; }
+  .mg-page .p-desc { font-size: 16px; }
+  .mg-page .v-sub { font-size: 17px; }
+  .mg-page .p-note { font-size: 16px; }
+  .mg-page .process-note { font-size: 14px; margin-top: 24px; padding-top: 16px; }
+  .mg-page .national-risk { font-size: 14px; margin-bottom: 20px; }
+
+  /* ── NAV ── */
+  .mg-page nav { padding: 0 16px; gap: 8px; }
+  .mg-page nav ul { display: none; }
+  .mg-page .logo { font-size: 16px; }
+  .mg-page .btn-nav { font-size: 15px; padding: 9px 16px; white-space: nowrap; min-height: 44px; }
+
+  /* ── LAYOUT ── */
+  .mg-page .wrap, .mg-page .wrap-w { padding: 0 16px; }
+  .mg-page section { padding: 44px 0; }
+  .mg-page #hero { padding: 28px 0 44px; }
 
   /* ── HERO LAYOUT ── */
   .mg-page #hero .wrap { max-width: 100%; }
   .mg-page .hero-wrap { flex-direction: column; align-items: flex-start; }
-  .mg-page .hero-left { text-align: left; }
+  .mg-page .hero-left { text-align: left; max-width: 100%; }
   .mg-page .hero-left * { text-align: left; }
   .mg-page .hero-right { display: none; }
+  .mg-page .hero-incident { max-width: 100%; width: 100%; box-sizing: border-box; }
 
   /* ── HERO CTA BUTTONS ── */
-  .mg-page .hero-cta { flex-direction: column; align-items: stretch; gap: 12px; margin-bottom: 36px; }
-  .mg-page .btn-primary { font-size: 17px; padding: 15px 24px; text-align: center; justify-content: center; white-space: nowrap; }
-  .mg-page .btn-ghost { font-size: 17px; text-align: center; padding: 12px 24px; }
+  .mg-page .hero-cta { flex-direction: column; align-items: stretch; gap: 12px; margin-bottom: 28px; }
+  .mg-page .btn-primary { font-size: 17px; padding: 15px 24px; text-align: center; justify-content: center; white-space: nowrap; min-height: 48px; }
+  .mg-page .btn-ghost { font-size: 17px; text-align: center; padding: 12px 24px; min-height: 48px; }
 
-  /* ── HERO STATS ── */
-  .mg-page .hstats { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding-top: 28px; }
-  .mg-page .hst { border-right: none !important; border-bottom: none !important; padding: 20px 0 !important; }
-  .mg-page .hst-n { font-size: 30px; }
+  /* ── HERO STATS (2×2 grid with dividers) ── */
+  .mg-page .hstats { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding-top: 28px; border-top: 1px solid var(--border); }
+  .mg-page .hst { padding: 18px 12px !important; border-right: 1px solid var(--border) !important; border-bottom: 1px solid var(--border) !important; margin: 0; }
+  .mg-page .hst:nth-child(2n) { border-right: none !important; }
+  .mg-page .hst:nth-last-child(-n+2) { border-bottom: none !important; }
+  .mg-page .hst-n { font-size: 26px; }
 
   /* ── PROBLEM CARDS ── */
   .mg-page .prob-grid { grid-template-columns: 1fr; }
@@ -1543,41 +1562,38 @@ body {
   /* ── MISTAKES ── */
   .mg-page .mk-item { grid-template-columns: 36px 1fr; gap: 16px; }
 
-  /* ── STATS BAND ── */
+  /* ── STATS BAND (3-col kept, tighter text) ── */
   .mg-page .stats-row { grid-template-columns: repeat(3, 1fr); gap: 0; }
-  .mg-page .sb { padding: 0 12px !important; border-right: 1px solid rgba(255,255,255,.09) !important; }
+  .mg-page .sb { padding: 0 10px !important; border-right: 1px solid rgba(255,255,255,.09) !important; }
   .mg-page .sb:first-child { padding-left: 0 !important; }
   .mg-page .sb:last-child  { border-right: none !important; padding-right: 0 !important; }
-  .mg-page .sb-n { font-size: 30px; }
-  .mg-page .sb-d { font-size: 13px; line-height: 1.4; }
+  .mg-page .sb-n { font-size: 28px; }
+  .mg-page .sb-d { font-size: 13px; line-height: 1.4; max-width: 100%; }
 
   /* ── SAMPLE REPORT ── */
-  .mg-page .sample-card-wrap { max-width: 100%; margin: 28px 0 0; }
+  .mg-page .sample-card-wrap { max-width: 100%; margin: 28px 0 0; padding: 12px !important; }
   .mg-page .sample-card-wrap .hero-pill { right: 0; }
 
   /* ── PRICING ── */
   .mg-page .pgrid { grid-template-columns: 1fr; }
-  .mg-page .btn-plan { width: 100%; text-align: center; justify-content: center; }
+  .mg-page .pcard { padding: 24px 20px; }
+  .mg-page .btn-plan { width: 100%; text-align: center; justify-content: center; min-height: 48px; padding: 15px; }
 
-  /* ── TOUCH TARGETS (48px min) ── */
+  /* ── TOUCH TARGETS ── */
   .mg-page .btn-primary,
   .mg-page .btn-plan,
-  .mg-page .btn-cta,
-  .mg-page .btn-nav,
-  .mg-page nav ul a { min-height: 48px; }
-  .mg-page .btn-primary { padding: 15px 32px; }
-  .mg-page .btn-plan    { padding: 15px; }
+  .mg-page .btn-cta { min-height: 48px; }
 
   /* ── MOBILE REPORT PREVIEW ── */
   .mg-page .mobile-report { display: block; }
 
-  /* ── CTA ── */
-  .mg-page #cta { padding: 64px 20px; }
-  .mg-page #cta h2 { font-size: 30px; }
-  .mg-page #cta p { font-size: 20px; margin-bottom: 32px; }
+  /* ── CTA SECTION ── */
+  .mg-page #cta { padding: 56px 16px; }
+  .mg-page #cta h2 { font-size: 28px; }
+  .mg-page #cta p { font-size: 18px; margin-bottom: 28px; }
   .mg-page .cta-row { flex-direction: column; align-items: stretch; gap: 12px; }
-  .mg-page .btn-cta { font-size: 19px; padding: 15px 24px; text-align: center; justify-content: center; }
-  .mg-page .btn-cta-ghost { font-size: 20px; padding: 15px 24px; text-align: center; justify-content: center; }
+  .mg-page .btn-cta { font-size: 18px; padding: 15px 24px; text-align: center; justify-content: center; }
+  .mg-page .btn-cta-ghost { font-size: 17px; padding: 15px 24px; text-align: center; justify-content: center; }
 
   /* ── FOOTER ── */
   .mg-page footer .footer-row1 { flex-direction: column; align-items: flex-start; gap: 24px; }
@@ -1749,7 +1765,7 @@ body {
 
 /* ── STICKY MOBILE CTA BAR ── */
 .sticky-bar {
-  display: none !important;
+  display: none;
   position: fixed; bottom: 0; left: 0; right: 0;
   z-index: 200;
   background: var(--dark, #0F0F0F);
@@ -1781,9 +1797,45 @@ body {
   transition: opacity .12s;
 }
 .btn-sticky:hover { opacity: .88; }
+.sticky-bar--visible { display: flex; }
 
+/* Desktop: always hide sticky bar */
+@media (min-width: 901px) {
+  .sticky-bar { display: none !important; }
+}
+
+/* Mobile: body padding so sticky bar doesn't overlap content */
 @media (max-width: 900px) {
-  .mg-page ~ .sticky-bar,
-  .sticky-bar { display: flex !important; }
   body:has(.mg-page) { padding-bottom: 76px; }
+}
+
+/* ── SMALL PHONE (≤ 480px) ── */
+@media (max-width: 480px) {
+  .mg-page h1 { font-size: clamp(26px, 7.5vw, 36px); }
+  .mg-page .section-h2 { font-size: 22px; line-height: 1.25; }
+  .mg-page .hero-sub { font-size: 17px; }
+  .mg-page .hero-clarify { font-size: 16px; }
+  .mg-page .hst-n { font-size: 22px; }
+  .mg-page .hst-l { font-size: 14px; }
+  .mg-page .hst { padding: 14px 10px !important; }
+  /* Stats band → single column on very small screens */
+  .mg-page .stats-row { grid-template-columns: 1fr; }
+  .mg-page .sb {
+    padding: 20px 0 !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(255,255,255,.09) !important;
+  }
+  .mg-page .sb:last-child { border-bottom: none !important; }
+  .mg-page .sb-n { font-size: 44px; }
+  .mg-page .sb-d { font-size: 15px; max-width: 100%; }
+  .mg-page .wrap, .mg-page .wrap-w { padding: 0 16px; }
+  .mg-page section { padding: 36px 0; }
+  .mg-page #hero { padding: 20px 0 36px; }
+  .mg-page .pcard { padding: 20px 16px; }
+  .mg-page .p-price { font-size: 36px; }
+  .mg-page .faq-q { font-size: 16px; }
+  .mg-page .faq-a { font-size: 15px; }
+  .mg-page .who-list li, .mg-page .outcome-list li { font-size: 16px; }
+  .mg-page #cta h2 { font-size: 24px; }
+  .mg-page .btn-cta { font-size: 17px; }
 }

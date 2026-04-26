@@ -614,7 +614,7 @@ export default function HomeES() {
         </div>
       </footer>
 
-      <div className="sticky-bar" style={{ display: showStickyBar ? "flex" : "none" }}>
+      <div className={`sticky-bar${showStickyBar ? " sticky-bar--visible" : ""}`}>
         <div className="sticky-bar-text">
           <strong>Verifica antes de pagar</strong>
           Desde $39 · Resultados en minutos
