@@ -1510,10 +1510,11 @@ body {
   .mg-page .national-risk { font-size: 14px; margin-bottom: 20px; }
 
   /* ── NAV ── */
-  .mg-page nav { padding: 0 16px; gap: 8px; }
+  .mg-page nav { padding: 0 12px; gap: 6px; overflow: hidden; }
   .mg-page nav ul { display: none; }
-  .mg-page .logo { font-size: 16px; }
-  .mg-page .btn-nav { font-size: 15px; padding: 9px 16px; white-space: nowrap; min-height: 44px; }
+  .mg-page .logo { font-size: 15px; flex-shrink: 1; white-space: nowrap; overflow: hidden; min-width: 0; }
+  .mg-page .nav-lang { font-size: 13px; flex-shrink: 0; white-space: nowrap; }
+  .mg-page .btn-nav { font-size: 14px; padding: 8px 12px; white-space: nowrap; flex-shrink: 0; min-height: 40px; }
 
   /* ── LAYOUT ── */
   .mg-page .wrap, .mg-page .wrap-w { padding: 0 16px; }
@@ -1770,29 +1771,31 @@ body {
   z-index: 200;
   background: var(--dark, #0F0F0F);
   border-top: 1px solid rgba(255,255,255,.1);
-  padding: 12px 20px;
+  padding: 10px 16px;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
+  min-height: 0;
 }
 .sticky-bar-text {
-  font-size: 13px; font-weight: 500;
+  font-size: 12px; font-weight: 500;
   color: rgba(255,255,255,.65);
-  line-height: 1.4; flex: 1;
+  line-height: 1.35; flex: 1; min-width: 0;
 }
 .sticky-bar-text strong {
   display: block;
-  font-size: 15px; font-weight: 700;
+  font-size: 14px; font-weight: 700;
   color: #fff; margin-bottom: 2px;
+  white-space: nowrap;
 }
 .btn-sticky {
   display: inline-flex; align-items: center;
   background: #B4531A; color: #fff;
-  font-family: inherit; font-size: 15px; font-weight: 700;
-  padding: 13px 22px; border-radius: 8px; border: none;
+  font-family: inherit; font-size: 14px; font-weight: 700;
+  padding: 11px 18px; border-radius: 8px; border: none;
   cursor: pointer; text-decoration: none;
   white-space: nowrap; flex-shrink: 0;
-  min-height: 48px;
+  min-height: 44px;
   box-shadow: 0 4px 16px rgba(180,83,26,.4);
   transition: opacity .12s;
 }
@@ -1806,7 +1809,7 @@ body {
 
 /* Mobile: body padding so sticky bar doesn't overlap content */
 @media (max-width: 900px) {
-  body:has(.mg-page) { padding-bottom: 76px; }
+  body:has(.mg-page) { padding-bottom: 64px; }
 }
 
 /* ── SMALL PHONE (≤ 480px) ── */
