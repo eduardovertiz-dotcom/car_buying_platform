@@ -91,7 +91,7 @@ export default function Home() {
       <nav>
         <a href="#" className="logo">
           <div className="logo-shield"><ShieldIcon /></div>
-          MexGuardian
+          <span className="logo-text">MexGuardian</span>
         </a>
         <ul>
           <li><a href="#process">How it works</a></li>
@@ -626,7 +626,7 @@ export default function Home() {
       <div className={`sticky-bar${showStickyBar ? " sticky-bar--visible" : ""}`}>
         <div className="sticky-bar-text">
           <strong>Verify before you pay</strong>
-          From $39 · Results in minutes
+          <span className="sticky-sub">From $39 · Results in minutes</span>
         </div>
         <a href="#pricing" className="btn-sticky">Start now →</a>
       </div>

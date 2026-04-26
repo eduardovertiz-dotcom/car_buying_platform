@@ -91,7 +91,7 @@ export default function HomeES() {
       <nav>
         <a href="#" className="logo">
           <div className="logo-shield"><ShieldIcon /></div>
-          MexGuardian
+          <span className="logo-text">MexGuardian</span>
         </a>
         <ul>
           <li><a href="#process">Cómo funciona</a></li>
@@ -617,7 +617,7 @@ export default function HomeES() {
       <div className={`sticky-bar${showStickyBar ? " sticky-bar--visible" : ""}`}>
         <div className="sticky-bar-text">
           <strong>Verifica antes de pagar</strong>
-          Desde $39 · Resultados en minutos
+          <span className="sticky-sub">Desde $39 · Resultados en minutos</span>
         </div>
         <a href="#pricing" className="btn-sticky">Empezar →</a>
       </div>
