@@ -20,7 +20,7 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
   useEffect(() => {
     fetch("/api/geo-currency")
       .then((r) => r.json())
-      .then(({ currency }: { currency: string }) => setGeoCurrency(currency.toUpperCase()))
+      .then(({ currency }: { currency: string }) => setGeoCurrency(currency))
       .catch(() => {});
   }, []);
 
@@ -52,7 +52,7 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "69", transaction_id: transaction.id }),
+        body: JSON.stringify({ plan: "69", transaction_id: transaction.id, currency: geoCurrency || undefined }),
       });
       if (!res.ok) throw new Error("UPGRADE CHECKOUT FAILED");
       const { url } = await res.json();
@@ -232,10 +232,10 @@ export default function AnalyzePanel({ plan }: { plan: "39" | "69" | null }) {
           }
           if (plan === "39") advanceToStep("complete"); else advanceStep();
         }}
-        className={`w-full text-base font-semibold px-5 py-4 rounded-lg transition-opacity text-left ${
+        className={`transition-colors text-left ${
           showUpgrade
-            ? "bg-transparent border border-[var(--border)] hover:border-black/20 text-[#444]"
-            : "bg-[#B4531A] hover:opacity-85 text-white shadow-[0_4px_16px_rgba(180,83,26,.28)]"
+            ? "w-full text-[13px] text-[#4A4A4A] hover:text-[#2A2A2A] py-2 underline underline-offset-2"
+            : "w-full text-base font-semibold px-5 py-4 rounded-lg bg-[#B4531A] hover:opacity-85 text-white shadow-[0_4px_16px_rgba(180,83,26,.28)]"
         }`}
       >
         {showUpgrade

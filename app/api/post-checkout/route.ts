@@ -45,8 +45,20 @@ export async function GET(req: Request) {
   // Best-effort: attach user_id if session is still active
   const { data: { user } } = await createClient().auth.getUser();
 
+  // Gate status on actual payment — OXXO/SPEI issues a voucher first
+  // (payment_status === "unpaid") and settles later via async webhook events.
+  const paymentStatus = session.payment_status; // "paid" | "unpaid" | "no_payment_required"
+  const status: "paid" | "pending" = paymentStatus === "paid" ? "paid" : "pending";
+
   if (isUpgrade) {
-    // ── UPGRADE: mutate the existing transaction, never create a new one ─────
+    // ── UPGRADE: only promote plan when payment has actually settled ──────────
+    if (status !== "paid") {
+      // Voucher issued — do not touch the existing row's plan or status yet.
+      // The webhook (async_payment_succeeded) will handle promotion.
+      console.log("[post-checkout] upgrade pending async payment:", { transactionId, paymentStatus });
+      return NextResponse.redirect(`${baseUrl}/transaction/${transactionId}`);
+    }
+
     const updatePayload: Record<string, unknown> = { plan: "69", status: "paid" };
     if (user?.id) updatePayload.user_id = user.id;
 
@@ -70,7 +82,7 @@ export async function GET(req: Request) {
     email,
     amount,
     plan,
-    status: "paid",
+    status,
   };
   if (user?.id) upsertPayload.user_id = user.id;
 

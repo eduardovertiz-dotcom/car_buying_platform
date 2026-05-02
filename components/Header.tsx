@@ -37,7 +37,7 @@ export default function Header({ plan }: { plan: "39" | "69" | null }) {
       <div className="max-w-[680px] mx-auto">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <p className="text-xs text-[var(--foreground-muted)] uppercase tracking-widest mb-0.5">
+            <p className="text-[11px] text-[var(--foreground-muted)] tracking-wide mb-0.5">
               {t.panels.step} {currentStepIndex + 1} {t.panels.of} {steps.length}
             </p>
             <p className="text-[var(--foreground)] font-semibold">
@@ -63,44 +63,70 @@ export default function Header({ plan }: { plan: "39" | "69" | null }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          {steps.map((step, i) => (
-            <div key={step.key} className="flex-1">
-              <div
-                className={`h-1 w-full rounded-full transition-colors duration-300 ${
-                  i === currentStepIndex
-                    ? "bg-[#B4531A]"
-                    : i < currentStepIndex
-                    ? "bg-white/20"
-                    : "bg-[var(--border)]"
-                }`}
-              />
-            </div>
-          ))}
-        </div>
-
-        <div className={`flex justify-between mt-1.5 transition-opacity ${isDecisionMade ? "pointer-events-none opacity-50" : ""}`}>
+        <div className={`flex items-center justify-center gap-0 transition-opacity ${isDecisionMade ? "pointer-events-none opacity-50" : ""}`}>
           {steps.map((step, i) => {
             const isCompleted = i < currentStepIndex;
             const isCurrent = i === currentStepIndex;
             const label = stepLabelMap[step.key] ?? step.label;
-            return isCompleted && !isDecisionMade ? (
+            const isLast = i === steps.length - 1;
+
+            const circleContent = isCompleted ? (
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M1.5 5L4 7.5L8.5 2.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            ) : (
+              <span className="text-[10px] font-medium leading-none">{i + 1}</span>
+            );
+
+            const circle = isCompleted && !isDecisionMade ? (
               <button
                 key={step.key}
                 onClick={() => goToStep(step.key)}
-                className="text-[10px] uppercase tracking-wider transition-colors duration-300 text-[var(--foreground-muted)] hover:text-white cursor-pointer"
+                className="flex flex-col items-center gap-1.5 cursor-pointer group"
               >
-                {label}
+                <div className="w-6 h-6 rounded-full bg-[#B4531A] flex items-center justify-center text-white opacity-60 group-hover:opacity-100 transition-opacity">
+                  {circleContent}
+                </div>
+                <span className="text-[10px] text-[var(--foreground-muted)] group-hover:text-[var(--foreground)] transition-colors capitalize">
+                  {label}
+                </span>
               </button>
             ) : (
-              <p
-                key={step.key}
-                className={`text-[10px] uppercase tracking-wider transition-colors duration-300 ${
-                  isCurrent ? "text-[#B4531A]" : "text-[var(--border)]"
-                }`}
-              >
-                {label}
-              </p>
+              <div key={step.key} className="flex flex-col items-center gap-1.5">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors duration-300 ${
+                  isCurrent
+                    ? "bg-[#B4531A] text-white"
+                    : isCompleted
+                    ? "bg-[#B4531A] text-white opacity-60"
+                    : "bg-[var(--border)] text-[var(--foreground-muted)]"
+                }`}>
+                  {circleContent}
+                </div>
+                <span className={`text-[10px] transition-colors duration-300 capitalize ${
+                  isCurrent
+                    ? "text-[#B4531A] font-medium"
+                    : isCompleted
+                    ? "text-[var(--foreground-muted)]"
+                    : "text-[var(--border)]"
+                }`}>
+                  {label}
+                </span>
+              </div>
+            );
+
+            return (
+              <div key={step.key} className="flex items-start flex-1">
+                <div className="flex flex-col items-center">
+                  {circle}
+                </div>
+                {!isLast && (
+                  <div className={`flex-1 h-px mt-3 transition-colors duration-300 ${
+                    i < currentStepIndex
+                      ? "bg-[#B4531A] opacity-40"
+                      : "bg-[var(--border)]"
+                  }`} />
+                )}
+              </div>
             );
           })}
         </div>

@@ -76,7 +76,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
   useEffect(() => {
     fetch("/api/geo-currency")
       .then((r) => r.json())
-      .then(({ currency }: { currency: string }) => setGeoCurrency(currency.toUpperCase()))
+      .then(({ currency }: { currency: string }) => setGeoCurrency(currency))
       .catch(() => {});
   }, []);
   // Server-computed risk output — single source of truth for score/level/checks
@@ -267,7 +267,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "69", transaction_id: transaction.id }),
+        body: JSON.stringify({ plan: "69", transaction_id: transaction.id, currency: geoCurrency || undefined }),
       });
       const { url, error } = await res.json();
       if (error || !url) throw new Error(error ?? "No checkout URL");
@@ -286,7 +286,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
         <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
           Verification required
         </h2>
-        <p className="text-[18px] text-[#444] leading-relaxed mb-10">
+        <p className="text-[18px] text-[#2A2A2A] leading-relaxed mb-10">
           A verification plan is required to run checks on this vehicle.
         </p>
         <a
@@ -306,7 +306,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
         <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
           Add vehicle information to continue.
         </h2>
-        <p className="text-[18px] text-[#444] leading-relaxed mb-8">
+        <p className="text-[18px] text-[#2A2A2A] leading-relaxed mb-8">
           Verification requires at least a VIN, plate number, or one uploaded
           document. Without this, no checks can be performed.
         </p>
@@ -351,7 +351,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
         <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
           Verification could not complete.
         </h2>
-        <p className="text-[18px] text-[#444] leading-relaxed mb-8">
+        <p className="text-[18px] text-[#2A2A2A] leading-relaxed mb-8">
           Something went wrong. Check your connection and try again.
         </p>
         <button
@@ -362,7 +362,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
         </button>
         <button
           onClick={() => goToStep("upload")}
-          className="text-[15px] text-[#666] hover:text-white transition-colors underline underline-offset-2"
+          className="text-[15px] text-[#4A4A4A] hover:text-white transition-colors underline underline-offset-2"
         >
           ← Back to Upload
         </button>
@@ -377,7 +377,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
         <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
           Add a plate number to continue.
         </h2>
-        <p className="text-[18px] text-[#444] leading-relaxed mb-8">
+        <p className="text-[18px] text-[#2A2A2A] leading-relaxed mb-8">
           A plate number or VIN is required to run official registry checks.
         </p>
         <button
@@ -397,7 +397,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
         <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
           Running verification checks.
         </h2>
-        <p className="text-[18px] text-[#444] leading-relaxed mb-8">
+        <p className="text-[18px] text-[#2A2A2A] leading-relaxed mb-8">
           Checking registry sources and document data.
         </p>
         <div className="border border-[var(--border)] rounded-lg px-5 py-4">
@@ -417,7 +417,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
         <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
           {isPro ? "Running full verification checks" : "Verifying this deal"}
         </h2>
-        <p className="text-[18px] text-[#444] leading-relaxed mb-8">
+        <p className="text-[18px] text-[#2A2A2A] leading-relaxed mb-8">
           {isPro
             ? "Verifying identity, documents, ownership, and running advanced fraud pattern checks."
             : "Checking REPUVE, outstanding liabilities, factura validity, and VIN registry. This will take a moment."}
@@ -455,6 +455,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
       <>
         {/* ── Report card ─────────────────────────────────────────── */}
         <div className="vr-wrap">
+          <div className="h-[3px] rounded-t-lg bg-[#B4531A] mb-0 -mt-px" style={{width: '100%'}} />
           <div className={`vr-pill${pillIsRisk ? "" : " warn"}`}>{badge}</div>
           <div className="vr-card">
             <div className="vr-header">
@@ -567,11 +568,11 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
         </div>
 
         {/* Upsell */}
-        <div className="border border-[var(--border)] rounded-lg px-5 py-5 mb-6">
+        <div className="border border-[rgba(0,0,0,0.08)] rounded-xl bg-[#FAFAFA] px-5 py-5 mb-6">
           <p className="text-[15px] font-semibold text-[var(--foreground)] mb-2">
             {t.fields.expertAvailable}
           </p>
-          <p className="text-[14px] text-[#444] leading-relaxed mb-4">
+          <p className="text-[14px] text-[#2A2A2A] leading-relaxed mb-4">
             {t.warnings.automatedLimited}
           </p>
           <button
@@ -608,7 +609,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
         ) : (
           <button
             onClick={handleDecision}
-            className="text-[14px] text-[#666] hover:text-[var(--foreground)] transition-colors underline underline-offset-2"
+            className="text-[14px] text-[#4A4A4A] hover:text-[var(--foreground)] transition-colors underline underline-offset-2"
           >
             {t.cta.continueResults}
           </button>
@@ -639,6 +640,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
       <>
         {/* Report card */}
         <div className="vr-wrap">
+          <div className="h-[3px] rounded-t-lg bg-[#B4531A] mb-0 -mt-px" style={{width: '100%'}} />
           {badge && (
             <div className={`vr-pill${pillIsRisk ? "" : " warn"}`}>{badge}</div>
           )}
@@ -807,7 +809,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
             )}
             <button
               onClick={handleDecision}
-              className="text-[14px] text-[#666] hover:text-[var(--foreground)] transition-colors underline underline-offset-2"
+              className="text-[14px] text-[#4A4A4A] hover:text-[var(--foreground)] transition-colors underline underline-offset-2"
             >
               {t.cta.continueAnyway}
             </button>
@@ -823,7 +825,7 @@ function VerifyInterface({ plan }: { plan: "39" | "69" | null }) {
       <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
         Something went wrong.
       </h2>
-      <p className="text-[18px] text-[#444] leading-relaxed mb-8">
+      <p className="text-[18px] text-[#2A2A2A] leading-relaxed mb-8">
         An unexpected state was reached. Reload the page or go back to continue.
       </p>
       <button
@@ -1292,7 +1294,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
   return (
     <section className="py-10">
       <div className="mb-6">
-        <span className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)]">
+        <span className="text-[12px] font-medium text-[var(--foreground-muted)] tracking-wide">
           {t.steps.complete}
         </span>
       </div>
@@ -1390,8 +1392,8 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
       </div>
 
       {isBasic && (
-        <div className="border border-amber-400/20 bg-amber-400/[0.06] rounded-lg px-4 py-4 mb-6">
-          <p className="text-[13px] text-amber-400/80 leading-relaxed">
+        <div className="border border-[rgba(0,0,0,0.12)] bg-white rounded-lg px-4 py-4 mb-6">
+          <p className="text-[13px] text-[#2A2A2A] leading-relaxed">
             {t.warnings.publicRecordsOnly}
           </p>
         </div>
@@ -1399,7 +1401,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
 
       {contract.status === "generated" ? (
         <>
-          <p className="text-[15px] text-[#444] mb-5">
+          <p className="text-[15px] text-[#2A2A2A] mb-5">
             {t.reports.agreementGenerated}
           </p>
 
@@ -1419,7 +1421,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
           )}
 
           {/* Download — secondary action */}
-          <button onClick={handleDownload} className="text-[15px] text-[#666] hover:text-white transition-colors mb-6">
+          <button onClick={handleDownload} className="text-[15px] text-[#4A4A4A] hover:text-white transition-colors mb-6">
             {t.cta.downloadAgreement}
           </button>
 
@@ -1432,7 +1434,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
             >
               {t.cta.shareTransaction}
             </button>
-            <p className="text-[15px] text-[#666] mt-1">
+            <p className="text-[15px] text-[#4A4A4A] mt-1">
               {t.fields.shareDescription}
             </p>
             {showShared && (
@@ -1459,13 +1461,13 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
           </div>
         </>
       ) : (
-        <div className="mb-8">
-          <p className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)] mb-4">
+        <div className="mb-8 border border-[rgba(0,0,0,0.08)] rounded-xl bg-white px-5 py-5">
+          <p className="text-[12px] font-medium text-[#999] tracking-wide mb-4">
             {t.fields.agreementDetails}
           </p>
           <div className="flex flex-col gap-6 mb-6">
             <div>
-              <p className="text-base text-[#444] mb-2">{t.fields.buyerFullName}</p>
+              <p className="text-base text-[#2A2A2A] mb-2">{t.fields.buyerFullName}</p>
               <input
                 type="text"
                 value={buyerName}
@@ -1475,7 +1477,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
               />
             </div>
             <div>
-              <p className="text-base text-[#444] mb-2">{t.fields.buyerEmail}</p>
+              <p className="text-base text-[#2A2A2A] mb-2">{t.fields.buyerEmail}</p>
               <input
                 type="email"
                 value={buyerEmail}
@@ -1485,7 +1487,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
               />
             </div>
             <div>
-              <p className="text-base text-[#444] mb-2">{t.fields.sellerFullName}</p>
+              <p className="text-base text-[#2A2A2A] mb-2">{t.fields.sellerFullName}</p>
               <input
                 type="text"
                 value={sellerName}
@@ -1495,7 +1497,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
               />
             </div>
             <div>
-              <p className="text-base text-[#444] mb-2">{t.fields.sellerEmail}</p>
+              <p className="text-base text-[#2A2A2A] mb-2">{t.fields.sellerEmail}</p>
               <input
                 type="email"
                 value={sellerEmail}
@@ -1505,7 +1507,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
               />
             </div>
             <div>
-              <p className="text-base text-[#444] mb-2">{t.fields.salePrice}</p>
+              <p className="text-base text-[#2A2A2A] mb-2">{t.fields.salePrice}</p>
               <input
                 type="text"
                 value={salePrice}
@@ -1515,7 +1517,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
               />
             </div>
             <div>
-              <p className="text-base text-[#444] mb-2">{t.fields.cityState}</p>
+              <p className="text-base text-[#2A2A2A] mb-2">{t.fields.cityState}</p>
               <input
                 type="text"
                 value={saleLocation}
@@ -1525,11 +1527,11 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
               />
             </div>
           </div>
-          <p className="text-[15px] text-[#666] leading-relaxed mb-4">
+          <p className="text-[15px] text-[#4A4A4A] leading-relaxed mb-4">
             {t.fields.reviewConfirm}
           </p>
           {(risk.confidence < 40 || transaction.documents.invoice.status !== "uploaded") && (
-            <p className="text-[15px] text-amber-400/80 leading-relaxed mb-4">
+            <p className="text-[15px] text-amber-600 leading-relaxed mb-4">
               {t.warnings.incompleteData}
             </p>
           )}
@@ -1572,7 +1574,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
       <div className="mb-8">
         <button
           onClick={handleDownloadAll}
-          className="text-[15px] text-[#666] hover:text-white transition-colors"
+          className="text-[15px] text-[#4A4A4A] hover:text-white transition-colors"
         >
           {t.cta.downloadRecord}
         </button>
@@ -1585,7 +1587,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
           </p>
           <div className="flex flex-col gap-4">
             <div>
-              <p className="text-base text-[#444] mb-2">{t.fields.type}</p>
+              <p className="text-base text-[#2A2A2A] mb-2">{t.fields.type}</p>
               <select
                 value={recordType}
                 onChange={(e) => setRecordType(e.target.value as MaintenanceRecordType)}
@@ -1597,7 +1599,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
               </select>
             </div>
             <div>
-              <p className="text-base text-[#444] mb-2">{t.fields.title}</p>
+              <p className="text-base text-[#2A2A2A] mb-2">{t.fields.title}</p>
               <input
                 type="text"
                 value={title}
@@ -1607,7 +1609,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
               />
             </div>
             <div>
-              <p className="text-base text-[#444] mb-2">{t.fields.date}</p>
+              <p className="text-base text-[#2A2A2A] mb-2">{t.fields.date}</p>
               <input
                 type="date"
                 value={date}
@@ -1631,7 +1633,7 @@ function CompleteInterface({ plan }: { plan: "39" | "69" | null }) {
       ) : (
         <>
           {showMaintenanceSaved && (
-            <p className="text-[15px] text-[#666] leading-relaxed mb-3">
+            <p className="text-[15px] text-[#4A4A4A] leading-relaxed mb-3">
               {t.reports.recordSaved}
             </p>
           )}
@@ -1715,7 +1717,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
         {changesBanner}
         <section className="py-10">
           <div className="mb-4">
-            <span className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)]">
+            <span className="text-[12px] font-medium text-[var(--foreground-muted)] tracking-wide">
               {t.steps.upload}
             </span>
           </div>
@@ -1724,7 +1726,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
             {t.steps.uploadHeading}
           </h2>
 
-          <p className="text-[18px] text-[#444] leading-relaxed mb-10">
+          <p className="text-[18px] text-[#2A2A2A] leading-relaxed mb-10">
             {t.steps.uploadBody}
           </p>
 
@@ -1735,7 +1737,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
           <div className="flex flex-col gap-6 mb-6">
             <div className="flex gap-4">
               <div className="flex-1">
-                <p className="text-base text-[#444] mb-2">{t.fields.make}</p>
+                <p className="text-base text-[#2A2A2A] mb-2">{t.fields.make}</p>
                 <input
                   type="text"
                   defaultValue={vehicle.make}
@@ -1745,7 +1747,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
                 />
               </div>
               <div className="flex-1">
-                <p className="text-base text-[#444] mb-2">{t.fields.model}</p>
+                <p className="text-base text-[#2A2A2A] mb-2">{t.fields.model}</p>
                 <input
                   type="text"
                   defaultValue={vehicle.model}
@@ -1755,7 +1757,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
                 />
               </div>
               <div className="w-24">
-                <p className="text-base text-[#444] mb-2">{t.fields.year}</p>
+                <p className="text-base text-[#2A2A2A] mb-2">{t.fields.year}</p>
                 <input
                   type="number"
                   defaultValue={vehicle.year || ""}
@@ -1774,7 +1776,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
             </div>
             <div className="flex gap-4">
               <div className="flex-1">
-                <p className="text-base text-[#444] mb-2">{t.fields.vinRecommended}</p>
+                <p className="text-base text-[#2A2A2A] mb-2">{t.fields.vinRecommended}</p>
                 <input
                   type="text"
                   defaultValue={vehicle.vin ?? ""}
@@ -1784,7 +1786,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
                 />
               </div>
               <div className="flex-1">
-                <p className="text-base text-[#444] mb-2">{t.fields.plateRecommended}</p>
+                <p className="text-base text-[#2A2A2A] mb-2">{t.fields.plateRecommended}</p>
                 <input
                   type="text"
                   defaultValue={vehicle.plate ?? ""}
@@ -1795,14 +1797,14 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
               </div>
             </div>
           </div>
-          <p className="text-[15px] text-[#666] leading-relaxed mb-10">
+          <p className="text-[15px] text-[#4A4A4A] leading-relaxed mb-10">
             {t.fields.vinBenefit}
           </p>
 
           {/* Document upload progress */}
           {uploadedDocs > 0 && !allUploaded && (
             <div className="border border-[var(--border)] rounded-lg px-4 py-4 mb-6">
-              <p className="text-[15px] text-[#444] leading-relaxed">
+              <p className="text-[15px] text-[#2A2A2A] leading-relaxed">
                 {uploadedDocs} {t.panels.of} 3 {t.warnings.documentsPartialCount}
               </p>
             </div>
@@ -1820,7 +1822,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
           {/* Hard gate warning — shown only when nothing has been provided */}
           {!hasMinimumInput && (
             <div className="border border-[var(--border)] rounded-lg px-4 py-4 mb-4">
-              <p className="text-[15px] text-[#444] leading-relaxed">
+              <p className="text-[15px] text-[#2A2A2A] leading-relaxed">
                 {t.warnings.addVinOrDoc}
               </p>
             </div>
@@ -1848,7 +1850,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
           </button>
 
           {vehicleComplete && !allUploaded && uploadedDocs > 0 && (
-            <p className="text-[15px] text-[#666] leading-relaxed">
+            <p className="text-[15px] text-[#4A4A4A] leading-relaxed">
               {t.warnings.addMoreDocuments}
             </p>
           )}
@@ -1867,14 +1869,14 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
         {changesBanner}
         <section className="py-10">
           <div className="mb-4">
-            <span className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)]">
+            <span className="text-[12px] font-medium text-[var(--foreground-muted)] tracking-wide">
               {t.steps.check}
             </span>
           </div>
           <h2 className="text-[28px] font-semibold text-[var(--foreground)] mb-6 leading-snug">
             {checkContent.heading}
           </h2>
-          <p className="text-[18px] text-[#444] leading-relaxed mb-10">
+          <p className="text-[18px] text-[#2A2A2A] leading-relaxed mb-10">
             {checkContent.body}
           </p>
           {!checkHasMinimumInput && (
@@ -1884,6 +1886,24 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
               </p>
             </div>
           )}
+          <div className="border border-[rgba(0,0,0,0.15)] rounded-xl bg-white px-5 py-4 mb-6 shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
+            <p className="text-[11px] font-medium text-[#999] uppercase tracking-wider mb-3">
+              {lang === "es" ? "Lo que revisaremos" : "What we check"}
+            </p>
+            <div className="flex flex-col gap-2">
+              {[
+                lang === "es" ? "Registro REPUVE — robo y recuperación" : "REPUVE registry — theft and recovery",
+                lang === "es" ? "Cadena de propiedad del vehículo" : "Vehicle ownership chain",
+                lang === "es" ? "Validez de documentos del vendedor" : "Seller document validity",
+                lang === "es" ? "Señales de riesgo en el historial" : "Historical risk signals",
+              ].map((item) => (
+                <div key={item} className="flex items-center gap-2.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#B4531A] flex-shrink-0" />
+                  <span className="text-[14px] text-[#2A2A2A]">{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
           <button
             onClick={() => {
               if (checkHasMinimumInput) {
@@ -1914,7 +1934,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
         {changesBanner}
         <section className="py-8">
           <div className="mb-4">
-            <span className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)]">
+            <span className="text-[12px] font-medium text-[var(--foreground-muted)] tracking-wide">
               {t.steps.analyze}
             </span>
           </div>
@@ -1931,7 +1951,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
         {changesBanner}
         <section className="py-8">
           <div className="mb-4">
-            <span className="text-[11px] uppercase tracking-widest text-[var(--foreground-muted)]">
+            <span className="text-[12px] font-medium text-[var(--foreground-muted)] tracking-wide">
               {t.steps.verify}
             </span>
           </div>
@@ -1956,7 +1976,7 @@ export default function AIInterface({ plan, dbStatus }: { plan: "39" | "69" | nu
     <>
       {backLink}
       <section className="py-8">
-        <p className="text-[18px] text-[#444] leading-relaxed mb-8">
+        <p className="text-[18px] text-[#2A2A2A] leading-relaxed mb-8">
           Something went wrong. Reload the page or go back.
         </p>
         <button

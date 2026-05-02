@@ -1,26 +1,28 @@
 "use client";
 
 import { TransactionProvider } from "@/context/TransactionContext";
-import AnalyzePanel from "@/components/panels/AnalyzePanel";
+import AIInterface from "@/components/AIInterface";
+import Header from "@/components/Header";
+import DocumentsPanel from "@/components/panels/DocumentsPanel";
+import VerificationPanel from "@/components/panels/VerificationPanel";
+import ActivityPanel from "@/components/panels/ActivityPanel";
+
+function FullEngine({ plan }: { plan: "39" | "69" }) {
+  return (
+    <TransactionProvider transactionId="txn_001">
+      <Header plan={plan} />
+      <main className="px-6 pb-16">
+        <div className="max-w-[680px] mx-auto">
+          <AIInterface plan={plan} dbStatus="paid" />
+          <DocumentsPanel />
+          <VerificationPanel />
+          <ActivityPanel />
+        </div>
+      </main>
+    </TransactionProvider>
+  );
+}
 
 export default function DevPreview() {
-  return (
-    <div className="min-h-screen bg-[var(--background)] px-6 py-10 max-w-md mx-auto">
-      <p className="text-xs text-[#666] mb-6 uppercase tracking-widest">Dev Preview — AnalyzePanel</p>
-
-      <div className="mb-12">
-        <p className="text-xs text-[#888] mb-3">Plan: $69 (no upsell, VIN provided)</p>
-        <TransactionProvider transactionId="txn_001">
-          <AnalyzePanel plan="69" />
-        </TransactionProvider>
-      </div>
-
-      <div>
-        <p className="text-xs text-[#888] mb-3">Plan: $39 (upsell shown, VIN provided)</p>
-        <TransactionProvider transactionId="txn_001">
-          <AnalyzePanel plan="39" />
-        </TransactionProvider>
-      </div>
-    </div>
-  );
+  return <FullEngine plan="39" />;
 }

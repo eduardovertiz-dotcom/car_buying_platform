@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
+import PaymentProcessing from "./processing";
+import { verifyStripeSession } from "@/lib/stripe/verifySession";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isManualMode } from "@/lib/verification/mode";
@@ -31,10 +33,13 @@ function renderError(message: string) {
 
 export default async function TransactionPage({
   params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams: { session_id?: string };
 }) {
   const { id } = params;
+  const comingFromStripe = !!searchParams.session_id;
 
   if (!UUID_RE.test(id)) {
     return renderError("This transaction link is invalid.");
@@ -75,8 +80,21 @@ export default async function TransactionPage({
     console.log("TX LOAD", { id: data.id, plan: data.plan, status: data.status });
   }
 
-  if (!isDev && data.status !== "paid") {
-    console.error("[TX_LOAD] NOT PAID", { id, status: data.status });
+  let effectiveStatus = data.status as string;
+
+  if (!isDev && effectiveStatus !== "paid" && comingFromStripe) {
+    // Server-side Stripe verification — deterministic, no webhook race
+    const verification = await verifyStripeSession(searchParams.session_id!, id);
+    if (verification.verified) {
+      effectiveStatus = "paid";
+    } else {
+      console.log("[TX_LOAD] STRIPE_NOT_VERIFIED", { id, reason: verification.reason });
+      return <PaymentProcessing />;
+    }
+  }
+
+  if (!isDev && effectiveStatus !== "paid") {
+    console.error("[TX_LOAD] NOT PAID", { id, status: effectiveStatus });
     return renderError("This transaction has not been completed.");
   }
 

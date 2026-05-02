@@ -34,19 +34,71 @@ export async function POST(req: Request) {
       currency?: string;
     };
 
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "";
+    const isLocalhost =
+      baseUrl.includes("localhost") ||
+      baseUrl.includes("127.0.0.1");
+    if (!baseUrl || (!baseUrl.startsWith("https://") && !isLocalhost)) {
+      throw new Error("INVALID NEXT_PUBLIC_BASE_URL");
+    }
+
+    const adminDb = createAdminClient();
+
+    // ── Test plan (internal only, $10 MXN) ─────────────────────────────────
+    if (plan === "test") {
+      console.log("[checkout] creating transaction");
+      const { data: testTx, error: testTxErr } = await adminDb
+        .from("transactions")
+        .insert({ plan: "test", status: "pending" })
+        .select("id")
+        .single();
+      console.log("[checkout] result:", testTx, testTxErr);
+      if (testTxErr || !testTx?.id) {
+        console.error("[checkout] FAILED TO CREATE TRANSACTION", testTxErr);
+        return new Response(
+          JSON.stringify({ error: "TRANSACTION_CREATION_FAILED" }),
+          { status: 500 }
+        );
+      }
+
+      console.log("[checkout] using transaction_id:", testTx.id);
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+
+        line_items: [
+          {
+            price: process.env.STRIPE_PRICE_TEST_MXN,
+            quantity: 1,
+          },
+        ],
+
+        metadata: {
+          transaction_id: testTx.id,
+          plan: "test",
+          is_upgrade: "false",
+        },
+
+        success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/transaction/${testTx.id}?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}`,
+      });
+      console.log("[checkout] test session created", { id: session.id, transaction_id: testTx.id });
+      return NextResponse.json({ url: session.url });
+    }
+
     if (plan !== "39" && plan !== "69") {
       throw new Error(`INVALID PLAN: ${plan}`);
     }
 
     const validPlan = plan as Plan;
+    const isUpgrade = validPlan === "69" && !!transaction_id;
 
     // ── Currency resolution ─────────────────────────────────────────────────
     // For upgrades, ALWAYS inherit the currency of the original paid session.
     // This guarantees the user cannot end up with a cross-currency transaction.
     let currency: Currency;
 
-    if (validPlan === "69" && transaction_id) {
-      const inherited = await inheritCurrencyFromTransaction(transaction_id);
+    if (isUpgrade) {
+      const inherited = await inheritCurrencyFromTransaction(transaction_id!);
       if (inherited) {
         currency = inherited;
       } else {
@@ -80,14 +132,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-    if (!baseUrl || !baseUrl.startsWith("https://")) {
-      throw new Error("INVALID NEXT_PUBLIC_BASE_URL");
-    }
-
     // ── Payment method composition ──────────────────────────────────────────
-    // OXXO and SPEI (customer_balance + mx_bank_transfer) are MXN-only on
-    // Stripe. Including them under any other currency triggers a Stripe error.
     const isMx = stripeCurrency === "mxn";
     const payment_method_types = (
       isMx ? ["card", "oxxo"] : ["card"]
@@ -97,12 +142,38 @@ export async function POST(req: Request) {
       ? { oxxo: { expires_after_days: 3 } }
       : undefined;
 
-    // ── Metadata (preserved for webhook + post-checkout) ────────────────────
+    // ── Resolve transaction ID ──────────────────────────────────────────────
+    // For upgrades: reuse the existing transaction row.
+    // For new purchases: create a pending row before Stripe so the ID is known.
+    let resolvedTransactionId: string;
+
+    if (isUpgrade) {
+      resolvedTransactionId = transaction_id!;
+    } else {
+      console.log("[checkout] creating transaction");
+      const { data: tx, error } = await adminDb
+        .from("transactions")
+        .insert({ plan: validPlan, status: "pending" })
+        .select("id")
+        .single();
+      console.log("[checkout] result:", tx, error);
+      if (error || !tx?.id) {
+        console.error("[checkout] FAILED TO CREATE TRANSACTION", error);
+        return new Response(
+          JSON.stringify({ error: "TRANSACTION_CREATION_FAILED" }),
+          { status: 500 }
+        );
+      }
+      resolvedTransactionId = tx.id;
+    }
+
+    // ── Metadata ────────────────────────────────────────────────────────────
     const metadata: Record<string, string> = {
       plan: validPlan,
       currency: stripeCurrency,
+      transaction_id: resolvedTransactionId,
+      is_upgrade: isUpgrade ? "true" : "false",
     };
-    if (transaction_id) metadata.transaction_id = transaction_id;
 
     // ── Session params ──────────────────────────────────────────────────────
     const params: Parameters<typeof stripe.checkout.sessions.create>[0] = {
@@ -110,9 +181,9 @@ export async function POST(req: Request) {
       payment_method_types,
       line_items: [{ price: priceId, quantity: 1 }],
       metadata,
-      success_url: `${baseUrl}/api/post-checkout?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: transaction_id
-        ? `${baseUrl}/transaction/${transaction_id}`
+      success_url: `${baseUrl}/transaction/${resolvedTransactionId}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: isUpgrade
+        ? `${baseUrl}/transaction/${resolvedTransactionId}`
         : `${baseUrl}/#pricing`,
     };
 
@@ -120,14 +191,16 @@ export async function POST(req: Request) {
       params.payment_method_options = payment_method_options;
     }
 
-
+    console.log("[checkout] using transaction_id:", resolvedTransactionId);
     const session = await stripe.checkout.sessions.create(params);
+    console.log("SESSION CREATED FULL:", session);
 
     console.log("[checkout] session created", {
       id: session.id,
       plan: validPlan,
       currency: stripeCurrency,
-      transaction_id: transaction_id ?? null,
+      transaction_id: resolvedTransactionId,
+      is_upgrade: isUpgrade,
       methods: payment_method_types,
     });
 

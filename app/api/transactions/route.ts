@@ -25,12 +25,15 @@ export async function POST(req: Request) {
 
     plan = PLAN_MAP[plan] || plan;
 
-    const VALID_PLANS = ["39", "69"];
-
-    if (!VALID_PLANS.includes(plan)) {
+    const isDev = process.env.NODE_ENV === "development";
+    if (
+      plan !== "39" &&
+      plan !== "69" &&
+      !(isDev && plan === "test")
+    ) {
       console.error("INVALID PLAN", plan);
-      return NextResponse.json(
-        { error: "Invalid plan" },
+      return new Response(
+        JSON.stringify({ error: "INVALID_PLAN" }),
         { status: 400 }
       );
     }

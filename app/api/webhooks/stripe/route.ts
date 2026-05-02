@@ -56,6 +56,7 @@ export async function POST(req: Request) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
+        console.log("🧠 FULL SESSION:", JSON.stringify(session, null, 2));
         const outcome: SettlementOutcome =
           session.payment_status === "paid" ? "paid" : "pending";
         await applyOutcome(session, outcome);
@@ -94,11 +95,11 @@ async function applyOutcome(
   outcome: SettlementOutcome
 ) {
   const stripe_session_id = session.id;
-  const email             = session.customer_details?.email ?? null;
-  const amount            = session.amount_total ?? 0;
-  const plan              = session.metadata?.plan ?? null;
-  const transaction_id    = session.metadata?.transaction_id ?? null;
-  const isUpgrade         = !!transaction_id;
+  const email = session.customer_details?.email ?? null;
+  const amount = session.amount_total ?? 0;
+  const plan = session.metadata?.plan ?? null;
+  const transaction_id = session.metadata?.transaction_id ?? null;
+  const isUpgrade = session.metadata?.is_upgrade === "true";
 
   console.log("[webhook] apply", {
     session_id: stripe_session_id,
@@ -120,6 +121,7 @@ async function applyOutcome(
     // Only promote plan when the async payment has actually settled.
     // Never downgrade the row's status — the prior purchase is already "paid".
     if (outcome === "paid") {
+      console.log("🔥 ENTERED PAID BLOCK 🔥");
       const { data: existing } = await adminDb
         .from("transactions")
         .select("plan")
@@ -161,41 +163,43 @@ async function applyOutcome(
   }
 
   // ── NEW PURCHASE ───────────────────────────────────────────────────────
-  // Upsert the row with the latest outcome. For OXXO/SPEI this first runs
-  // with outcome="pending" (voucher issued) and later with "paid" or "failed"
-  // when the async event settles.
   if (!email) {
     console.error("[webhook] missing customer email:", stripe_session_id);
   }
 
-  const upsertPayload: Record<string, unknown> = {
-    stripe_session_id,
-    email,
-    amount,
-    plan,
-    status: outcome,
-  };
+  if (transaction_id) {
+    // Pre-created transaction (new flow) — idempotent update.
+    // Never downgrade from "paid" → "pending"/"failed" via out-of-order events.
+    let query = adminDb
+      .from("transactions")
+      .update({ stripe_session_id, email, amount, status: outcome })
+      .eq("id", transaction_id);
 
-  const { error } = await adminDb
-    .from("transactions")
-    .upsert(upsertPayload, { onConflict: "stripe_session_id" });
+    if (outcome !== "paid") {
+      query = query.neq("status", "paid") as typeof query;
+    }
 
-  if (error) {
-    console.error("[webhook] upsert failed:", {
-      stripe_session_id,
-      code: error.code,
-      message: error.message,
-    });
-    await logError("webhook_new_purchase", error.message, {
-      stripe_session_id,
-      plan,
-      code: error.code,
-    });
-    throw new Error(`DB upsert failed: ${error.message}`);
+    const { error } = await query;
+
+    if (error) {
+      console.error("[webhook] update failed:", { transaction_id, code: error.code, message: error.message });
+      await logError("webhook_new_purchase", error.message, { transaction_id, stripe_session_id, code: error.code });
+      throw new Error(`DB update failed: ${error.message}`);
+    }
+
+    console.log("[webhook] transaction updated OK:", { transaction_id, outcome });
+  } else {
+    // Legacy path: no pre-created transaction — idempotent upsert by stripe_session_id.
+    const { error } = await adminDb
+      .from("transactions")
+      .upsert({ stripe_session_id, email, amount, plan, status: outcome }, { onConflict: "stripe_session_id" });
+
+    if (error) {
+      console.error("[webhook] upsert failed:", { stripe_session_id, code: error.code, message: error.message });
+      await logError("webhook_new_purchase", error.message, { stripe_session_id, plan, code: error.code });
+      throw new Error(`DB upsert failed: ${error.message}`);
+    }
+
+    console.log("[webhook] transaction upserted OK:", { stripe_session_id, outcome });
   }
-
-  console.log("[webhook] transaction upserted OK:", {
-    stripe_session_id,
-    outcome,
-  });
 }
